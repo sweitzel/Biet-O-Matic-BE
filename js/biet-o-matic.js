@@ -419,7 +419,11 @@ let popup = function () {
               return '<img src="ebay.png"><p>'+data+'</p>';
             }*/
           },
-          {'data': 'articleDescription', 'defaultContent': 'Unbekannt1'},
+          {
+            data: 'articleDescription',
+            render: $.fn.dataTable.render.ellipsis(100, true, false),
+            'defaultContent': 'Unbekannt'
+          },
           {
             data: 'articleEndTime',
             render: function (data, type, row) {

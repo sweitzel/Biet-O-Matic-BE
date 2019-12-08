@@ -42,7 +42,9 @@
       ]],
       ['articlePaymentMethods', ['#payDet1']],
       ['articleShippingCost', ['#fshippingCost']],
-      ['articleAuctionState', ['#msgPanel > div > div']]
+      ['articleAuctionState', ['#msgPanel > div > div']],
+      ['articleBidCount', ['#qty-test']],
+      ['articleMinimumBid', ['#MaxBidId']]
     ]);
     parseInfoArray.forEach(parseInfoEntry);
   }
@@ -96,12 +98,31 @@
             ebayArticleInfo.articleCurrency = currency;
           }
         } else if (key === "articleDescription") {
-          if (domEntry.lastChild.nodeName === "#text" ) {
-            value = domEntry.childNodes[1].textContent;
-          } else {
-            value = "Unbekannt";
-            console.warn("Biet-O-Mat: Unable to parse Article Description from %O", domEntry);
+          // some articles have long description, separated by <wbr> - so concat the strings
+          value = "";
+          for (let child of domEntry.childNodes) {
+            if (child.nodeName === '#text') {
+              value += child.textContent.trim();
+            }
           }
+        } else if (key === "articleMinimumBid") {
+          // the MinBidId input has a attribute which lists the minimum bid
+          // that will be used in the UI to indicate if the maxBid is high enough
+          value = domEntry.getAttribute('aria-label')
+            .replace(/\n/g, "")
+            .replace(/\s+/g, " ");
+          //console.debug("Minimum Bid: %O", value);
+          let regex = /\s([A-Z]{2,3}(?:\s[$]?))([0-9,]+)(?:.|,)([0-9]{2})\s/;
+          let result = [];
+          if (value.match(regex)) {
+            result = value.match(regex);
+            let p1 = result[2].replace(/,/, '');
+            let p2 = result[3];
+            value = parseFloat(`${p1}.${p2}`);
+          }
+        } else if (key === "articleBidCount") {
+          //console.debug("articleBidCount=%s", domEntry.textContent.trim());
+          value = parseInt(domEntry.textContent.trim(), 10);
         } else {
           value = domEntry.textContent.trim();
           // replace newline and multiple spaces
@@ -282,6 +303,10 @@
             }
           });
         }
+        // TEST ONLY
+        if (bomAutoBidNew.checked) {
+          doBid();
+        }
       });
     }
 
@@ -346,16 +371,43 @@
     let maxBidInput = document.getElementById('MaxBidId');
     let autoBidInput = document.getElementById('BomAutoBid');
     if (maxBidInput !== null) {
-      try {
-        maxBidInput.value = info.maxBid.toLocaleString('de-DE');
-      } catch (e) {
-        maxBidInput.value = info.maxBid.toString();
+      if (info.maxBid !== null) {
+        try {
+          maxBidInput.value = info.maxBid.toLocaleString('de-DE');
+        } catch (e) {
+          maxBidInput.value = info.maxBid.toString();
+        }
       }
       if (autoBidInput !== null) {
-        autoBidInput.checked = info.autoBid;
+        if (info.autoBid !== null) {
+          autoBidInput.checked = info.autoBid;
+        }
       }
       activateAutoBidButton(info.maxBid);
     }
+  }
+
+  /*
+   * Perform a Bid for an Article
+   * - perform bid only if autoBid is checked
+   * Note: Time checking has to be performed externally!
+   */
+  function doBid() {
+    let maxBidInput = document.getElementById('MaxBidId');
+    let autoBidInput = document.getElementById('BomAutoBid');
+    if (autoBidInput === null || autoBidInput.checked === false) {
+      console.log("Biet-O-Matic: doBid() aborted, autoBid is off, %O", autoBidInput);
+      return;
+    }
+
+    console.log("Biet-O-Matic: Performing bid for article %s: Bid=%s", ebayArticleInfo.articleId, maxBidInput.value);
+    // press bid button
+    let bidButton = $('#bidBtn_btn');
+    bidButton.innerText = "Kidding";
+    // check and return if login window is presented
+
+
+
   }
 
   /*
