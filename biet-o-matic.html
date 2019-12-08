@@ -1,0 +1,75 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Biet-O-Mat</title>
+  <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui"/>
+  <style>
+    body {
+      width: 80%;
+      height: 800px;
+    }
+  </style>
+  <link rel="stylesheet" type="text/css" href="thirdparty/jquery-ui.min.css"/>
+  <link rel="stylesheet" type="text/css" href="thirdparty/dataTables.jqueryui.min.css">
+  <link rel="stylesheet" type="text/css" href="css/biet-o-matic.css"/>
+  <script type="text/javascript" src="thirdparty/browser-polyfill.min.js"></script>
+  <script type="text/javascript" src="thirdparty/jquery-3.4.1.min.js"></script>
+  <script type="text/javascript" src="thirdparty/datatables.min.js"></script>
+  <script type="text/javascript" src="thirdparty/dataTables.responsive.min.js"></script>
+  <script type="text/javascript" src="thirdparty/dataTables.jqueryui.min.js"></script>
+  <script type="text/javascript" src="thirdparty/moment-with-locales.min.js"></script>
+  <script type="text/javascript" src="js/biet-o-matic.js"></script>
+</head>
+<body>
+
+<div style="margin-bottom: 50px;">
+  <div id="tableButtons"/>
+  <fieldset>
+    <legend>Aktive Ebay Artikel Tabs</legend>
+    <fieldset style="width:240px;margin: 20px">
+      <legend>Optionen</legend>
+      <label for="inpAutoBid" style="display: inline-block;white-space: nowrap">
+        <input id="inpAutoBid" name="autoBid" title="Sollen Gebote automatisch abgegeben werden?" type="checkbox" style="width: 30px; height: 30px;vertical-align: middle;">
+        <span>Automatikmodus</span>
+      </label>
+    </fieldset>
+    <table id="articles" class="hover responsive nowrap" style="width:100%">
+      <thead>
+      <tr>
+        <th>Artikelnr.</th>
+        <th>Beschreibung</th>
+        <th>Auktions Ende</th>
+        <th>Preis</th>
+        <th>Versandkosten</th>
+        <th>Status</th>
+        <th>Ihr Maximalgebot</th>
+      </tr>
+      </thead>
+      <tfoot>
+      </tfoot>
+    </table>
+  </fieldset>
+</div>
+
+<div id="internal" style="margin-top: 20px">
+  <fieldset>
+    <legend>Speichernutzung</legend>
+    <p>Der Browser begrenzt die Menge an Einträgen im Speicher. Chrome beispielsweise auf 512 Einträge mit max 100kb
+      Größe</p>
+    <label for="inpStorageCount">
+      Elemente: <input id="inpStorageCount" name="Elemente" type="number" disabled="true" readonly="true">
+    </label>
+    <label for="inpStorageSize">
+      Größe in Byte: <input id="inpStorageSize" name="Größe" type="text" disabled="true" readonly="true">
+    </label>
+    <input id="inpStorageClearAll" type="button" title="Entfernt folgende Elemente: Maximalgebote, Aktiv-Flag"
+           value="Alle Einträge entfernen" style="margin-left: 20px"/>
+  </fieldset>
+  <p style="text-align: right">Biet-O-Matic BE</p>
+</div>
+</body>
+</html>

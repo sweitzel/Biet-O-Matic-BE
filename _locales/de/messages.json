@@ -1,0 +1,10 @@
+{
+  "appName": {
+    "message": "Biet-O-Matic BE",
+    "description": "Extension Name"
+  },
+  "appDesc": {
+    "message": "Eine Browser Erweiterung um eBay Gebote abzugeben",
+    "description": "Extension Short Description"
+  }
+}

@@ -1,0 +1,6 @@
+/* highlight via border */
+.bomHighlightBorder {
+  /*text-shadow: 2px -2px 3px #FF0000;*/
+  border-color: #FF0000;
+  border-width: 2px;
+}

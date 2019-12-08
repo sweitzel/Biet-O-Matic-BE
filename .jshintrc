@@ -1,0 +1,13 @@
+{
+  "globals": {
+    "browser": true
+  },
+  "esversion": 8,
+  "undef": true,
+  "browser": true,
+  "devel": true,
+  "moz": true,
+  "jquery": true,
+  "strict": true,
+  "laxcomma": true
+}
