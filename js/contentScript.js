@@ -42,7 +42,10 @@
       ]],
       ['articlePaymentMethods', ['#payDet1']],
       ['articleShippingCost', ['#fshippingCost']],
-      ['articleAuctionState', ['#msgPanel > div > div']],
+      ['articleAuctionState', [
+        '#w1-5-_msg',
+        '#msgPanel > div > div'
+      ]],
       ['articleBidCount', ['#qty-test']],
       ['articleMinimumBid', ['#MaxBidId']]
     ]);
@@ -53,7 +56,7 @@
     for (let v of value) {
       let domEntry = document.querySelector(v);
       //console.log("%O", domEntry);
-      if (domEntry !== null) {
+      if (domEntry != null) {
         let value = null;
         if (key === "articleEndTime") {
           value = parseEndTime(domEntry);
@@ -61,7 +64,7 @@
           // get price
           let price = domEntry.getAttribute("content");
           let currency = null;
-          if (price !== null && typeof price !== 'undefined') {
+          if (price != null && typeof price !== 'undefined') {
             value = parseFloat(price);
           } else {
             // use regular expression to parse info, e.g.
@@ -88,7 +91,7 @@
             }
           }
           // get currency itemprop=priceCurrency
-          if (currency === null) {
+          if (currency == null) {
             currency = document.querySelectorAll('[itemprop="priceCurrency"]');
             if (currency.length === 1) {
               ebayArticleInfo.articleCurrency = currency[0].getAttribute("content");
@@ -112,7 +115,7 @@
             .replace(/\n/g, "")
             .replace(/\s+/g, " ");
           //console.debug("Minimum Bid: %O", value);
-          let regex = /\s([A-Z]{2,3}(?:\s[$]?))([0-9,]+)(?:.|,)([0-9]{2})\s/;
+          let regex = /\s([A-Z]{2,3}(?:\s[$]?))([0-9, ]+)(?:.|,)([0-9]{2})\s/;
           let result = [];
           if (value.match(regex)) {
             result = value.match(regex);
@@ -144,7 +147,7 @@
     // ebay.com has unix epoch time, yeah!
     //<span class="timeMs" timems="1575217753000">Today 5:29PM</span>
     let timems = domValue.querySelector('span[timems]');
-    if ( timems !== null) {
+    if ( timems != null) {
       return parseInt(timems.getAttribute('timems'), 10);
     }
     // ebay.de still only has ugly date string which needs to be parsed
@@ -189,7 +192,7 @@
    */
   function extendPage() {
     let bidButton = document.getElementById('bidBtn_btn');
-    if (bidButton === null || typeof bidButton === 'undefined') {
+    if (bidButton == null || typeof bidButton === 'undefined') {
       console.warn("Biet-O-Matic: Do not extend page, no bid button found");
       return;
     }
@@ -197,7 +200,7 @@
 
     // add button right of bid button
     let buttonDiv = document.getElementById("BomAutoBidDiv");
-    if (buttonDiv !== null) {
+    if (buttonDiv != null) {
       buttonDiv.remove();
     }
     buttonDiv = document.createElement("div");
@@ -242,7 +245,7 @@
   function activateAutoBidButton(maxBidInputValue) {
     // TODO check https://www.ebay.de/help/buying/bidding/automatisches-bietsystem-bei-ebay-maximalgebot?id=4014
     let buttonInput = document.getElementById('BomAutoBid');
-    if (buttonInput === null) {
+    if (buttonInput == null) {
       console.warn("ButtonInput invalid - shouldnt happen");
       return;
     }
@@ -267,11 +270,11 @@
     let maxBidInput = document.getElementById('MaxBidId');
     let bomAutoBid = document.getElementById('BomAutoBid');
     // max bid
-    if (maxBidInput !== null) {
+    if (maxBidInput != null) {
       maxBidInput.addEventListener('input', (e) => {
         let bomAutoBidNew = document.getElementById('BomAutoBid');
         let maxBidInputNew = document.getElementById('MaxBidId');
-        if (maxBidInputNew !== null) {
+        if (maxBidInputNew != null) {
           //updateMaxBidInput(maxBidInputNew.value);
           // replace , with .
           let maxBidInputValue = maxBidInputNew.value.replace(/,/, '.');
@@ -289,11 +292,11 @@
       });
     }
     // BomAutoBid
-    if (bomAutoBid !== null) {
+    if (bomAutoBid != null) {
       bomAutoBid.addEventListener('change', (e) => {
         let bomAutoBidNew = document.getElementById('BomAutoBid');
         let maxBidInputNew = document.getElementById('MaxBidId');
-        if (bomAutoBidNew !== null) {
+        if (bomAutoBidNew != null) {
           // inform popup
           browser.runtime.sendMessage({
             action: 'ebayArticleMaxBidUpdated',
@@ -304,16 +307,16 @@
           });
         }
         // TEST ONLY
-        if (bomAutoBidNew.checked) {
+        /*if (bomAutoBidNew.checked) {
           doBid();
-        }
+        }*/
       });
     }
 
     // article current price
     // Note: the itemprop=price content is not refreshed, only the text!
     let articleBidPrice = document.getElementById('prcIsum_bidPrice');
-    if (articleBidPrice !== null) {
+    if (articleBidPrice != null) {
       let observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList') {
@@ -338,7 +341,7 @@
               ebayArticleInfo.articleBidPrice = value;
               // find Ebay MaxBidId Input
               let maxBidInput = document.getElementById('MaxBidId');
-              if (maxBidInput === null) {
+              if (maxBidInput == null) {
                 console.warn("Biet-O-Matic: Cannot find MaxBidId input!");
                 return;
               }
@@ -352,8 +355,9 @@
               // send info to extension popup, it will simply refresh the the data
               browser.runtime.sendMessage({
                 action: 'ebayArticleRefresh',
+              }).catch((e) => {
+                console.warn("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed: %O", e);
               });
-
             }
           }
         });
@@ -370,16 +374,16 @@
   function updateMaxBidInfo(info) {
     let maxBidInput = document.getElementById('MaxBidId');
     let autoBidInput = document.getElementById('BomAutoBid');
-    if (maxBidInput !== null) {
-      if (info.maxBid !== null) {
+    if (maxBidInput != null) {
+      if (info.maxBid != null) {
         try {
           maxBidInput.value = info.maxBid.toLocaleString('de-DE');
         } catch (e) {
           maxBidInput.value = info.maxBid.toString();
         }
       }
-      if (autoBidInput !== null) {
-        if (info.autoBid !== null) {
+      if (autoBidInput != null) {
+        if (info.autoBid != null) {
           autoBidInput.checked = info.autoBid;
         }
       }
@@ -392,23 +396,97 @@
    * - perform bid only if autoBid is checked
    * Note: Time checking has to be performed externally!
    */
-  function doBid() {
-    let maxBidInput = document.getElementById('MaxBidId');
-    let autoBidInput = document.getElementById('BomAutoBid');
-    if (autoBidInput === null || autoBidInput.checked === false) {
+  async function doBid(test = true) {
+    const maxBidInput = document.getElementById('MaxBidId');
+    const autoBidInput = document.getElementById('BomAutoBid');
+    if (autoBidInput == null || autoBidInput.checked === false) {
       console.log("Biet-O-Matic: doBid() aborted, autoBid is off, %O", autoBidInput);
       return;
     }
 
     console.log("Biet-O-Matic: Performing bid for article %s: Bid=%s", ebayArticleInfo.articleId, maxBidInput.value);
     // press bid button
-    let bidButton = $('#bidBtn_btn');
-    bidButton.innerText = "Kidding";
-    // check and return if login window is presented
+    const bidButton =  document.getElementById('bidBtn_btn');
+    if (bidButton == null) {
+      console.warn("Biet-O-Matic: Article %s - Unable to get Bid Button!", ebayArticleInfo.articleId);
+      return;
+    }
 
+    /*
+     * We use a Mutation Observer to wait for the Modal 'vilens-modal-wrapper' to open
+     * after the Bid Button was clicked
+     * Use timeout: 3000ms
+     * Uses: https://stackoverflow.com/questions/7434685/how-can-i-be-notified-when-an-element-is-added-to-the-page
+     *
+     * Two considered alternative results:
+     * a) Bid was too low
+     * b) Bid was high enough still and we need to confirm
+     *
+     * Note: If not logged in, here the page will redirect to signin and terminate the Content Script!
+     */
 
+    // initiate bid
+    bidButton.click();
 
+    // wait for modal to open: vilens-modal-wrapper
+    let modalBody = await waitFor('#MODAL_BODY')
+      .catch((e) => {
+        console.warn("Biet-O-Matic: Waiting for Bidding Modal timed out: %s", e.toString());
+      });
+    // modal close button
+    const closeButton = document.querySelector('.vilens-modal-close');
+
+    const statusMsg = document.getElementById('STATUS_MSG');
+    //console.log("Status: obj=%O, msg=%s", statusMsg, statusMsg.textContent);
+    // e.g. 'Bieten Sie mindestens EUR 47,50.'
+
+    // some bidding issue, send status to popup (keep modal open, in case user wants to manually correct bid)
+    if (statusMsg != null) {
+      console.log("Biet-O-Matic: Bidding failed: Error reported by eBay: %s", statusMsg.textContent);
+      return;
+    }
+
+    // get confirm button
+    const confirmButton = document.getElementById('confirm_button');
+    if (confirmButton == null) {
+      console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
+      return;
+    }
+
+    // Note: After closing the modal, the page will reload and the content script reinitialize!
+
+    if (test) {
+      // close modal
+      if (closeButton != null) {
+        closeButton.click();
+      }
+      // send info to popup about (almost) successful bid
+    } else {
+      // confirm the bid
+      console.log("Biet-O-Matic: Bid submitted for Article %s", ebayArticleInfo.articleId);
+      // send info to popup
+    }
   }
+
+  // https://stackoverflow.com/questions/5525071/how-to-wait-until-an-element-exists
+  function waitFor(selector, timeout = 3000) {
+    return new Promise(function (resolve, reject) {
+      waitForElementToDisplay(selector, 250, timeout);
+
+      function waitForElementToDisplay(selector, time, timeout) {
+        if (timeout <= 0) {
+          reject(`waitFor(${selector}), timeout expired!`);
+        } else if (document.querySelector(selector) != null) {
+          resolve(document.querySelector(selector));
+        } else {
+          setTimeout(function () {
+            waitForElementToDisplay(selector, time, timeout - time);
+          }, time);
+        }
+      }
+    });
+  }
+
 
   /*
    * MAIN
