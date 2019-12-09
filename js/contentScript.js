@@ -193,7 +193,7 @@
   function extendPage() {
     let bidButton = document.getElementById('bidBtn_btn');
     if (bidButton == null || typeof bidButton === 'undefined') {
-      console.warn("Biet-O-Matic: Do not extend page, no bid button found");
+      console.log("Biet-O-Matic: Do not extend page, no bid button found.");
       return;
     }
     // check if button already exists (extension reloaded?)

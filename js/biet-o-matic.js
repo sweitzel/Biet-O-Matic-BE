@@ -80,7 +80,7 @@ let popup = function () {
     // inpAutoBid checkbox
     $('#inpAutoBid').on('input', (e) => {
       console.debug('Biet-O-Mat: Automatic mode toggled: %s', e.target.checked);
-      storeSetting('autoBidEnabled', e.target.checked);
+      //storeSetting('autoBidEnabled', e.target.checked);
     });
   }
 
@@ -233,7 +233,6 @@ let popup = function () {
 
   /*
    * Restore settings from browser storage
-   * - Automatic bidding: inpAutoBid -> autoBidEnabled
    */
   function restoreSettings() {
     // inpAutoBid
@@ -243,9 +242,11 @@ let popup = function () {
       if (typeof result.settings !== undefined) {
         pt.settings = result.settings;
       }
+      /* Note: This doesnt make sense, autoBid is per browser window
       if (typeof pt.settings !== 'undefined' && pt.settings.hasOwnProperty('autoBidEnabled')) {
         $('#inpAutoBid').attr('checked', pt.settings.autoBidEnabled);
       }
+      */
     });
   }
 
