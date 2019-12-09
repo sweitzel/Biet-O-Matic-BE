@@ -44,6 +44,7 @@
       ['articleShippingCost', ['#fshippingCost']],
       ['articleAuctionState', [
         '#w1-5-_msg',
+        '#w1-4-_msg',
         '#msgPanel > div > div'
       ]],
       ['articleBidCount', ['#qty-test']],
@@ -379,6 +380,7 @@
         try {
           maxBidInput.value = info.maxBid.toLocaleString('de-DE');
         } catch (e) {
+          console.log("updateMaxBidInfo failed to parse %O", maxBidInput.value);
           maxBidInput.value = info.maxBid.toString();
         }
       }

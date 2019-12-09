@@ -11,7 +11,7 @@
     ]
   },
   "browser_action": {
-    "default_title": "Öffne Biet-O-Mat"
+    "default_title": "Öffne Biet-O-Matic BE"
   },
   "content_scripts": [
     {

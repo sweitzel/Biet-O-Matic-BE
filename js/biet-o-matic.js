@@ -80,6 +80,7 @@ let popup = function () {
     // inpAutoBid checkbox
     $('#inpAutoBid').on('input', (e) => {
       console.debug('Biet-O-Mat: Automatic mode toggled: %s', e.target.checked);
+      updateFavicon(e.target.checked);
       //storeSetting('autoBidEnabled', e.target.checked);
     });
   }
@@ -148,9 +149,12 @@ let popup = function () {
         let storInfo = result[articleId];
         console.debug("Biet-O-Mat: Found info for Article %s in storage: %O", articleId, result);
         // maxBid
-        if (storInfo.hasOwnProperty('maxBid')) {
-          // get article row and update autoBid checkbox
-          maxBid = Number.parseFloat(storInfo.maxBid);
+        if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null) {
+          if (typeof storInfo.maxBid === 'string') {
+            maxBid = Number.parseFloat(storInfo.maxBid).toFixed(2);
+          } else {
+            maxBid = storInfo.maxBid.toFixed(2);
+          }
         }
         // autoBid
         if (storInfo.hasOwnProperty('autoBid')) {
@@ -227,7 +231,7 @@ let popup = function () {
       console.info('Biet-O-Mat: Alle Storage Einträge entfernt (Gebote, Einstellungen)');
       browser.storage.sync.clear().catch(onError);
       // reload page
-      browser.tabs.reload();
+      browser.tabs.reload(e.sender.tab.id);
     });
   }
 
@@ -293,13 +297,18 @@ let popup = function () {
    */
   function configureUi() {
     // maxBid input field
-    $('.dataTable').on('input', 'tr input', function (e) {
-      console.debug('configureUi() INPUT Event e=%O, data=%O', e, this);
-      if (this.parentNode.parentNode.nodeName !== 'TR') {
-        console.warn('Biet-O-Mat: configureUi() missing parentNode id, %O', this.parentNode);
-        return;
+    $('.dataTable').on('change', 'tr input', function (e) {
+      console.debug('Biet-O-Matic: configureUi() INPUT Event e=%O, data=%O', e, this);
+      // TODO: Dont like that - fails if HTML is changed
+      let tr = this.parentNode.parentNode;
+      if (tr.nodeName !== 'TR') {
+        tr = tr.parentNode;
+        if (tr.nodeName !== 'TR') {
+          console.warn('Biet-O-Mat: configureUi() missing parentNode id, %O', tr);
+          return;
+        }
       }
-      let tabId = parseInt(this.parentNode.parentNode.id, 10);
+      let tabId = parseInt(tr.id, 10);
       let row = pt.table.row(`#${tabId}`);
       let data = row.data();
 
@@ -307,7 +316,7 @@ let popup = function () {
       let autoBidChecked = null;
       if (this.name === 'inpMaxBid') {
         // maxBid was entered
-        maxBidValue = this.valueAsNumber;
+        maxBidValue = Number.parseFloat(this.value);
       } else if (this.name === 'chkAutoBid') {
         // autoBid checkbox was clicked
         autoBidChecked = this.checked;
@@ -329,10 +338,10 @@ let popup = function () {
   function updateRowMaxBid(row, maxBid, autoBid) {
     //row.invalidate();
     let data = row.data();
-    console.debug('Biet-O-Mat: updateRowMaxBid(%s) row=%O, maxBid=%O, autoBid=%O data=%O',
-      data.articleId, data, maxBid, autoBid, data);
+    console.debug('Biet-O-Mat: updateRowMaxBid(%s) row=%O, maxBid=%O (%s), autoBid=%O',
+      data.articleId, data, maxBid, typeof maxBid, autoBid);
     if (typeof data === 'undefined' || !data.hasOwnProperty('articleBidPrice')) {
-      console.warn('Biet-O-Mat: updateRowMaxBid for row=%O - missing articleBidPrice in data', data);
+      console.warn('Biet-O-Mat: updateRowMaxBid for row=%O - missing articleBidPrice in data');
       return;
     }
     // maxBid
@@ -341,7 +350,7 @@ let popup = function () {
     row.node().lastChild.childNodes.forEach((child) => {
       if (child.name === 'inpMaxBid') {
         maxBidInput = child;
-        if (maxBid !== null) {
+        if (maxBid !== null && !Number.isNaN(maxBid)) {
           maxBidInput.value = maxBid;
         }
       }
@@ -350,8 +359,8 @@ let popup = function () {
     let autoBidCheckbox = null;
     // get article row and update autoBid checkbox
     row.node().lastChild.childNodes.forEach((child) => {
-      if (child.name === 'chkAutoBid') {
-        autoBidCheckbox = child;
+      if (child.nodeName === 'LABEL') {
+        autoBidCheckbox = child.children.chkAutoBid;
         if (autoBid != null) {
           autoBidCheckbox.checked = autoBid;
         }
@@ -385,6 +394,99 @@ let popup = function () {
     }
   }
 
+  //region Favicon Handling
+  function measureText(context, text, fontface, min, max, desiredWidth) {
+    if (max-min < 1) {
+      return min;
+    }
+    let test = min+((max-min)/2); //Find half interval
+    context.font=`bold ${test}px "${fontface}"`;
+    let found;
+    if ( context.measureText(text).width > desiredWidth) {
+      found = measureText(context, text, fontface, min, test, desiredWidth);
+    } else {
+      found = measureText(context, text, fontface, test, max, desiredWidth);
+    }
+    return parseInt(found);
+  }
+  /* determine good contrast color (black or white) for given BG color */
+  function getContrastYIQ(hexcolor){
+    const r = parseInt(hexcolor.substr(0,2),16);
+    const g = parseInt(hexcolor.substr(2,2),16);
+    const b = parseInt(hexcolor.substr(4,2),16);
+    // http://www.w3.org/TR/AERT#color-contrast
+    let yiq = ((r*299)+(g*587)+(b*114))/1000;
+    return (yiq >= 128) ? 'black' : 'white';
+  }
+  /* generate favicon based on title and color */
+  function createFavicon(title, color) {
+    if (typeof color !== 'string' || !color.startsWith('#')) {
+      console.warn("createFavicon() skipped (invalid color): title=%s, color=%s (%s)", title, color, typeof color);
+      return undefined;
+    }
+    let canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    let ctx = canvas.getContext('2d');
+    // background color
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 63, 63);
+    // text color
+    ctx.fillStyle = getContrastYIQ(color);
+
+    let acronym = title.split(' ').map(function(item) {
+      return item[0];
+    }).join('').substr(0, 2);
+
+    let fontSize = measureText(ctx, acronym, 'Arial', 0, 60, 50);
+    ctx.font = `bold ${fontSize}px "Arial"`;
+    ctx.textAlign='center';
+    ctx.textBaseline="middle";
+    ctx.fillText(acronym, 32, 38);
+
+    // prepare icon as Data URL
+    let link = document.createElement('link');
+    link.type = 'image/x-icon';
+    link.rel = 'shortcut icon';
+    link.href = canvas.toDataURL("image/x-icon");
+
+    return {
+      link: link,
+      image: ctx.getImageData(0, 0, canvas.width, canvas.height)
+    };
+    //document.getElementsByTagName('head')[0].appendChild(link);
+  }
+  function updateFavicon(checked) {
+    let title = 'B';
+    let color = '#a6001a';
+    if (checked) {
+      color = '#457725';
+    }
+    let favUrl = createFavicon(title, color).link;
+    let favImg = createFavicon(title, color).image;
+    if (favUrl) {
+      favUrl.id = "favicon";
+      let head = document.getElementsByTagName('head')[0];
+      if (document.getElementById('favicon')) {
+        head.removeChild(document.getElementById('favicon'));
+      }
+      head.appendChild(favUrl);
+    }
+    // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
+    let query = browser.tabs.query({
+      currentWindow: true,
+      url: [ browser.extension.getURL("*"), "*://*.ebay.de/itm/*","*://*.ebay.com/itm/*" ]
+    });
+    query.then((tabs) => {
+      for (let tab of tabs) {
+        //console.debug("Set icon on tab %d (%s)", tab.id, tab.url);
+        browser.browserAction.setIcon({imageData: favImg, tabId: tab.id})
+          .catch(onError);
+      }
+    }, onError);
+  }
+  //endregion
+
+
   /*
    * If an article is close to ending or ended, highlight the date
    * if it ended, highlight the status as well
@@ -410,6 +512,7 @@ let popup = function () {
       pt.whoIAm = whoIAm;
       registerEvents();
       restoreSettings();
+      updateFavicon(false);
 
       pt.table = $('#articles').DataTable({
         columns: [
@@ -464,7 +567,10 @@ let popup = function () {
           {
             data: 'maxBid', 'defaultContent':
               '<input name="inpMaxBid" type="number" min="0" step="0.50" width="50">' +
-              '<input type="checkbox" name="chkAutoBid" disabled="true" style="width: 15px; height: 15px; vertical-align: middle">Aktiv'
+              '<label>' +
+              '<input type="checkbox" name="chkAutoBid" disabled="true" style="width: 15px; height: 15px; vertical-align: middle"/>' +
+              '<span>Aktiv</span>' +
+              '</label>'
           },
         ],
         order: [[2, "asc"]],
@@ -474,6 +580,7 @@ let popup = function () {
         ],
         searchDelay: 400,
         rowId: 'tabId',
+        pageLength: 25,
         language:
         //"url": "https://cdn.datatables.net/plug-ins/1.10.20/i18n/German.json"
           {
