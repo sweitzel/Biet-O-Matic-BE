@@ -26,7 +26,7 @@ let popup = function () {
    */
   function registerEvents() {
     // listen to global events (received from other Browser window or background script)
-    browser.runtime.onMessage.addListener((request, sender) => {
+    browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
       //console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
       switch (request.action) {
         case 'ebayArticleUpdated':
@@ -59,6 +59,12 @@ let popup = function () {
               sender.tab.id,
               false
             );
+          }
+          break;
+        case 'isAutoBidEnabled':
+          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
+            console.debug("Browser Event isAutoBidEnabled received: sender=%O", sender);
+            return Promise.resolve($('#inpAutoBid').is(':checked'));
           }
           break;
       }
@@ -327,6 +333,7 @@ let popup = function () {
         autoBid: autoBidChecked,
         maxBid: maxBidValue
       };
+      // todo: maxBidValue cannot be null, or it will be removed
       updateRowMaxBid(row, maxBidValue, autoBidChecked);
       storeArticleInfo(data.articleId, info, tabId, true);
     });
@@ -350,7 +357,7 @@ let popup = function () {
     row.node().lastChild.childNodes.forEach((child) => {
       if (child.name === 'inpMaxBid') {
         maxBidInput = child;
-        if (maxBid !== null && !Number.isNaN(maxBid)) {
+        if (maxBid != null && !Number.isNaN(maxBid)) {
           maxBidInput.value = maxBid;
         }
       }
@@ -424,7 +431,7 @@ let popup = function () {
       console.warn("createFavicon() skipped (invalid color): title=%s, color=%s (%s)", title, color, typeof color);
       return undefined;
     }
-    let canvas = document.createElement('canvas');
+    const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 64;
     let ctx = canvas.getContext('2d');
     // background color
@@ -444,7 +451,7 @@ let popup = function () {
     ctx.fillText(acronym, 32, 38);
 
     // prepare icon as Data URL
-    let link = document.createElement('link');
+    const link = document.createElement('link');
     link.type = 'image/x-icon';
     link.rel = 'shortcut icon';
     link.href = canvas.toDataURL("image/x-icon");
@@ -502,6 +509,56 @@ let popup = function () {
     }
   }
 
+  // datable: render column articleBidPrice
+  function renderArticleBidPrice(data, type, row) {
+    if (typeof data !== 'undefined') {
+      //console.log("data=%O, type=%O, row=%O", data, type, row);
+      let currency = "EUR";
+      if (row.hasOwnProperty('articleCurrency')) {
+        currency = row.articleCurrency;
+      }
+      try {
+        let result = new Intl.NumberFormat('de-DE', {style: 'currency', currency: currency})
+          .format(data);
+        return type === "display" || type === "filter" ? result : data;
+      } catch (e) {
+        return data;
+      }
+    }
+  }
+
+  // datatable: render column articleMaxBid
+  function renderArticleMaxBid(data, type, row) {
+    console.log("renderArticleMaxBid data=%O, type=%O, row=%O", data, type, row);
+    let autoBid = false;
+    if (row.hasOwnProperty('articleAutoBid')) {
+      autoBid = row.articleAutoBid;
+    }
+
+    const divArticleMaxBid = document.createElement('div');
+    const inpMaxBid = document.createElement('input');
+    inpMaxBid.id = 'inpMaxBid_' + row.articleId;
+    inpMaxBid.type = 'number';
+    inpMaxBid.min = 0;
+    inpMaxBid.step = 0.5;
+
+    const labelAutoBid = document.createElement('label');
+    const chkAutoBid = document.createElement('input');
+    chkAutoBid.id = 'chkAutoBid_' + row.articleId;
+    chkAutoBid.type = 'checkbox';
+    chkAutoBid.style.width = '15px';
+    chkAutoBid.style.height = '15px';
+    chkAutoBid.style.verticalAlign = 'middle';
+    labelAutoBid.appendChild(chkAutoBid);
+    const spanAutoBid = document.createElement('span');
+    spanAutoBid.textContent = 'Aktiv';
+    labelAutoBid.appendChild(spanAutoBid);
+
+    divArticleMaxBid.appendChild(inpMaxBid);
+    divArticleMaxBid.appendChild(labelAutoBid);
+    return divArticleMaxBid.outerHTML;
+  }
+
   /*
    * MAIN
    */
@@ -517,8 +574,8 @@ let popup = function () {
       pt.table = $('#articles').DataTable({
         columns: [
           {
-            'data': 'articleId',
-            'visible': true,
+            data: 'articleId',
+            visible: true,
             /*render: function(data) {
               return '<img src="ebay.png"><p>'+data+'</p>';
             }*/
@@ -545,27 +602,23 @@ let popup = function () {
           },
           {
             data: 'articleBidPrice',
-            render: function (data, type, row) {
-              if (typeof data !== 'undefined') {
-                //console.log("data=%O, type=%O, row=%O", data, type, row);
-                let currency = "EUR";
-                if (row.hasOwnProperty('articleCurrency')) {
-                  currency = row.articleCurrency;
-                }
-                try {
-                  let result = new Intl.NumberFormat('de-DE', {style: 'currency', currency: currency})
-                    .format(data);
-                  return type === "display" || type === "filter" ? result : data;
-                } catch (e) {
-                  return data;
-                }
-              }
-            },
+            render: renderArticleBidPrice
           },
           {data: 'articleShippingCost', 'defaultContent': '0.00'},
           {data: 'articleAuctionState', 'defaultContent': ''},
           {
-            data: 'maxBid', 'defaultContent':
+            data: 'articleMaxBid',
+            render: renderArticleMaxBid,
+            defaultContent: 0
+          },
+          {
+            data: 'articleAutoBid',
+            visible: false,
+            defaultContent: false
+          },
+          {
+            data: 'maxBid',
+            defaultContent:
               '<input name="inpMaxBid" type="number" min="0" step="0.50" width="50">' +
               '<label>' +
               '<input type="checkbox" name="chkAutoBid" disabled="true" style="width: 15px; height: 15px; vertical-align: middle"/>' +

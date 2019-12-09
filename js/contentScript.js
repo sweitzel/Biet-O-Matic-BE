@@ -116,14 +116,7 @@
             .replace(/\n/g, "")
             .replace(/\s+/g, " ");
           //console.debug("Minimum Bid: %O", value);
-          let regex = /\s([A-Z]{2,3}(?:\s[$]?))([0-9, ]+)(?:.|,)([0-9]{2})\s/;
-          let result = [];
-          if (value.match(regex)) {
-            result = value.match(regex);
-            let p1 = result[2].replace(/,/, '');
-            let p2 = result[3];
-            value = parseFloat(`${p1}.${p2}`);
-          }
+          value = parsePriceString(value);
         } else if (key === "articleBidCount") {
           //console.debug("articleBidCount=%s", domEntry.textContent.trim());
           value = parseInt(domEntry.textContent.trim(), 10);
@@ -316,11 +309,19 @@
 
     // article current price
     // Note: the itemprop=price content is not refreshed, only the text!
+    /*
+     * Ebay automatically updates certain elements.
+     * The sooner the Article is ending, the faster the refresh occurs.
+     * We use this to update the price information, as well as trigger the bidding procedure.
+     */
     let articleBidPrice = document.getElementById('prcIsum_bidPrice');
     if (articleBidPrice != null) {
       let observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList') {
+            console.log("Mutation received %s: %d seconds left",
+              Date.now().toLocaleString( 'de-DE'),
+              (ebayArticleInfo.articleEndTime - Date.now())/1000);
             //console.debug("Biet-O-Matic: Attributes changed: type=%s old=%s, new=%s mut=%O",
             //  mutation.type, mutation.oldValue, mutation.target.textContent, mutation);
             let oldN = mutation.removedNodes;
@@ -328,18 +329,7 @@
             oldN=oldN[0];
             if (typeof oldN !== 'undefined' && oldN.textContent !== newN.textContent) {
               // price changed
-              let value = newN.textContent.trim();
-              value = value.replace(/\n/g, "");
-              value = value.replace(/\s+/g, " ");
-              let regex = /^([A-Z]{2,3}(?:\s[$]?))([0-9,]+)(?:.|,)([0-9]{2})$/;
-              let result = [];
-              if (value.match(regex)) {
-                result = value.match(regex);
-                let p1 = result[2].replace(/,/, '');
-                let p2 = result[3];
-                value = parseFloat(`${p1}.${p2}`);
-              }
-              ebayArticleInfo.articleBidPrice = value;
+              ebayArticleInfo.articleBidPrice = parsePriceString(newN.textContent);
               // find Ebay MaxBidId Input
               let maxBidInput = document.getElementById('MaxBidId');
               if (maxBidInput == null) {
@@ -353,7 +343,7 @@
                 detail: ebayArticleInfo
               });
             } else {
-              // send info to extension popup, it will simply refresh the the data
+              // send trigger to extension popup, so it can refresh the date (timeleft)
               browser.runtime.sendMessage({
                 action: 'ebayArticleRefresh',
               }).catch((e) => {
@@ -367,6 +357,21 @@
         childList: true
       });
     }
+  }
+
+  function parsePriceString(price) {
+    price = price
+      .replace(/\n/g, "")
+      .replace(/\s+/g, " ");
+    let regex = /([A-Z]{2,3}(?:\s[$]?))([0-9,]+)(?:.|,)([0-9]{2})/;
+    let result = [];
+    if (price.match(regex)) {
+      result = price.match(regex);
+      let p1 = result[2].replace(/,/, '');
+      let p2 = result[3];
+      price = parseFloat(`${p1}.${p2}`).toFixed(2);
+    }
+    return price;
   }
 
   /*
@@ -383,6 +388,8 @@
           console.log("updateMaxBidInfo failed to parse %O", maxBidInput.value);
           maxBidInput.value = info.maxBid.toString();
         }
+      } else {
+        info.maxBid = Number.parseFloat(maxBidInput.value);
       }
       if (autoBidInput != null) {
         if (info.autoBid != null) {
@@ -528,5 +535,11 @@
       updateMaxBidInfo(request.detail);
     }
   });
+
+  // TODO remove
+  browser.runtime.sendMessage({ action: 'isAutoBidEnabled' })
+    .then((result) => {
+      console.log("Result: %O", result);
+    });
 
 })();
