@@ -170,7 +170,7 @@
       // new Date(year, monthIndex [, day [, hour [, minutes [, seconds [, milliseconds]]]]]);
       let date = new Date(parseInt(m[3], 10), months[m[2]],
         parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10), parseInt(m[6],10));
-      console.debug("Biet-O-Matic: Input Date=%O, regexMatch=%O, date=%O", text, m, date);
+      //console.debug("Biet-O-Matic: Input Date=%O, regexMatch=%O, date=%O", text, m, date);
       return date.valueOf();
     } else {
       console.warn("Biet-O-Matic: Unable to parse date from Input Date=%O", text);
@@ -234,23 +234,24 @@
   /*
    * Activate the auto bid button if:
    * - a value has been entered in MaxBidId Input field
-   * - the value is higher than the current price of the article
+   * - the value is higher than the minimum or current price of the article
    */
-  function activateAutoBidButton(maxBidInputValue) {
-    // TODO check https://www.ebay.de/help/buying/bidding/automatisches-bietsystem-bei-ebay-maximalgebot?id=4014
+  function activateAutoBidButton(maxBidValue, minBidValue) {
     let buttonInput = document.getElementById('BomAutoBid');
     if (buttonInput == null) {
       console.warn("ButtonInput invalid - shouldnt happen");
       return;
     }
     buttonInput.disabled = true;
-    // if no maxBid entered or maxBid < (curPrice + 0.50), then autoBid button disabled (cannot be activated)
-    if (!Number.isNaN(maxBidInputValue) && maxBidInputValue > ebayArticleInfo.articleBidPrice) {
+
+    // if no maxBid entered or maxBid < minBid, then autoBid button disabled (cannot be activated)
+    if ((minBidValue *1 >= ebayArticleInfo.articleBidPrice && maxBidValue *1 < minBidValue *1) ||
+      maxBidValue *1 <= ebayArticleInfo.articleBidPrice) {
       // no bid, or bid too low
-      buttonInput.disabled = false;
-    } else {
       buttonInput.disabled = true;
       buttonInput.checked = false;
+    } else {
+      buttonInput.disabled = false;
     }
   }
 
@@ -273,13 +274,24 @@
           // replace , with .
           let maxBidInputValue = maxBidInputNew.value.replace(/,/, '.');
           maxBidInputValue = Number.parseFloat(maxBidInputValue);
-          activateAutoBidButton(maxBidInputValue);
+          ebayArticleInfo.articleMaxBid = maxBidInputValue;
+          // update minimumbid
+          let minBidValue = null;
+          if (maxBidInputNew.getAttribute('aria-label') != null) {
+            minBidValue = maxBidInputNew.getAttribute('aria-label')
+              .replace(/\n/g, "")
+              .replace(/\s+/g, " ");
+            minBidValue = parsePriceString(minBidValue);
+            ebayArticleInfo.articleMinimumBid = minBidValue;
+          }
+          activateAutoBidButton(maxBidInputValue, minBidValue);
           // inform popup
           browser.runtime.sendMessage({
             action: 'ebayArticleMaxBidUpdated',
             detail: {
               maxBid: maxBidInputValue,
-              autoBid: bomAutoBidNew.checked
+              autoBid: bomAutoBidNew.checked,
+              minBid: minBidValue
             }
           });
         }
@@ -336,7 +348,16 @@
                 console.warn("Biet-O-Matic: Cannot find MaxBidId input!");
                 return;
               }
-              activateAutoBidButton(maxBidInput.value);
+              // update minimumbid
+              let minBidValue = null;
+              if (maxBidInput.getAttribute('aria-label') != null) {
+                minBidValue = maxBidInput.getAttribute('aria-label')
+                  .replace(/\n/g, "")
+                  .replace(/\s+/g, " ");
+                minBidValue = parsePriceString(minBidValue);
+                ebayArticleInfo.articleMinimumBid = minBidValue;
+              }
+              activateAutoBidButton(maxBidInput.value, minBidValue);
               // send info to extension popup about new price
               browser.runtime.sendMessage({
                 action: 'ebayArticleUpdated',
@@ -371,7 +392,7 @@
       let p2 = result[3];
       price = parseFloat(`${p1}.${p2}`).toFixed(2);
     }
-    return price;
+    return Number.parseFloat(price.toString());
   }
 
   /*
@@ -503,7 +524,7 @@
 
   let body = document.getElementById("Body");
   if (body === null) {
-    throw new Error("Biet-O-Mat: skipping on this page; no Body element.");
+    throw new Error("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
   }
   let itemType = body.getAttribute("itemtype");
   if ( itemType === null ) {

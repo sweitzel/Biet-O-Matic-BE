@@ -126,7 +126,7 @@ let popup = function () {
     - if if table, update the entry
     - also complement the date with info from DB
   */
-  function addOrUpdateArticle(tab, info) {
+  async function addOrUpdateArticle(tab, info) {
     if (!info.hasOwnProperty('articleId')) {
       return;
     }
@@ -134,6 +134,39 @@ let popup = function () {
     let articleId = info.articleId;
     console.debug('Biet-O-Mat: addOrUpdateArticle(%s) tab=%O, info=%O, row=%O', info.articleId, tab, info, row);
     info.tabId = tab.id;
+
+    // complement with DB info
+    let maxBid = null;
+    let autoBid = false;
+    let result = await browser.storage.sync.get(articleId);
+    if (Object.keys(result).length === 1) {
+      let storInfo = result[articleId];
+      let data = row.data();
+      console.debug("Biet-O-Mat: Found info for Article %s in storage: %O", articleId, result);
+      // maxBid
+      if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null) {
+        if (typeof storInfo.maxBid === 'string') {
+          maxBid = Number.parseFloat(storInfo.maxBid).toFixed(2);
+        } else {
+          maxBid = storInfo.maxBid.toFixed(2);
+        }
+      }
+      // autoBid
+      if (storInfo.hasOwnProperty('autoBid')) {
+        autoBid = storInfo.autoBid;
+      }
+      // if articleEndTime changed, update it in storage
+      if (storInfo.hasOwnProperty('endTime')) {
+        if (storInfo.endTime !== info.articleEndTime) {
+          storInfo.endTime = info.articleEndTime;
+          console.log("Biet-O-Matic: Updating article %s end time to %s", articleId, storInfo.endTime);
+          storeArticleInfo(articleId, storInfo);
+        }
+      }
+    }
+    info.articleMaxBid = maxBid;
+    info.articleAutoBid = autoBid;
+
     // article already in table
     if (row.length === 0 || typeof row === 'undefined') {
       // article not in table - simply add it
@@ -146,37 +179,6 @@ let popup = function () {
     // assign again, the row might have been just initialized
     row = pt.table.row(`#${tab.id}`);
 
-    // complement with DB info
-    updateRowMaxBid(row, null, null);
-    browser.storage.sync.get(articleId).then((result) => {
-      if (Object.keys(result).length === 1) {
-        let maxBid = null;
-        let autoBid = null;
-        let storInfo = result[articleId];
-        console.debug("Biet-O-Mat: Found info for Article %s in storage: %O", articleId, result);
-        // maxBid
-        if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null) {
-          if (typeof storInfo.maxBid === 'string') {
-            maxBid = Number.parseFloat(storInfo.maxBid).toFixed(2);
-          } else {
-            maxBid = storInfo.maxBid.toFixed(2);
-          }
-        }
-        // autoBid
-        if (storInfo.hasOwnProperty('autoBid')) {
-          autoBid = storInfo.autoBid;
-        }
-        updateRowMaxBid(row, maxBid, autoBid);
-        // if articleEndTime changed, store it
-        if (storInfo.hasOwnProperty('endTime')) {
-          if (storInfo.endTime !== row.data().articleEndTime) {
-            storInfo.endTime = row.data().articleEndTime;
-            console.log("Biet-O-Matic: Updating article %s end time to %s", articleId, storInfo.endTime);
-            storeArticleInfo(articleId, storInfo);
-          }
-        }
-      }
-    });
     // add highlight colors for expired auctions
     highlightExpired(row, info);
   }
@@ -204,7 +206,7 @@ let popup = function () {
       console.debug("addArticle skipped for tab %O, no info");
       return;
     }
-    row.data(info).draw();
+    row.data(info).invalidate().draw();
     // todo animate / highlight changed cell or at least the row
   }
 
@@ -285,7 +287,8 @@ let popup = function () {
     }
     browser.storage.sync.set({[articleId]: info})
       .then((e) => {
-        console.debug('Biet-O-Mat: Successfully saved Article %s info to sync-storage: %O, tab %O', articleId, info, tabId);
+        console.debug('Biet-O-Mat: storeArticleInfo(%s) Successfully saved Article info to sync-storage: %O, tab %O',
+          articleId, info, tabId);
         if (informTab) {
           // send update to article tab
           browser.tabs.sendMessage(tabId, {
@@ -303,47 +306,39 @@ let popup = function () {
    */
   function configureUi() {
     // maxBid input field
-    $('.dataTable').on('change', 'tr input', function (e) {
-      console.debug('Biet-O-Matic: configureUi() INPUT Event e=%O, data=%O', e, this);
-      // TODO: Dont like that - fails if HTML is changed
-      let tr = this.parentNode.parentNode;
-      if (tr.nodeName !== 'TR') {
-        tr = tr.parentNode;
-        if (tr.nodeName !== 'TR') {
-          console.warn('Biet-O-Mat: configureUi() missing parentNode id, %O', tr);
-          return;
-        }
-      }
-      let tabId = parseInt(tr.id, 10);
-      let row = pt.table.row(`#${tabId}`);
+    $('.dataTable').on('change', 'tr input', function () {
+      //console.debug('Biet-O-Matic: configureUi() INPUT Event e=%O, data=%O, val=%s', e, this, this.value);
+      // parse articleId from id of both inputs
+      let articleId = this.id
+        .replace('chkAutoBid_', '')
+        .replace('inpMaxBid_', '');
+      // determine row by articleId
+      const row = pt.table.row(`:contains(${articleId})`);
       let data = row.data();
 
-      let maxBidValue = null;
-      let autoBidChecked = null;
-      if (this.name === 'inpMaxBid') {
+      if (this.id.startsWith('inpMaxBid_')) {
         // maxBid was entered
-        maxBidValue = Number.parseFloat(this.value);
-      } else if (this.name === 'chkAutoBid') {
+        data.articleMaxBid = Number.parseFloat(this.value);
+      } else if (this.id.startsWith('chkAutoBid_')) {
         // autoBid checkbox was clicked
-        autoBidChecked = this.checked;
+        data.articleAutoBid = this.checked;
       }
       // store info when maxBid updated
       let info = {
         endTime: data.articleEndTime,
-        autoBid: autoBidChecked,
-        maxBid: maxBidValue
+        maxBid: data.articleMaxBid,
+        autoBid: data.articleAutoBid
       };
-      // todo: maxBidValue cannot be null, or it will be removed
-      updateRowMaxBid(row, maxBidValue, autoBidChecked);
-      storeArticleInfo(data.articleId, info, tabId, true);
+      updateRowMaxBid(row, data.articleMaxBid, data.articleAutoBid);
+      storeArticleInfo(data.articleId, info, data.tabId, true);
     });
   }
 
   /*
    * Updates the maxBid input and autoBid checkbox for a given row
+   * Note: the update can either be triggered from the article page, or via user editing on the datatable
    */
   function updateRowMaxBid(row, maxBid, autoBid) {
-    //row.invalidate();
     let data = row.data();
     console.debug('Biet-O-Mat: updateRowMaxBid(%s) row=%O, maxBid=%O (%s), autoBid=%O',
       data.articleId, data, maxBid, typeof maxBid, autoBid);
@@ -352,53 +347,17 @@ let popup = function () {
       return;
     }
     // maxBid
-    let maxBidInput = null;
-    // get article row and update autoBid checkbox
-    row.node().lastChild.childNodes.forEach((child) => {
-      if (child.name === 'inpMaxBid') {
-        maxBidInput = child;
-        if (maxBid != null && !Number.isNaN(maxBid)) {
-          maxBidInput.value = maxBid;
-        }
-      }
-    });
+    if (maxBid != null && !Number.isNaN(maxBid)) {
+      data.articleMaxBid = maxBid;
+    }
     // autoBid
-    let autoBidCheckbox = null;
-    // get article row and update autoBid checkbox
-    row.node().lastChild.childNodes.forEach((child) => {
-      if (child.nodeName === 'LABEL') {
-        autoBidCheckbox = child.children.chkAutoBid;
-        if (autoBid != null) {
-          autoBidCheckbox.checked = autoBid;
-        }
-      }
-    });
-
-    // maxBid was entered, check if the autoBid field can be enabled
-    if (data.hasOwnProperty('articleBidPrice')) {
-      // if the maxBid is > current Price, unlock the autoBod checkbox
-      if (maxBidInput !== null && maxBidInput.valueAsNumber > data.articleBidPrice) {
-        if (autoBidCheckbox !== null) {
-          autoBidCheckbox.disabled = false;
-        }
-      } else if (autoBidCheckbox !== null && autoBidCheckbox.checked === false) {
-        // only deactivate checkbox if no active bid is defined
-        autoBidCheckbox.disabled = true;
-      }
-
-      // if the maxBid is < current Price, add highlight color
-      if (maxBidInput === null || maxBidInput.valueAsNumber > data.articleBidPrice) {
-        maxBidInput.classList.remove('bomHighlightBorder');
-      } else {
-        maxBidInput.classList.add('bomHighlightBorder');
-      }
+    if (autoBid != null) {
+      data.articleAutoBid = autoBid;
     }
 
-    // disable maxBid/autoBid if article ended
-    if ((data.articleEndTime - Date.now()) <= 0) {
-      maxBidInput.disabled = true;
-      autoBidCheckbox.disabled = true;
-    }
+    // invalidate data, redraw
+    // todo selective redraw for parts of the row
+    row.invalidate('data').draw();
   }
 
   //region Favicon Handling
@@ -527,25 +486,35 @@ let popup = function () {
     }
   }
 
-  // datatable: render column articleMaxBid
+  /*
+   * datatable: render column articleMaxBid
+   * - input:number for maxBid
+   * - label for autoBid and in it:
+   * - input:checkbox for autoBid
+   */
   function renderArticleMaxBid(data, type, row) {
-    console.log("renderArticleMaxBid data=%O, type=%O, row=%O", data, type, row);
+    if (type !== 'display' && type !== 'filter') return data;
+    //console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
     let autoBid = false;
     if (row.hasOwnProperty('articleAutoBid')) {
       autoBid = row.articleAutoBid;
     }
-
+    let maxBid = 0;
+    if (data != null) {
+      maxBid = data;
+    }
     const divArticleMaxBid = document.createElement('div');
     const inpMaxBid = document.createElement('input');
     inpMaxBid.id = 'inpMaxBid_' + row.articleId;
     inpMaxBid.type = 'number';
-    inpMaxBid.min = 0;
-    inpMaxBid.step = 0.5;
-
+    inpMaxBid.min = '0';
+    inpMaxBid.step = '0.5';
+    inpMaxBid.defaultValue = maxBid;
     const labelAutoBid = document.createElement('label');
     const chkAutoBid = document.createElement('input');
     chkAutoBid.id = 'chkAutoBid_' + row.articleId;
     chkAutoBid.type = 'checkbox';
+    chkAutoBid.defaultChecked = autoBid;
     chkAutoBid.style.width = '15px';
     chkAutoBid.style.height = '15px';
     chkAutoBid.style.verticalAlign = 'middle';
@@ -554,9 +523,51 @@ let popup = function () {
     spanAutoBid.textContent = 'Aktiv';
     labelAutoBid.appendChild(spanAutoBid);
 
+    // maxBid was entered, check if the autoBid field can be enabled
+    if (row.hasOwnProperty('articleBidPrice') && row.articleBidPrice != null) {
+      // if the maxBid is > current Price, unlock the autoBid checkbox
+      // also minBid must be > articleBid (could be stale info)
+      if (row.hasOwnProperty('articleMinimumBid') &&
+        (row.hasOwnProperty('articleBidPrice') && row.articleMinimumBid *1 > row.articleBidPrice *1)) {
+        chkAutoBid.disabled = false;
+      } else if (row.hasOwnProperty('articleBidPrice') && row.articleMaxBid *1 > row.articleBidPrice *1) {
+        // fallback if the minimum bid price is not set by article page
+        chkAutoBid.disabled = false;
+      } else if (chkAutoBid.checked === false) {
+        // only deactivate checkbox if no active bid is defined
+        chkAutoBid.disabled = true;
+      }
+      // if the maxBid is < minimum bidding price or current Price, add highlight color
+      // *1 to ensure all values are numbers
+      if ((row.articleMinimumBid *1 >= row.articleBidPrice *1 && row.articleMaxBid *1 < row.articleMinimumBid *1) ||
+        row.articleMaxBid *1 <= row.articleBidPrice *1) {
+        inpMaxBid.classList.add('bomHighlightBorder');
+      } else {
+        inpMaxBid.classList.remove('bomHighlightBorder');
+      }
+    }
+    // disable maxBid/autoBid if article ended
+    if (row.articleEndTime - Date.now() <= 0) {
+      //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
+      inpMaxBid.disabled = true;
+      chkAutoBid.disabled = true;
+    }
     divArticleMaxBid.appendChild(inpMaxBid);
     divArticleMaxBid.appendChild(labelAutoBid);
     return divArticleMaxBid.outerHTML;
+  }
+
+  /*
+   * Return settings for the current window
+   * autoBidEnabled: Is autoBid enabled for this window?
+   * bidMoment: When to execute the bid, early (10s) or late (2s)
+   * howMany: How many articles to bid for this window (one or all)
+   *
+   */
+  function get_settings() {
+    let settings = {};
+    settings.autoBidEnabled = $('#inpAutoBid').is(':checked');
+    return settings;
   }
 
   /*
@@ -589,11 +600,11 @@ let popup = function () {
             data: 'articleEndTime',
             render: function (data, type, row) {
               if (typeof data !== 'undefined') {
+                if (type !== 'display' && type !== 'filter') return data;
                 let timeLeft = moment(data);  // jshint ignore:line
                 moment.relativeTimeThreshold('ss', 0);
                 timeLeft.locale('de');
-                let result = `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
-                return type === "display" || type === "filter" ? result : data;
+                return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
               } else {
                 return "unbegrenzt";
               }
@@ -607,29 +618,22 @@ let popup = function () {
           {data: 'articleShippingCost', 'defaultContent': '0.00'},
           {data: 'articleAuctionState', 'defaultContent': ''},
           {
+            data: 'articleAutoBid',
+            visible: false,
+            defaultContent: "false"
+          },
+          {
             data: 'articleMaxBid',
             render: renderArticleMaxBid,
             defaultContent: 0
-          },
-          {
-            data: 'articleAutoBid',
-            visible: false,
-            defaultContent: false
-          },
-          {
-            data: 'maxBid',
-            defaultContent:
-              '<input name="inpMaxBid" type="number" min="0" step="0.50" width="50">' +
-              '<label>' +
-              '<input type="checkbox" name="chkAutoBid" disabled="true" style="width: 15px; height: 15px; vertical-align: middle"/>' +
-              '<span>Aktiv</span>' +
-              '</label>'
-          },
+          }
         ],
         order: [[2, "asc"]],
         columnDefs: [
-          {"searchable": false, "orderable": false, "targets": [4, 5]},
-          {"width": "150px", "targets": [5, 6]}
+          {"searchable": false, "orderable": false, "targets": [4, 5, 6, 7]},
+          { "type": "num", "targets": 7 },
+          {"width": "100px", "targets": [0, 3, 4]},
+          {"width": "220px", "targets": [2, 5, 6, 7]},
         ],
         searchDelay: 400,
         rowId: 'tabId',
