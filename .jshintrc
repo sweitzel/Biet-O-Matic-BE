@@ -1,6 +1,7 @@
 {
   "globals": {
-    "browser": true
+    "browser": true,
+    "moment": true
   },
   "esversion": 8,
   "undef": true,

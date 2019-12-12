@@ -15,12 +15,17 @@
 
   // check if the contentScript was already loaded (each Tab will get its own window object)
   // return value will be passed back to executeScript
-  if (window.hasRun === true)
+  if (window.hasRun === true) {
+    console.debug("Biet-O-Mat: RELOADED EXTENSION, window=%O", window);
     return true;
+  }
   window.hasRun = true;
 
   // Object containing determined Information from Ebay Article Page
-  let ebayArticleInfo = Object.create(null);
+  let ebayArticleInfo = {};
+
+  // array with performance information (related to bidding)
+  let perfInfo = [];
 
   /*
    * Parse information from Ebay Article page
@@ -37,7 +42,9 @@
       ],
       ['articleBidPrice', [
         '#prcIsum_bidPrice',           // normal running article
-        '#mainContent > div:nth-child(1) > table > tbody > tr:nth-child(6) > td > div > div:nth-child(2) > div.u-flL.w29.vi-price-np > span',
+        '#mainContent > div:nth-child(1) > table > tbody > tr:nth-child(6) > td > div > div:nth-child(2) > div.u-flL.w29.vi-price-np > span', // ended auction
+      ]],
+      ['articleBuyPrice', [
         '#prcIsum'                     // sofortkauf
       ]],
       ['articlePaymentMethods', ['#payDet1']],
@@ -62,36 +69,19 @@
         if (key === "articleEndTime") {
           value = parseEndTime(domEntry);
         } else if (key === "articleBidPrice") {
-          // get price
+          // attempt to get price lazily from the content attribute
           let price = domEntry.getAttribute("content");
           let currency = null;
           if (price != null && typeof price !== 'undefined') {
             value = parseFloat(price);
           } else {
-            // use regular expression to parse info, e.g.
-            // US $1,000.12
-            // GBP 26.00
-            // EUR 123,00
-            value = domEntry.textContent.trim();
-            value = value.replace(/\n/g, "");
-            value = value.replace(/\s+/g, " ");
-            let regex = /^([A-Z]{2,3}(?:\s[$]?))([0-9,]+)(?:.|,)([0-9]{2})$/;
-            let result = [];
-            if (value.match(regex)) {
-              result = value.match(regex);
-              let p1 = result[2].replace(/,/, '');
-              let p2 = result[3];
-              value = parseFloat(`${p1}.${p2}`);
-              currency = result[1].trim();
-              if (currency === "US $") {
-                currency = "USD";
-              }
-            } else {
-              console.log('Biet-O-Matic: parseInfoEntry(%s) failed domEntry=%O, regex=%O', key, domEntry, regex);
-              value = '-1';
+            let p = parsePriceString(domEntry.textContent.trim());
+            if (p != null) {
+              currency = p.currency;
+              value = p.price;
             }
           }
-          // get currency itemprop=priceCurrency
+          // get currency from itemprop=priceCurrency
           if (currency == null) {
             currency = document.querySelectorAll('[itemprop="priceCurrency"]');
             if (currency.length === 1) {
@@ -100,6 +90,14 @@
           } else {
             // determined above
             ebayArticleInfo.articleCurrency = currency;
+          }
+        } else if (key === "articleBuyPrice") {
+          // attempt to get price lazily from the content attribute
+          let price = domEntry.getAttribute("content");
+          if (price != null && typeof price !== 'undefined') {
+            value = parseFloat(price);
+          } else {
+            value = parsePriceString(domEntry.textContent.trim()).price;
           }
         } else if (key === "articleDescription") {
           // some articles have long description, separated by <wbr> - so concat the strings
@@ -116,7 +114,7 @@
             .replace(/\n/g, "")
             .replace(/\s+/g, " ");
           //console.debug("Minimum Bid: %O", value);
-          value = parsePriceString(value);
+          value = parsePriceString(value).price;
         } else if (key === "articleBidCount") {
           //console.debug("articleBidCount=%s", domEntry.textContent.trim());
           value = parseInt(domEntry.textContent.trim(), 10);
@@ -243,9 +241,9 @@
       return;
     }
     buttonInput.disabled = true;
-
     // if no maxBid entered or maxBid < minBid, then autoBid button disabled (cannot be activated)
-    if ((minBidValue *1 >= ebayArticleInfo.articleBidPrice && maxBidValue *1 < minBidValue *1) ||
+    if (Number.isNaN(maxBidValue) ||
+      (minBidValue *1 >= ebayArticleInfo.articleBidPrice && maxBidValue *1 < minBidValue *1) ||
       maxBidValue *1 <= ebayArticleInfo.articleBidPrice) {
       // no bid, or bid too low
       buttonInput.disabled = true;
@@ -264,9 +262,9 @@
   function monitorChanges() {
     let maxBidInput = document.getElementById('MaxBidId');
     let bomAutoBid = document.getElementById('BomAutoBid');
-    // max bid
+    // max bid input changed?
     if (maxBidInput != null) {
-      maxBidInput.addEventListener('input', (e) => {
+      maxBidInput.addEventListener('change', (e) => {
         let bomAutoBidNew = document.getElementById('BomAutoBid');
         let maxBidInputNew = document.getElementById('MaxBidId');
         if (maxBidInputNew != null) {
@@ -275,14 +273,23 @@
           let maxBidInputValue = maxBidInputNew.value.replace(/,/, '.');
           maxBidInputValue = Number.parseFloat(maxBidInputValue);
           ebayArticleInfo.articleMaxBid = maxBidInputValue;
-          // update minimumbid
+          // update minimum bid
           let minBidValue = null;
           if (maxBidInputNew.getAttribute('aria-label') != null) {
             minBidValue = maxBidInputNew.getAttribute('aria-label')
               .replace(/\n/g, "")
               .replace(/\s+/g, " ");
-            minBidValue = parsePriceString(minBidValue);
+            minBidValue = parsePriceString(minBidValue).price;
             ebayArticleInfo.articleMinimumBid = minBidValue;
+          }
+          // check if bid > buy-now price (sofortkauf), then we update the maxBid with buyPrice
+          if (ebayArticleInfo.hasOwnProperty('articleBuyPrice') && maxBidInputValue >= ebayArticleInfo.articleBuyPrice) {
+            console.log("Biet-O-Matic: monitorChanges() updated maxBid %s to %s (sofortkauf price)",
+              maxBidInputValue, ebayArticleInfo.articleBuyPrice);
+            // set to 1 cent less, to prevent unfriendly redirection
+            maxBidInputValue = (Number.parseFloat(ebayArticleInfo.articleBuyPrice.toString()) - 0.01);
+            maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE');
+            ebayArticleInfo.articleMaxBid = maxBidInputValue;
           }
           activateAutoBidButton(maxBidInputValue, minBidValue);
           // inform popup
@@ -293,11 +300,13 @@
               autoBid: bomAutoBidNew.checked,
               minBid: minBidValue
             }
+          }).catch((e) => {
+            console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
           });
         }
       });
     }
-    // BomAutoBid
+    // BomAutoBid input checked?
     if (bomAutoBid != null) {
       bomAutoBid.addEventListener('change', (e) => {
         let bomAutoBidNew = document.getElementById('BomAutoBid');
@@ -310,12 +319,10 @@
               maxBid: parseFloat(maxBidInputNew.value),
               autoBid: bomAutoBidNew.checked
             }
+          }).catch((e) => {
+            console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
           });
         }
-        // TEST ONLY
-        /*if (bomAutoBidNew.checked) {
-          doBid();
-        }*/
       });
     }
 
@@ -331,17 +338,24 @@
       let observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList') {
-            console.log("Mutation received %s: %d seconds left",
-              Date.now().toLocaleString( 'de-DE'),
-              (ebayArticleInfo.articleEndTime - Date.now())/1000);
-            //console.debug("Biet-O-Matic: Attributes changed: type=%s old=%s, new=%s mut=%O",
-            //  mutation.type, mutation.oldValue, mutation.target.textContent, mutation);
+            let timeLeftInSeconds = (ebayArticleInfo.articleEndTime - Date.now()) / 1000;
+            if (timeLeftInSeconds <= 10) {
+              console.log("Mutation received: %d seconds left", timeLeftInSeconds);
+              doBid()
+                .then(() => {
+                  // todo ?
+                })
+                .catch((e) => {
+                  console.info("Biet-O-Matic: doBid() was aborted: %O", JSON.stringify(e));
+                  sendArticleLog(e);
+                });
+            }
             let oldN = mutation.removedNodes;
             let newN = mutation.target;
             oldN=oldN[0];
             if (typeof oldN !== 'undefined' && oldN.textContent !== newN.textContent) {
               // price changed
-              ebayArticleInfo.articleBidPrice = parsePriceString(newN.textContent);
+              ebayArticleInfo.articleBidPrice = parsePriceString(newN.textContent).price;
               // find Ebay MaxBidId Input
               let maxBidInput = document.getElementById('MaxBidId');
               if (maxBidInput == null) {
@@ -354,7 +368,7 @@
                 minBidValue = maxBidInput.getAttribute('aria-label')
                   .replace(/\n/g, "")
                   .replace(/\s+/g, " ");
-                minBidValue = parsePriceString(minBidValue);
+                minBidValue = parsePriceString(minBidValue).price;
                 ebayArticleInfo.articleMinimumBid = minBidValue;
               }
               activateAutoBidButton(maxBidInput.value, minBidValue);
@@ -362,6 +376,8 @@
               browser.runtime.sendMessage({
                 action: 'ebayArticleUpdated',
                 detail: ebayArticleInfo
+              }).catch((e) => {
+                console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %O", e);
               });
             } else {
               // send trigger to extension popup, so it can refresh the date (timeleft)
@@ -380,10 +396,22 @@
     }
   }
 
+  /*
+   * Parse price from text
+   * returns {currency: "EUR", price: 0.01}
+   */
   function parsePriceString(price) {
+    let currency = null;
+    if (price == null) {
+      return null;
+    }
     price = price
       .replace(/\n/g, "")
       .replace(/\s+/g, " ");
+    // use regular expression to parse info, e.g.
+    // US $1,000.12
+    // GBP 26.00
+    // EUR 123,00
     let regex = /([A-Z]{2,3}(?:\s[$]?))([0-9,]+)(?:.|,)([0-9]{2})/;
     let result = [];
     if (price.match(regex)) {
@@ -391,8 +419,15 @@
       let p1 = result[2].replace(/,/, '');
       let p2 = result[3];
       price = parseFloat(`${p1}.${p2}`).toFixed(2);
+      currency = result[1].trim();
+      if (currency === "US $") {
+        currency = "USD";
+      }
     }
-    return Number.parseFloat(price.toString());
+    return {
+      price: Number.parseFloat(price.toString()),
+      currency: currency
+    };
   }
 
   /*
@@ -422,87 +457,203 @@
   }
 
   /*
-   * Perform a Bid for an Article
-   * - perform bid only if autoBid is checked
-   * Note: Time checking has to be performed externally!
+   * Trigger the Bid for an Article
+   * - perform bid only if autoBid is checked (window + article) - this will also be repeated at the very end!
+   * - Trigger time checking has to be performed externally!
+   * - The bid is separated in two phases:
+   *   Phase1: Prepare Bid (~10 seconds before end) -> inform popup setArticleStatus "Gebotsbgabe vorbereiten."
+   *   Phase2: Confirm Bid (1..3 seconds before end) -> inform popup setArticleStatus "Gebotsabgabe erfolgt."
    */
   async function doBid(test = true) {
-    const maxBidInput = document.getElementById('MaxBidId');
-    const autoBidInput = document.getElementById('BomAutoBid');
-    if (autoBidInput == null || autoBidInput.checked === false) {
-      console.log("Biet-O-Matic: doBid() aborted, autoBid is off, %O", autoBidInput);
-      return;
-    }
-
-    console.log("Biet-O-Matic: Performing bid for article %s: Bid=%s", ebayArticleInfo.articleId, maxBidInput.value);
-    // press bid button
-    const bidButton =  document.getElementById('bidBtn_btn');
-    if (bidButton == null) {
-      console.warn("Biet-O-Matic: Article %s - Unable to get Bid Button!", ebayArticleInfo.articleId);
-      return;
-    }
-
-    /*
-     * We use a Mutation Observer to wait for the Modal 'vilens-modal-wrapper' to open
-     * after the Bid Button was clicked
-     * Use timeout: 3000ms
-     * Uses: https://stackoverflow.com/questions/7434685/how-can-i-be-notified-when-an-element-is-added-to-the-page
-     *
-     * Two considered alternative results:
-     * a) Bid was too low
-     * b) Bid was high enough still and we need to confirm
-     *
-     * Note: If not logged in, here the page will redirect to signin and terminate the Content Script!
-     */
-
-    // initiate bid
-    bidButton.click();
-
-    // wait for modal to open: vilens-modal-wrapper
-    let modalBody = await waitFor('#MODAL_BODY')
-      .catch((e) => {
-        console.warn("Biet-O-Matic: Waiting for Bidding Modal timed out: %s", e.toString());
-      });
-    // modal close button
-    const closeButton = document.querySelector('.vilens-modal-close');
-
-    const statusMsg = document.getElementById('STATUS_MSG');
-    //console.log("Status: obj=%O, msg=%s", statusMsg, statusMsg.textContent);
-    // e.g. 'Bieten Sie mindestens EUR 47,50.'
-
-    // some bidding issue, send status to popup (keep modal open, in case user wants to manually correct bid)
-    if (statusMsg != null) {
-      console.log("Biet-O-Matic: Bidding failed: Error reported by eBay: %s", statusMsg.textContent);
-      return;
-    }
-
-    // get confirm button
-    const confirmButton = document.getElementById('confirm_button');
-    if (confirmButton == null) {
-      console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
-      return;
-    }
-
-    // Note: After closing the modal, the page will reload and the content script reinitialize!
-
-    if (test) {
-      // close modal
-      if (closeButton != null) {
-        closeButton.click();
+    let perfSnapshot = [];
+    storePerfInfo("Initialisierung");
+    try {
+      const maxBidInput = document.getElementById('MaxBidId');
+      const autoBidInput = document.getElementById('BomAutoBid');
+      // ensure article autoBid is checked
+      if (autoBidInput == null || autoBidInput.checked === false) {
+        console.debug("Biet-O-Matic: doBid() aborted, Article autoBid is off, %O", autoBidInput);
+        throw {
+          component: "Bietvorgang",
+          level: "Abbruch",
+          message: "Automatisches bieten für Artikel inaktiv"
+        };
       }
-      // send info to popup about (almost) successful bid
-    } else {
-      // confirm the bid
-      console.log("Biet-O-Matic: Bid submitted for Article %s", ebayArticleInfo.articleId);
-      // send info to popup
+      // ensure window autoBid is checked
+      let settings = await browser.runtime.sendMessage({ action: 'getWindowSettings' });
+      if (typeof settings === 'undefined' || !settings.hasOwnProperty('autoBidEnabled' )) {
+        console.warn("autoBidEnabled not in settings!? o=%O settings=%s:%s, %s", settings, typeof settings, JSON.stringify(settings), settings.autoBidEnabled);
+        throw {
+          component: "Bietvorgang",
+          level: "Interner Fehler",
+          message: "Konnte autoBidEnabled Option nicht prüfen"
+        };
+      } else if (settings.autoBidEnabled === false) {
+        console.debug("Biet-O-Matic: doBid() aborted, Window autoBid is off (settings=%O)", settings);
+        throw {
+          component: "Bietvorgang",
+          level: "Abbruch",
+          message: "Automatisches bieten für Fenster inaktiv"
+        };
+      }
+      // set bidIsRunning, because the mutation observer will retrigger doBid
+      // we want to ensure checking for autoBidEnabled again, in case its enabled on the last second
+      if (ebayArticleInfo.hasOwnProperty('bidIsRunning')) {
+        ebayArticleInfo.bidIsRunning++;
+      } else {
+        ebayArticleInfo.bidIsRunning = 0;
+      }
+      if (ebayArticleInfo.bidIsRunning > 0) {
+        return;
+      }
+
+      //region The following will ensure that the bid procedure will not be executed twice
+      let result = browser.storage.sync.get(ebayArticleInfo.articleId);
+      if (Object.keys(result).length === 1) {
+        let storInfo = result[ebayArticleInfo.articleId];
+        console.log("XXX2 lockBidProcessIfNotAlreadyLocked %O x=%s", storInfo, storInfo.bidIsRunning);
+        if (storInfo.hasOwnProperty('bidIsRunning') && storInfo.bidIsRunning) {
+          throw {
+            component: "Bietvorgang",
+            level: "Abbruch",
+            message: "Es wurde bereits geboten."
+          };
+        }
+      }
+      browser.runtime.sendMessage({
+        action: 'lockBidProcess',
+        detail: {
+          articleId: ebayArticleInfo.articleId,
+          locked: true
+        },
+      });
+      //endregion
+
+      storePerfInfo("Phase1: Gebotsvorbereitung");
+      console.log("Biet-O-Matic: Performing bid for article %s: maxBid=%s", ebayArticleInfo.articleId, maxBidInput.value);
+      // press bid button
+      const bidButton =  document.getElementById('bidBtn_btn');
+      if (bidButton == null) {
+        console.warn("Biet-O-Matic: Article %s - Unable to get Bid Button!", ebayArticleInfo.articleId);
+        throw {
+          component: "Bietvorgang",
+          level: "Interner Fehler",
+          message: "Kann den Bieten-Knopf nicht auf der Artikel Seite finden!"
+        };
+      }
+
+      /*
+       * We use a Mutation Observer to wait for the Modal 'vilens-modal-wrapper' to open
+       * after the Bid Button was clicked
+       * Use timeout: 3000ms
+       * Uses: https://stackoverflow.com/questions/7434685/how-can-i-be-notified-when-an-element-is-added-to-the-page
+       *
+       * Two considered alternative results:
+       * a) Bid was too low
+       * b) Bid was high enough still and we need to confirm
+       *
+       * Note: If not logged in, here the page will redirect to signin and terminate the Content Script!
+       */
+
+      /*
+       * Phase 2: Initiate the Bid
+       */
+      storePerfInfo("Phase2: Gebot abgeben");
+      bidButton.click();
+
+      // wait for modal to open: vilens-modal-wrapper
+      let modalBody = await waitFor('#MODAL_BODY', 2000)
+        .catch((e) => {
+          console.warn("Biet-O-Matic: Waiting for Bidding Modal timed out: %s", e.toString());
+          throw {
+            component: "Bietvorgang",
+            level: "Interner Fehler",
+            message: "Element #MODAL_BODY nicht gefunden!"
+          };
+        });
+      // modal close button
+      const closeButton = document.querySelector('.vilens-modal-close');
+
+      const statusMsg = document.getElementById('STATUS_MSG');
+      //console.log("Status: obj=%O, msg=%s", statusMsg, statusMsg.textContent);
+      // e.g. 'Bieten Sie mindestens EUR 47,50.'
+
+      // some bidding issue, send status to popup (keep modal open, in case user wants to manually correct bid)
+      if (statusMsg != null) {
+        console.log("Biet-O-Matic: Bidding failed: Error reported by eBay: %s", statusMsg.textContent);
+        throw {
+          component: "Bietvorgang",
+          level: "Problem beim bieten",
+          message: statusMsg.textContent
+        };
+      }
+
+      // get confirm button
+      const confirmButton = document.getElementById('confirm_button');
+      if (confirmButton == null) {
+        console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
+        throw {
+          component: "Bietvorgang",
+          level: "Fehler beim bieten",
+          message: "Element confirm_button nicht gefunden!"
+        };
+      }
+
+      /*
+       Phase 3: Confirm the bid
+       We want to perform the confirmation of the bid as close as possible to the end
+       We set a timeout which will perform the bid ~2 seconds before the auction ends
+       */
+      storePerfInfo("Phase3: Warten auf Bietzeitpunkt");
+      let wakeUpInMs = (ebayArticleInfo.articleEndTime - Date.now()) - 2000;
+      await wait(wakeUpInMs);
+
+      // Note: After closing the modal, the page will reload and the content script reinitialize!
+      if (test) {
+        // close modal
+        if (closeButton != null) {
+          closeButton.click();
+        }
+        console.log("Biet-O-Matic: Test bid performed for Article %s", ebayArticleInfo.articleId);
+        storePerfInfo("Phase3: Testgebot beendet");
+        // send info to popup about (almost) successful bid
+        sendArticleLog( {
+          component: "Bietvorgang",
+          level: "Erfolg",
+          message: "Test-Bietvorgang erfolgreich.",
+        });
+      } else {
+        // confirm the bid
+        console.log("Biet-O-Matic: Bid submitted for Article %s", ebayArticleInfo.articleId);
+        storePerfInfo("Phase3: Gebot wurde abgegeben");
+        // send info to popup
+        sendArticleLog( {
+          component: "Bietvorgang",
+          level: "Erfolg",
+          message: "Bietvorgang abgeschlossen.",
+        });
+      }
+    } finally {
+      if (ebayArticleInfo.bidIsRunning < 1) {
+        console.log("Biet-O-Matic: Bidding procedure ended");
+        getPerfInfoString();
+      }
     }
+  }
+
+  // promisified setTimeout - simply wait for a defined time
+  function wait(ms) {
+    return new Promise(function(resolve) {
+      window.setTimeout(function() {
+        resolve();
+      }, ms);
+    });
   }
 
   // https://stackoverflow.com/questions/5525071/how-to-wait-until-an-element-exists
   function waitFor(selector, timeout = 3000) {
     return new Promise(function (resolve, reject) {
       waitForElementToDisplay(selector, 250, timeout);
-
       function waitForElementToDisplay(selector, time, timeout) {
         if (timeout <= 0) {
           reject(`waitFor(${selector}), timeout expired!`);
@@ -517,6 +668,90 @@
     });
   }
 
+  /*
+    Send log information to popup - it will be persisted under the storage
+    - messageObject { component: s, message: s, level: s}
+    TODO: use HTML for good/bad indication
+   */
+  function sendArticleLog(messageObject) {
+    messageObject.timestamp = Date.now();
+    browser.runtime.sendMessage({
+      action: 'addArticleLog',
+      detail: {
+        articleId: ebayArticleInfo.articleId,
+        message: messageObject
+      },
+    }).catch((e) => {
+      console.warn("Biet-O-Matic: sendArticleLog(), Cannot sendMessage");
+    });
+  }
+
+  /*
+   * Manage Bid process locking
+   *   If the article page reloads (can happen due to user action or automatically)
+   *   then the contentScript reexecutes and loses all state.
+   *   To prevent that bidding triggers multiple times, a lock will be used which is persisted in article storage.
+   * todo: to set the lock a message to popup is used, and here we directly check the storage. Should we ensure
+   *   consistency?
+   */
+  async function lockBidProcessIfNotAlreadyLocked(status) {
+    // check article storage for lock
+    let result = browser.storage.sync.get(ebayArticleInfo.articleId);
+    console.log("XXX1");
+    if (Object.keys(result).length === 1) {
+      let storInfo = result[ebayArticleInfo.articleId];
+      console.log("XXX2 lockBidProcessIfNotAlreadyLocked %O x=%s", storInfo, storInfo.bidIsRunning);
+      if (storInfo.hasOwnProperty('bidIsRunning') && storInfo.bidIsRunning) {
+        throw {
+          component: "Bietvorgang",
+          level: "Abbruch",
+          message: "Es wurde bereits geboten."
+        };
+      }
+    }
+console.log("XXX2");
+    await browser.runtime.sendMessage({
+      action: 'lockBidProcess',
+      detail: {
+        articleId: ebayArticleInfo.articleId,
+        locked: true
+      },
+    });
+  }
+
+  /*
+   * store timing data in array - can be sent to popup
+  */
+  function storePerfInfo(message) {
+    perfInfo.push({
+      date: Date.now(),
+      perf: performance.now(),
+      description: message
+    });
+  }
+  // print perf info,
+  function getPerfInfoString() {
+    let result = "";
+    let previousTime = 0;
+    perfInfo.forEach((m) => {
+      let prevDiff = 0;
+      let firstDiff = 0;
+      if (previousTime > 0) {
+        firstDiff = (m.perf - perfInfo[0].perf).toFixed(2);
+        prevDiff = (m.perf - previousTime).toFixed(2);
+      }
+      result += `${m.description}: ${prevDiff}ms (seit start: ${firstDiff}ms), `;
+      previousTime = m.perf;
+    });
+    // calculate timeleft until auction end
+    let timeLeft = ebayArticleInfo.articleEndTime - perfInfo[perfInfo.length - 1].date;
+    result += `timeLeft = ${timeLeft}ms (${ebayArticleInfo.articleEndTime} - ${perfInfo[perfInfo.length - 1].date}`;
+    sendArticleLog( {
+      component: "Bieten",
+      level: "Performance",
+      message: result,
+    });
+  }
 
   /*
    * MAIN
@@ -524,18 +759,21 @@
 
   let body = document.getElementById("Body");
   if (body === null) {
-    throw new Error("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
+    console.log("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
+    return;
   }
   let itemType = body.getAttribute("itemtype");
   if ( itemType === null ) {
-    throw new Error("Biet-O-Mat: skipping on this page; no itemtype in body element");
+    console.log("Biet-O-Mat: skipping on this page; no itemtype in body element");
+    return;
   }
   if ( itemType !== "https://schema.org/Product"  ) {
-    throw new Error(`Biet-O-Mat: skipping on this page; invalid itemtype in body element (${itemType})`);
+    console.log(`Biet-O-Mat: skipping on this page; invalid itemtype in body element (${itemType})`);
+    return;
   }
 
   parsePage();
-  console.debug("Biet-O-Mat: %O", ebayArticleInfo);
+  console.debug("Biet-O-Mat: Article Info: %s, window=%O", JSON.stringify(ebayArticleInfo), window);
   extendPage();
   monitorChanges();
 
@@ -543,6 +781,8 @@
   browser.runtime.sendMessage({
     action: 'ebayArticleUpdated',
     detail: ebayArticleInfo
+  }).catch((e) => {
+    console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %O", e);
   });
 
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -556,11 +796,4 @@
       updateMaxBidInfo(request.detail);
     }
   });
-
-  // TODO remove
-  browser.runtime.sendMessage({ action: 'isAutoBidEnabled' })
-    .then((result) => {
-      console.log("Result: %O", result);
-    });
-
 })();

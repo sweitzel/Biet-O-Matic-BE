@@ -20,10 +20,11 @@ let BomTab = (function () {
   });
 }()); // end BomTab
 
-async function openBomTab(param) {
+async function openBomTab(tab, clickData) {
+  'use strict';
   // query tab for specified or current window with extension URL
   let tabs = await browser.tabs.query({
-    windowId: (param && 'windowId' in param) ? param.windowId : browser.windows.WINDOW_ID_CURRENT,
+    windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
     url: browser.extension.getURL('biet-o-matic.html')
   });
   for (let i = 0; i < tabs.length; i++) {
@@ -35,8 +36,12 @@ async function openBomTab(param) {
     // if open, ensure it is pinned (user might have accidentally un-pinned it)
     let params = { };
     params.pinned = true;
-    params.highlighted = true;
-    params.active = true;
+    // do not activate BOM overview tab if the current tab is an ebay tab - this could cause confusion
+    let regex = /^https:\/\/www.ebay.(de|com)\/itm/i;
+    if (!tab.url.match(regex)) {
+      params.highlighted = true;
+      params.active = true;
+    }
     // autoDiscardable not supported by all browsers, so we check it exists
     if ('autoDiscardable' in tabs[i]) {
       params.autoDiscardable = false;
@@ -49,7 +54,7 @@ async function openBomTab(param) {
   if (tabs.length === 0) {
     await browser.tabs.create({
       url: browser.extension.getURL('biet-o-matic.html'),
-      windowId: (param && 'windowId' in param) ? param.windowId : browser.windows.WINDOW_ID_CURRENT,
+      windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
       pinned: true,
       index: 0
     });

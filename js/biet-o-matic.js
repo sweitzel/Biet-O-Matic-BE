@@ -15,13 +15,18 @@ let popup = function () {
 
   let pt = {};
 
-  function onError(error, sender) {
-    console.error("Error: %O, Sender: %O", error, sender);
+  function onError(error, sender = null) {
+    console.error("Biet-O-Matic: Promise Error: %O, Sender: %O", error, sender);
   }
 
   /*
    register events:
-     - custom 'ebayArticleUpdated': from content script with info about article
+     - ebayArticleUpdated: from content script with info about article
+     - ebayArticleRefresh: from content script, simple info to refresh the row (update remaing time)
+     - updateArticleStatus: from content script to update the Auction State with given info
+     - ebayArticleMaxBidUpdated: from content script to update maxBid info
+     - getWindowSettings: from content script to retrieve the settings for this window (e.g. autoBidEnabled)
+     - addArticleLog: from content script to store log info for article
      - browser.tabs.onremoved: Tab closed
    */
   function registerEvents() {
@@ -33,14 +38,27 @@ let popup = function () {
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
             console.debug("Browser Event ebayArticleUpdated received: sender=%O, detail=%O", sender, request.detail);
             addOrUpdateArticle(sender.tab, request.detail);
+            // update BE favicon for this tab
+            updateFavicon($('#inpAutoBid').prop('checked'), sender.tab);
           }
           break;
         case 'ebayArticleRefresh':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Browser Event ebayArticleRefresh received from tab %s: sender=%O", sender.tab.id, sender);
+            console.debug("Browser Event ebayArticleRefresh received from tab %s", sender.tab.id);
             let dateCell = pt.table.cell(`#${sender.tab.id}`, 2);
             // redraw date
-            //dateCell.draw();
+            dateCell.invalidate('data').draw();
+          }
+          break;
+        case 'updateArticleStatus':
+          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
+            console.debug("Browser Event updateArticleStatus received from tab %s: sender=%O, detail=%s",
+              sender.tab.id, sender, JSON.stringify(request.detail));
+            let row = pt.table.row(`#${sender.tab.id}`);
+            let data = row.data();
+            let statusCell = pt.table.cell(`#${sender.tab.id}`, 5);
+            data.articleAuctionState = request.detail.message;
+            statusCell.invalidate('data').draw();
           }
           break;
         case 'ebayArticleMaxBidUpdated':
@@ -55,16 +73,33 @@ let popup = function () {
                 endTime: data.articleEndTime,
                 maxBid: request.detail.maxBid,
                 autoBid: request.detail.autoBid
-              },
-              sender.tab.id,
-              false
+              }
             );
           }
           break;
-        case 'isAutoBidEnabled':
+        case 'getWindowSettings':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Browser Event isAutoBidEnabled received: sender=%O", sender);
-            return Promise.resolve($('#inpAutoBid').is(':checked'));
+            console.debug("Browser Event getWindowSettings received: sender=%O", sender);
+            return Promise.resolve(getWindowSettings());
+          }
+          break;
+        case 'addArticleLog':
+          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
+            console.debug("Browser Event addArticleLog received: sender=%O, detail=%s",
+              sender, JSON.stringify(request.detail));
+            let row = pt.table.row(`#${sender.tab.id}`);
+            let data = row.data();
+            let statusCell = pt.table.cell(`#${sender.tab.id}`, 5);
+            data.articleAuctionState = request.detail.message.message;
+            statusCell.invalidate('data').draw();
+            storeArticleLog(request.detail);
+          }
+          break;
+        case 'lockBidProcess':
+          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
+            console.debug("Browser Event lockBidProcess received: sender=%O, detail=%s",
+              sender, JSON.stringify(request.detail));
+            storeArticleBidLock(request.detail);
           }
           break;
       }
@@ -82,12 +117,26 @@ let popup = function () {
         }
       }
     });
+    // tab reloaded
+    browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
+      console.debug('Biet-O-Mat: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
+    });
+
+    // toggle autoBid for window
+    browser.browserAction.onClicked.addListener(function (tab, clickData) {
+      if (pt.whoIAm.currentWindow.id === tab.windowId) {
+        console.debug('Biet-O-Mat: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
+        const toggle = $('#inpAutoBid');
+        let checked = toggle.prop('checked');
+        toggle.prop('checked', !checked);
+        updateFavicon(!checked);
+      }
+    });
 
     // inpAutoBid checkbox
     $('#inpAutoBid').on('input', (e) => {
       console.debug('Biet-O-Mat: Automatic mode toggled: %s', e.target.checked);
       updateFavicon(e.target.checked);
-      //storeSetting('autoBidEnabled', e.target.checked);
     });
   }
 
@@ -100,7 +149,7 @@ let popup = function () {
     let ret = {};
     // first determine simply which window currently running on
     ret.currentWindow = await browser.windows.getCurrent({populate: true});
-    console.debug("detectWhoIAm(): window=%O", ret.currentWindow);
+    console.debug("Biet-O-Matic: detectWhoIAm(): window=%O", ret.currentWindow);
     return ret;
   }
 
@@ -236,10 +285,10 @@ let popup = function () {
       $('#inpStorageSize').val(result);
     });
     $('#inpStorageClearAll').on('click', (e) => {
-      console.info('Biet-O-Mat: Alle Storage Einträge entfernt (Gebote, Einstellungen)');
+      console.debug('Biet-O-Mat: Alle Storage Einträge entfernt (Gebote, Einstellungen) %O', e);
       browser.storage.sync.clear().catch(onError);
       // reload page
-      browser.tabs.reload(e.sender.tab.id);
+      browser.tabs.reload();
     });
   }
 
@@ -262,25 +311,12 @@ let popup = function () {
     });
   }
 
-  // store a setting to sync storage
-  function storeSetting(key, value) {
-    if (typeof pt.settings === 'undefined') {
-      console.warn("Biet-O-Matic: storeSetting() key=%O, value=%O - pt.settings still undefined!?!", key, value);
-      restoreSettings();
-    }
-    pt.settings[key] = value;
-    browser.storage.sync.set({"settings": pt.settings})
-      .then((e) => {
-        console.log('Biet-O-Mat: Successfully saved to sync-storage: %O', pt.settings);
-      }).catch(onError);
-  }
-
   /*
    * store articleInfo to sync storage
    * - key: articleId
    * - value: endTime, maxBid, autoBid
    */
-  function storeArticleInfo(articleId, info, tabId, informTab = true) {
+  function storeArticleInfo(articleId, info, tabId = null) {
     if (articleId === null || typeof articleId === 'undefined') {
       console.warn("Bit-O-Matic: storeArticleInfo - unknown articleId! info=%O tab=%O", info, tabId);
       return;
@@ -289,7 +325,7 @@ let popup = function () {
       .then((e) => {
         console.debug('Biet-O-Mat: storeArticleInfo(%s) Successfully saved Article info to sync-storage: %O, tab %O',
           articleId, info, tabId);
-        if (informTab) {
+        if (tabId != null) {
           // send update to article tab
           browser.tabs.sendMessage(tabId, {
             action: 'UpdateArticleMaxBid',
@@ -300,11 +336,59 @@ let popup = function () {
   }
 
   /*
+   * Append log entry for Article to storage
+   * Also update show as Article Status in table
+   */
+  async function storeArticleLog(info) {
+    if (!info.hasOwnProperty('articleId') || !info.hasOwnProperty('message')) {
+      console.warn("Biet-O-Matic: storeArticleLog(), incomplete info: %O", JSON.stringify(info));
+      return;
+    }
+    // get info for article from storage
+    // todo: should probably be local storage?
+    let result = await browser.storage.sync.get(info.articleId)
+    console.debug("Biet-O-Mat: storeArticleLog(%s) existing entry: settings=%O, info=%s",
+      info.articleId, result[info.articleId], info);
+    let settings = result[info.articleId];
+    if (settings == null) {
+      settings = {};
+    }
+    if (!settings.hasOwnProperty('log')) {
+      settings.log = [];
+    }
+    settings.log.push(info.message);
+    // store the object again
+    await storeArticleInfo(info.articleId, settings);
+  }
+
+  /*
+   * Set bidIsRunning for given article
+   *   This prevents that the same article page triggers the bidding process multiple times
+   *   e.g. if the page was reloaded and the contentScript lost the state
+   */
+  function storeArticleBidLock(info) {
+    // get info for article from storage
+    browser.storage.sync.get(info.articleId)
+      .then((result) => {
+        console.debug("Biet-O-Mat: storeArticleLog(%s) existing entry: settings=%O",
+          info.articleId, result[info.articleId]);
+        let settings = result[info.articleId];
+        settings.bidIsRunning = info.locked;
+        // store the object again
+        storeArticleInfo(info.articleId, settings);
+      }).catch(onError);
+  }
+
+  /*
    * Configure UI Elements events:
    * - maxBid Input: If auction running and value higher than the current bid, enable the autoBid checkbox for this row
    * - autoBid checkbox: when checked, the bid and autoBid status is updated in the storage
    */
   function configureUi() {
+    // settings
+    $('#inpAutoBid').prop('checked', false);
+    $('#inpPrepareBidSecs').val('5');
+
     // maxBid input field
     $('.dataTable').on('change', 'tr input', function () {
       //console.debug('Biet-O-Matic: configureUi() INPUT Event e=%O, data=%O, val=%s', e, this, this.value);
@@ -323,14 +407,16 @@ let popup = function () {
         // autoBid checkbox was clicked
         data.articleAutoBid = this.checked;
       }
+      // update local ui
+      updateRowMaxBid(row, data.articleMaxBid, data.articleAutoBid);
       // store info when maxBid updated
       let info = {
         endTime: data.articleEndTime,
         maxBid: data.articleMaxBid,
         autoBid: data.articleAutoBid
       };
-      updateRowMaxBid(row, data.articleMaxBid, data.articleAutoBid);
-      storeArticleInfo(data.articleId, info, data.tabId, true);
+      // update storage info
+      storeArticleInfo(data.articleId, info, data.tabId);
     });
   }
 
@@ -347,14 +433,15 @@ let popup = function () {
       return;
     }
     // maxBid
-    if (maxBid != null && !Number.isNaN(maxBid)) {
+    if (maxBid == null || Number.isNaN(maxBid)) {
+      data.articleMaxBid = 0;
+    } else {
       data.articleMaxBid = maxBid;
     }
     // autoBid
     if (autoBid != null) {
       data.articleAutoBid = autoBid;
     }
-
     // invalidate data, redraw
     // todo selective redraw for parts of the row
     row.invalidate('data').draw();
@@ -421,7 +508,7 @@ let popup = function () {
     };
     //document.getElementsByTagName('head')[0].appendChild(link);
   }
-  function updateFavicon(checked) {
+  function updateFavicon(checked = false, tab = null) {
     let title = 'B';
     let color = '#a6001a';
     if (checked) {
@@ -437,18 +524,25 @@ let popup = function () {
       }
       head.appendChild(favUrl);
     }
-    // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
-    let query = browser.tabs.query({
-      currentWindow: true,
-      url: [ browser.extension.getURL("*"), "*://*.ebay.de/itm/*","*://*.ebay.com/itm/*" ]
-    });
-    query.then((tabs) => {
-      for (let tab of tabs) {
-        //console.debug("Set icon on tab %d (%s)", tab.id, tab.url);
-        browser.browserAction.setIcon({imageData: favImg, tabId: tab.id})
-          .catch(onError);
-      }
-    }, onError);
+    if (tab == null) {
+      // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
+      let query = browser.tabs.query({
+        currentWindow: true,
+        url: [ browser.extension.getURL("*"), "*://*.ebay.de/itm/*","*://*.ebay.com/itm/*" ]
+      });
+      query.then((tabs) => {
+        for (let tab of tabs) {
+          console.debug("Biet-O-Matic: updateFavicon(), Set icon on tab %d (%s)", tab.id, tab.url);
+          browser.browserAction.setIcon({imageData: favImg, tabId: tab.id})
+            .catch(onError);
+        }
+      }, onError);
+    } else {
+      // update for single tab
+      console.debug("Biet-O-Matic: updateFavicon(), Set icon on tab %d (%s)", tab.id, tab.url);
+      browser.browserAction.setIcon({imageData: favImg, tabId: tab.id})
+        .catch(onError);
+    }
   }
   //endregion
 
@@ -564,9 +658,10 @@ let popup = function () {
    * howMany: How many articles to bid for this window (one or all)
    *
    */
-  function get_settings() {
-    let settings = {};
+  function getWindowSettings() {
+    let settings = { autoBidEnabled: false, prepareBidSecs: 5};
     settings.autoBidEnabled = $('#inpAutoBid').is(':checked');
+    settings.prepareBidSecs = Number.parseInt($('#inpPrepareBidSecs').val(), 10);
     return settings;
   }
 
@@ -575,12 +670,11 @@ let popup = function () {
    */
 
   document.addEventListener('DOMContentLoaded', function () {
-    //dbInit();
     detectWhoIAm().then(whoIAm => {
       pt.whoIAm = whoIAm;
       registerEvents();
       restoreSettings();
-      updateFavicon(false);
+      updateFavicon();
 
       pt.table = $('#articles').DataTable({
         columns: [
@@ -594,7 +688,7 @@ let popup = function () {
           {
             data: 'articleDescription',
             render: $.fn.dataTable.render.ellipsis(100, true, false),
-            'defaultContent': 'Unbekannt'
+            defaultContent: 'Unbekannt'
           },
           {
             data: 'articleEndTime',
@@ -613,6 +707,7 @@ let popup = function () {
           },
           {
             data: 'articleBidPrice',
+            defaultContent: 0,
             render: renderArticleBidPrice
           },
           {data: 'articleShippingCost', 'defaultContent': '0.00'},
@@ -713,8 +808,11 @@ let popup = function () {
 
       configureUi();
       checkBrowserStorage();
-      console.debug("DOMContentLoaded handler for window with id = %d completed.", pt.whoIAm.currentWindow.id);
-    }).catch(err => console.error(err));
+      console.debug("DOMContentLoaded handler for window with id = %d completed (%O).", pt.whoIAm.currentWindow.id, pt.whoIAm.currentWindow.helloFromBom);
+      pt.whoIAm.currentWindow.helloFromBom = "Date: " + moment().format();
+    }).catch((err) => {
+      console.error("Biet-O-Matic:; DOMContentLoaded post initialisation failed; %s", err);
+    });
   });
 };
 popup();
