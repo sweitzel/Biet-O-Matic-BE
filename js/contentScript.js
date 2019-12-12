@@ -27,6 +27,16 @@
   // array with performance information (related to bidding)
   let perfInfo = [];
 
+
+  /*
+   * handle reload: for various reasons the page can reload or go even to a different page
+   * - article ended and redirects to a recommended article -> redirect back
+   * - reload when a modal was closed  -> resume bidding
+   */
+  function handleReload() {
+
+  }
+
   /*
    * Parse information from Ebay Article page
    */
@@ -60,6 +70,7 @@
     parseInfoArray.forEach(parseInfoEntry);
   }
 
+  // parse a specific DOM element from the current page
   function parseInfoEntry(value, key, map) {
     for (let v of value) {
       let domEntry = document.querySelector(v);
@@ -295,6 +306,7 @@
           // inform popup
           browser.runtime.sendMessage({
             action: 'ebayArticleMaxBidUpdated',
+            articleId: ebayArticleInfo.articleId,
             detail: {
               maxBid: maxBidInputValue,
               autoBid: bomAutoBidNew.checked,
@@ -310,13 +322,12 @@
     if (bomAutoBid != null) {
       bomAutoBid.addEventListener('change', (e) => {
         let bomAutoBidNew = document.getElementById('BomAutoBid');
-        let maxBidInputNew = document.getElementById('MaxBidId');
         if (bomAutoBidNew != null) {
           // inform popup
           browser.runtime.sendMessage({
             action: 'ebayArticleMaxBidUpdated',
+            articleId: ebayArticleInfo.articleId,
             detail: {
-              maxBid: parseFloat(maxBidInputNew.value),
               autoBid: bomAutoBidNew.checked
             }
           }).catch((e) => {
@@ -340,12 +351,9 @@
           if (mutation.type === 'childList') {
             let timeLeftInSeconds = (ebayArticleInfo.articleEndTime - Date.now()) / 1000;
             if (timeLeftInSeconds <= 10) {
-              console.log("Mutation received: %d seconds left", timeLeftInSeconds);
+              console.debug("Biet-O-Matic: Mutation received: %d seconds left", timeLeftInSeconds);
               doBid()
-                .then(() => {
-                  // todo ?
-                })
-                .catch((e) => {
+                .catch(e => {
                   console.info("Biet-O-Matic: doBid() was aborted: %O", JSON.stringify(e));
                   sendArticleLog(e);
                 });
@@ -385,6 +393,7 @@
                 action: 'ebayArticleRefresh',
               }).catch((e) => {
                 console.warn("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed: %O", e);
+                // todo reload page to repair the BE
               });
             }
           }
@@ -472,7 +481,7 @@
       const autoBidInput = document.getElementById('BomAutoBid');
       // ensure article autoBid is checked
       if (autoBidInput == null || autoBidInput.checked === false) {
-        console.debug("Biet-O-Matic: doBid() aborted, Article autoBid is off, %O", autoBidInput);
+        console.debug("Biet-O-Matic: doBid() abort, Article autoBid is off");
         throw {
           component: "Bietvorgang",
           level: "Abbruch",
@@ -482,49 +491,40 @@
       // ensure window autoBid is checked
       let settings = await browser.runtime.sendMessage({ action: 'getWindowSettings' });
       if (typeof settings === 'undefined' || !settings.hasOwnProperty('autoBidEnabled' )) {
-        console.warn("autoBidEnabled not in settings!? o=%O settings=%s:%s, %s", settings, typeof settings, JSON.stringify(settings), settings.autoBidEnabled);
         throw {
           component: "Bietvorgang",
           level: "Interner Fehler",
           message: "Konnte autoBidEnabled Option nicht prüfen"
         };
       } else if (settings.autoBidEnabled === false) {
-        console.debug("Biet-O-Matic: doBid() aborted, Window autoBid is off (settings=%O)", settings);
+        console.debug("Biet-O-Matic: doBid() abort, Window autoBid is off");
         throw {
           component: "Bietvorgang",
           level: "Abbruch",
           message: "Automatisches bieten für Fenster inaktiv"
         };
       }
-      // set bidIsRunning, because the mutation observer will retrigger doBid
-      // we want to ensure checking for autoBidEnabled again, in case its enabled on the last second
-      if (ebayArticleInfo.hasOwnProperty('bidIsRunning')) {
-        ebayArticleInfo.bidIsRunning++;
-      } else {
-        ebayArticleInfo.bidIsRunning = 0;
-      }
-      if (ebayArticleInfo.bidIsRunning > 0) {
-        return;
-      }
 
-      //region The following will ensure that the bid procedure will not be executed twice
-      let result = browser.storage.sync.get(ebayArticleInfo.articleId);
+      /*
+       * region The following will ensure that the bid procedure will not be executed twice
+       * due to mutation observer the function will be called again, even after the auction ended
+       */
+      let result = await browser.storage.sync.get(ebayArticleInfo.articleId);
       if (Object.keys(result).length === 1) {
         let storInfo = result[ebayArticleInfo.articleId];
-        console.log("XXX2 lockBidProcessIfNotAlreadyLocked %O x=%s", storInfo, storInfo.bidIsRunning);
-        if (storInfo.hasOwnProperty('bidIsRunning') && storInfo.bidIsRunning) {
+        if (storInfo.hasOwnProperty('bidHasStarted') && storInfo.bidHasStarted) {
           throw {
             component: "Bietvorgang",
             level: "Abbruch",
-            message: "Es wurde bereits geboten."
+            message: "Es wird bereits geboten."
           };
         }
       }
-      browser.runtime.sendMessage({
+      await browser.runtime.sendMessage({
         action: 'lockBidProcess',
+        articleId: ebayArticleInfo.articleId,
         detail: {
-          articleId: ebayArticleInfo.articleId,
-          locked: true
+          bidHasStarted: true
         },
       });
       //endregion
@@ -617,7 +617,7 @@
         console.log("Biet-O-Matic: Test bid performed for Article %s", ebayArticleInfo.articleId);
         storePerfInfo("Phase3: Testgebot beendet");
         // send info to popup about (almost) successful bid
-        sendArticleLog( {
+        sendArticleLog({
           component: "Bietvorgang",
           level: "Erfolg",
           message: "Test-Bietvorgang erfolgreich.",
@@ -627,26 +627,31 @@
         console.log("Biet-O-Matic: Bid submitted for Article %s", ebayArticleInfo.articleId);
         storePerfInfo("Phase3: Gebot wurde abgegeben");
         // send info to popup
-        sendArticleLog( {
+        sendArticleLog({
           component: "Bietvorgang",
           level: "Erfolg",
           message: "Bietvorgang abgeschlossen.",
         });
       }
-    } finally {
-      if (ebayArticleInfo.bidIsRunning < 1) {
-        console.log("Biet-O-Matic: Bidding procedure ended");
-        getPerfInfoString();
-      }
+      // finally also submit performance info
+      getPerfInfoString();
+    } catch (err) {
+      //console.log("XXX werfe %s", JSON.stringify(err));
+      throw err;
     }
   }
 
   // promisified setTimeout - simply wait for a defined time
   function wait(ms) {
-    return new Promise(function(resolve) {
-      window.setTimeout(function() {
+    return new Promise(function (resolve) {
+      if (ms < 100) {
+        console.log("Biet-O-Mat: wait(%s), too short, abort wait.", ms);
         resolve();
-      }, ms);
+      } else {
+        window.setTimeout(function () {
+          resolve();
+        }, ms);
+      }
     });
   }
 
@@ -677,45 +682,12 @@
     messageObject.timestamp = Date.now();
     browser.runtime.sendMessage({
       action: 'addArticleLog',
+      articleId: ebayArticleInfo.articleId,
       detail: {
-        articleId: ebayArticleInfo.articleId,
         message: messageObject
       },
     }).catch((e) => {
       console.warn("Biet-O-Matic: sendArticleLog(), Cannot sendMessage");
-    });
-  }
-
-  /*
-   * Manage Bid process locking
-   *   If the article page reloads (can happen due to user action or automatically)
-   *   then the contentScript reexecutes and loses all state.
-   *   To prevent that bidding triggers multiple times, a lock will be used which is persisted in article storage.
-   * todo: to set the lock a message to popup is used, and here we directly check the storage. Should we ensure
-   *   consistency?
-   */
-  async function lockBidProcessIfNotAlreadyLocked(status) {
-    // check article storage for lock
-    let result = browser.storage.sync.get(ebayArticleInfo.articleId);
-    console.log("XXX1");
-    if (Object.keys(result).length === 1) {
-      let storInfo = result[ebayArticleInfo.articleId];
-      console.log("XXX2 lockBidProcessIfNotAlreadyLocked %O x=%s", storInfo, storInfo.bidIsRunning);
-      if (storInfo.hasOwnProperty('bidIsRunning') && storInfo.bidIsRunning) {
-        throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Es wurde bereits geboten."
-        };
-      }
-    }
-console.log("XXX2");
-    await browser.runtime.sendMessage({
-      action: 'lockBidProcess',
-      detail: {
-        articleId: ebayArticleInfo.articleId,
-        locked: true
-      },
     });
   }
 
@@ -740,13 +712,14 @@ console.log("XXX2");
         firstDiff = (m.perf - perfInfo[0].perf).toFixed(2);
         prevDiff = (m.perf - previousTime).toFixed(2);
       }
-      result += `${m.description}: ${prevDiff}ms (seit start: ${firstDiff}ms), `;
+      result += `${m.description}: ${prevDiff}ms (seit start: ${firstDiff}ms, ${m.date}), `;
       previousTime = m.perf;
     });
     // calculate timeleft until auction end
     let timeLeft = ebayArticleInfo.articleEndTime - perfInfo[perfInfo.length - 1].date;
-    result += `timeLeft = ${timeLeft}ms (${ebayArticleInfo.articleEndTime} - ${perfInfo[perfInfo.length - 1].date}`;
-    sendArticleLog( {
+    result += `timeLeft = ${timeLeft}ms (${ebayArticleInfo.articleEndTime} - ${perfInfo[perfInfo.length - 2].date}`;
+    console.log("XXX getPerfInfoString() %s", result);
+    sendArticleLog({
       component: "Bieten",
       level: "Performance",
       message: result,
@@ -757,13 +730,17 @@ console.log("XXX2");
    * MAIN
    */
 
+  // handle reload
+  handleReload();
+
+  // first we check if the page is a expected Article Page
   let body = document.getElementById("Body");
-  if (body === null) {
+  if (body == null) {
     console.log("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
     return;
   }
   let itemType = body.getAttribute("itemtype");
-  if ( itemType === null ) {
+  if ( itemType == null ) {
     console.log("Biet-O-Mat: skipping on this page; no itemtype in body element");
     return;
   }
@@ -772,8 +749,9 @@ console.log("XXX2");
     return;
   }
 
+  // parse article information
   parsePage();
-  console.debug("Biet-O-Mat: Article Info: %s, window=%O", JSON.stringify(ebayArticleInfo), window);
+  console.debug("Biet-O-Matic: Article Info: %s", JSON.stringify(ebayArticleInfo));
   extendPage();
   monitorChanges();
 
@@ -785,6 +763,7 @@ console.log("XXX2");
     console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %O", e);
   });
 
+  // event listener for messages from BE overview popup
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // return ebayArticleInfo back to Popup script
     if (request.action === "GetArticleInfo") {
@@ -792,7 +771,8 @@ console.log("XXX2");
     }
     // receive updated MaxBid info from Popup - update the document
     if (request.action === "UpdateArticleMaxBid") {
-      console.log("Biet-O-Matic: onMessage(UpdateArticleMaxBid) request=%O, sender=%O, sendResponse=%O", request, sender, sendResponse);
+      console.log("Biet-O-Matic: onMessage(UpdateArticleMaxBid) request=%O, sender=%O, sendResponse=%O",
+        request, sender, sendResponse);
       updateMaxBidInfo(request.detail);
     }
   });

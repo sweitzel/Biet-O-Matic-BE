@@ -36,15 +36,16 @@ let popup = function () {
       switch (request.action) {
         case 'ebayArticleUpdated':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Browser Event ebayArticleUpdated received: sender=%O, detail=%O", sender, request.detail);
-            addOrUpdateArticle(sender.tab, request.detail);
+            console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received: tab=%s, detail=%s", sender.tab.id, JSON.stringify(request.detail));
+            addOrUpdateArticle(sender.tab, request.detail)
+              .catch(onError);
             // update BE favicon for this tab
             updateFavicon($('#inpAutoBid').prop('checked'), sender.tab);
           }
           break;
         case 'ebayArticleRefresh':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Browser Event ebayArticleRefresh received from tab %s", sender.tab.id);
+            console.debug("Biet-O-Matic: Browser Event ebayArticleRefresh received from tab %s", sender.tab.id);
             let dateCell = pt.table.cell(`#${sender.tab.id}`, 2);
             // redraw date
             dateCell.invalidate('data').draw();
@@ -52,7 +53,7 @@ let popup = function () {
           break;
         case 'updateArticleStatus':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Browser Event updateArticleStatus received from tab %s: sender=%O, detail=%s",
+            console.debug("Biet-O-Matic: Browser Event updateArticleStatus received from tab %s: sender=%O, detail=%s",
               sender.tab.id, sender, JSON.stringify(request.detail));
             let row = pt.table.row(`#${sender.tab.id}`);
             let data = row.data();
@@ -63,43 +64,36 @@ let popup = function () {
           break;
         case 'ebayArticleMaxBidUpdated':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Browser Event ebayArticleMaxBidUpdate received: sender=%O, detail=%O", sender, request.detail);
+            console.debug("Biet-O-Matic: Browser Event ebayArticleMaxBidUpdate received: sender=%O, detail=%O", sender, request.detail);
             let row = pt.table.row(`#${sender.tab.id}`);
-            let data = row.data();
-            updateRowMaxBid(row, request.detail.maxBid, request.detail.autoBid);
-            storeArticleInfo(
-              data.articleId,
-              {
-                endTime: data.articleEndTime,
-                maxBid: request.detail.maxBid,
-                autoBid: request.detail.autoBid
-              }
-            );
+            updateRowMaxBid(row, request.detail);
+            storeArticleInfo(request.articleId, request.detail);
           }
           break;
         case 'getWindowSettings':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Browser Event getWindowSettings received: sender=%O", sender);
+            console.debug("Biet-O-Matic: Browser Event getWindowSettings received: sender=%O", sender);
             return Promise.resolve(getWindowSettings());
           }
           break;
         case 'addArticleLog':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Browser Event addArticleLog received: sender=%O, detail=%s",
-              sender, JSON.stringify(request.detail));
+            console.debug("Biet-O-Matic: Browser Event addArticleLog received: tab=%d, detail=%s",
+              sender.tab.id, JSON.stringify(request.detail));
             let row = pt.table.row(`#${sender.tab.id}`);
             let data = row.data();
+            // show latest message in table (status column)
             let statusCell = pt.table.cell(`#${sender.tab.id}`, 5);
             data.articleAuctionState = request.detail.message.message;
             statusCell.invalidate('data').draw();
-            storeArticleLog(request.detail);
+            storeArticleLog(request.articleId, request.detail);
           }
           break;
         case 'lockBidProcess':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Browser Event lockBidProcess received: sender=%O, detail=%s",
+            console.debug("Biet-O-Matic: Browser Event lockBidProcess received: sender=%O, detail=%s",
               sender, JSON.stringify(request.detail));
-            storeArticleBidLock(request.detail);
+            storeArticleInfo(request.articleId, request.detail);
           }
           break;
       }
@@ -107,7 +101,7 @@ let popup = function () {
 
     // tab closed
     browser.tabs.onRemoved.addListener(function (tabId, removeInfo) {
-      console.debug('Biet-O-Mat: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
+      console.debug('Biet-O-Matic: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
       // window closing, no need to update anybody
       if (removeInfo.isWindowClosing === false) {
         // remove tab from table
@@ -118,14 +112,15 @@ let popup = function () {
       }
     });
     // tab reloaded
-    browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
-      console.debug('Biet-O-Mat: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
+    /*browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
+      console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
     });
+     */
 
     // toggle autoBid for window
     browser.browserAction.onClicked.addListener(function (tab, clickData) {
       if (pt.whoIAm.currentWindow.id === tab.windowId) {
-        console.debug('Biet-O-Mat: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
+        console.debug('Biet-O-Matic: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
         const toggle = $('#inpAutoBid');
         let checked = toggle.prop('checked');
         toggle.prop('checked', !checked);
@@ -135,7 +130,7 @@ let popup = function () {
 
     // inpAutoBid checkbox
     $('#inpAutoBid').on('input', (e) => {
-      console.debug('Biet-O-Mat: Automatic mode toggled: %s', e.target.checked);
+      console.debug('Biet-O-Matic: Automatic mode toggled: %s', e.target.checked);
       updateFavicon(e.target.checked);
     });
   }
@@ -179,9 +174,8 @@ let popup = function () {
     if (!info.hasOwnProperty('articleId')) {
       return;
     }
-    let row = pt.table.row(`#${tab.id}`);
     let articleId = info.articleId;
-    console.debug('Biet-O-Mat: addOrUpdateArticle(%s) tab=%O, info=%O, row=%O', info.articleId, tab, info, row);
+    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%O', info.articleId, tab, info);
     info.tabId = tab.id;
 
     // complement with DB info
@@ -190,8 +184,7 @@ let popup = function () {
     let result = await browser.storage.sync.get(articleId);
     if (Object.keys(result).length === 1) {
       let storInfo = result[articleId];
-      let data = row.data();
-      console.debug("Biet-O-Mat: Found info for Article %s in storage: %O", articleId, result);
+      console.debug("Biet-O-Matic: Found info for Article %s in storage: %O", articleId, result);
       // maxBid
       if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null) {
         if (typeof storInfo.maxBid === 'string') {
@@ -217,6 +210,7 @@ let popup = function () {
     info.articleAutoBid = autoBid;
 
     // article already in table
+    let row = pt.table.row(`#${tab.id}`);
     if (row.length === 0 || typeof row === 'undefined') {
       // article not in table - simply add it
       addActiveArticleTab(info);
@@ -236,7 +230,7 @@ let popup = function () {
    * Add a new article to the active articles table
    */
   function addActiveArticleTab(info) {
-    console.debug('Biet-O-Mat: addActiveArticleTab(%s), info=%O)', info.articleId, info);
+    console.debug('Biet-O-Matic: addActiveArticleTab(%s), info=%O)', info.articleId, info);
     if (!info.hasOwnProperty('articleId')) {
       console.debug("addArticle skipped for tab %O, no info");
       return;
@@ -250,7 +244,7 @@ let popup = function () {
    * Update an existing article in the active articles table
    */
   function updateActiveArticleTab(info, row) {
-    console.debug('Biet-O-Mat: updateActiveArticleTab(%s) info=%O, row=%O', info.articleId, info, row);
+    console.debug('Biet-O-Matic: updateActiveArticleTab(%s) info=%O, row=%O', info.articleId, info, row);
     if (!info.hasOwnProperty('articleId')) {
       console.debug("addArticle skipped for tab %O, no info");
       return;
@@ -285,7 +279,7 @@ let popup = function () {
       $('#inpStorageSize').val(result);
     });
     $('#inpStorageClearAll').on('click', (e) => {
-      console.debug('Biet-O-Mat: Alle Storage Einträge entfernt (Gebote, Einstellungen) %O', e);
+      console.debug('Biet-O-Matic: Alle Storage Einträge entfernt (Gebote, Einstellungen) %O', e);
       browser.storage.sync.clear().catch(onError);
       // reload page
       browser.tabs.reload();
@@ -299,7 +293,7 @@ let popup = function () {
     // inpAutoBid
     pt.settings = {};
     browser.storage.sync.get('settings').then((result) => {
-      console.debug("Biet-O-Mat: restoreSettings() updating from sync storage: settings=%O", result);
+      console.debug("Biet-O-Matic: restoreSettings() updating from sync storage: settings=%O", result);
       if (typeof result.settings !== undefined) {
         pt.settings = result.settings;
       }
@@ -313,70 +307,44 @@ let popup = function () {
 
   /*
    * store articleInfo to sync storage
+   *   will keep update values which are provided in the info object
    * - key: articleId
-   * - value: endTime, maxBid, autoBid
+   * - value: endTime, minBid, maxBid, autoBid
    */
-  function storeArticleInfo(articleId, info, tabId = null) {
+  async function storeArticleInfo(articleId, info, tabId = null) {
     if (articleId === null || typeof articleId === 'undefined') {
-      console.warn("Bit-O-Matic: storeArticleInfo - unknown articleId! info=%O tab=%O", info, tabId);
+      console.warn("Biet-O-Matic: storeArticleInfo() - unknown articleId! info=%O tab=%O", info, tabId);
       return;
     }
-    browser.storage.sync.set({[articleId]: info})
-      .then((e) => {
-        console.debug('Biet-O-Mat: storeArticleInfo(%s) Successfully saved Article info to sync-storage: %O, tab %O',
-          articleId, info, tabId);
-        if (tabId != null) {
-          // send update to article tab
-          browser.tabs.sendMessage(tabId, {
-            action: 'UpdateArticleMaxBid',
-            detail: info
-          });
-        }
-      }).catch(onError);
+    let settings = {};
+    // restore from existing config
+    let result = await browser.storage.sync.get(articleId);
+    if (Object.keys(result).length === 1) {
+      settings = result[articleId];
+    }
+    // merge new info into existing settings
+    let newSettings = Object.assign({}, settings, info);
+    // store the settings back to the storage
+    await browser.storage.sync.set({[articleId]: newSettings});
+    if (tabId != null) {
+      // send update to article tab
+      await browser.tabs.sendMessage(tabId, {
+        action: 'UpdateArticleMaxBid',
+        detail: info
+      });
+    }
   }
 
   /*
-   * Append log entry for Article to storage
-   * Also update show as Article Status in table
+   * Append log entry for Article to local storage
    */
-  async function storeArticleLog(info) {
-    if (!info.hasOwnProperty('articleId') || !info.hasOwnProperty('message')) {
-      console.warn("Biet-O-Matic: storeArticleLog(), incomplete info: %O", JSON.stringify(info));
-      return;
-    }
+  async function storeArticleLog(articleId, info) {
     // get info for article from storage
-    // todo: should probably be local storage?
-    let result = await browser.storage.sync.get(info.articleId)
-    console.debug("Biet-O-Mat: storeArticleLog(%s) existing entry: settings=%O, info=%s",
-      info.articleId, result[info.articleId], info);
-    let settings = result[info.articleId];
-    if (settings == null) {
-      settings = {};
-    }
-    if (!settings.hasOwnProperty('log')) {
-      settings.log = [];
-    }
-    settings.log.push(info.message);
-    // store the object again
-    await storeArticleInfo(info.articleId, settings);
-  }
-
-  /*
-   * Set bidIsRunning for given article
-   *   This prevents that the same article page triggers the bidding process multiple times
-   *   e.g. if the page was reloaded and the contentScript lost the state
-   */
-  function storeArticleBidLock(info) {
-    // get info for article from storage
-    browser.storage.sync.get(info.articleId)
-      .then((result) => {
-        console.debug("Biet-O-Mat: storeArticleLog(%s) existing entry: settings=%O",
-          info.articleId, result[info.articleId]);
-        let settings = result[info.articleId];
-        settings.bidIsRunning = info.locked;
-        // store the object again
-        storeArticleInfo(info.articleId, settings);
-      }).catch(onError);
+    let log = JSON.parse(window.localStorage.getItem(`log:${articleId}`));
+    console.debug("Biet-O-Matic: storeArticleLog(%s) info=%s", articleId, JSON.stringify(info));
+    if (log == null) log = [];
+    log.push(info.message);
+    window.localStorage.setItem(`log:${articleId}`, JSON.stringify(log));
   }
 
   /*
@@ -387,7 +355,6 @@ let popup = function () {
   function configureUi() {
     // settings
     $('#inpAutoBid').prop('checked', false);
-    $('#inpPrepareBidSecs').val('5');
 
     // maxBid input field
     $('.dataTable').on('change', 'tr input', function () {
@@ -399,7 +366,6 @@ let popup = function () {
       // determine row by articleId
       const row = pt.table.row(`:contains(${articleId})`);
       let data = row.data();
-
       if (this.id.startsWith('inpMaxBid_')) {
         // maxBid was entered
         data.articleMaxBid = Number.parseFloat(this.value);
@@ -407,8 +373,8 @@ let popup = function () {
         // autoBid checkbox was clicked
         data.articleAutoBid = this.checked;
       }
-      // update local ui
-      updateRowMaxBid(row, data.articleMaxBid, data.articleAutoBid);
+      // update local with maxBid/autoBid changes
+      updateRowMaxBid(row);
       // store info when maxBid updated
       let info = {
         endTime: data.articleEndTime,
@@ -423,27 +389,31 @@ let popup = function () {
   /*
    * Updates the maxBid input and autoBid checkbox for a given row
    * Note: the update can either be triggered from the article page, or via user editing on the datatable
+   * Also performs row redraw to show the updated data.
    */
-  function updateRowMaxBid(row, maxBid, autoBid) {
+  function updateRowMaxBid(row, info= {}) {
     let data = row.data();
-    console.debug('Biet-O-Mat: updateRowMaxBid(%s) row=%O, maxBid=%O (%s), autoBid=%O',
-      data.articleId, data, maxBid, typeof maxBid, autoBid);
-    if (typeof data === 'undefined' || !data.hasOwnProperty('articleBidPrice')) {
-      console.warn('Biet-O-Mat: updateRowMaxBid for row=%O - missing articleBidPrice in data');
-      return;
+    console.debug('Biet-O-Matic: updateRowMaxBid(%s) info=%s', data.articleId, JSON.stringify(info));
+    // minBid
+    if (info.hasOwnProperty('minBid')) {
+      data.articleMinimumBid = info.minBid;
     }
     // maxBid
-    if (maxBid == null || Number.isNaN(maxBid)) {
-      data.articleMaxBid = 0;
-    } else {
-      data.articleMaxBid = maxBid;
+    if (info.hasOwnProperty('maxBid')) {
+      if (info.maxBid == null || Number.isNaN(info.maxBid)) {
+        data.articleMaxBid = 0;
+      } else {
+        data.articleMaxBid = info.maxBid;
+      }
     }
     // autoBid
-    if (autoBid != null) {
-      data.articleAutoBid = autoBid;
+    if (info.hasOwnProperty('autoBid')) {
+      if (info.autoBid != null) {
+        data.articleAutoBid = info.autoBid;
+      }
     }
     // invalidate data, redraw
-    // todo selective redraw for parts of the row
+    // todo selective redraw for parts of the row ?
     row.invalidate('data').draw();
   }
 
@@ -801,7 +771,7 @@ let popup = function () {
             browser.tabs.update(data.tabId, {active: true})
               .catch(onError);
           } else {
-            console.debug('Biet-O-Mat: Unable to activate tab(2): data=%O', data);
+            console.debug('Biet-O-Matic: Unable to activate tab(2): data=%O', data);
           }
         }
       });
