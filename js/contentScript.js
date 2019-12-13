@@ -71,11 +71,7 @@
       ]],
       ['articlePaymentMethods', ['#payDet1']],
       ['articleShippingCost', ['#fshippingCost']],
-      ['articleAuctionState', [
-        '#w1-5-_msg',
-        '#w1-4-_msg',
-        '#msgPanel > div > div'
-      ]],
+      ['articleAuctionState', ['#msgPanel']],
       ['articleBidCount', ['#qty-test']],
       ['articleMinimumBid', ['#MaxBidId']]
     ]);
@@ -140,6 +136,8 @@
         } else if (key === "articleBidCount") {
           //console.debug("articleBidCount=%s", domEntry.textContent.trim());
           value = parseInt(domEntry.textContent.trim(), 10);
+        } else if (key === "articleAuctionState") {
+          value = domEntry.outerHTML;
         } else {
           value = domEntry.textContent.trim();
           // replace newline and multiple spaces
