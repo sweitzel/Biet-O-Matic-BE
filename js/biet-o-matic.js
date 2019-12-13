@@ -89,13 +89,6 @@ let popup = function () {
             storeArticleLog(request.articleId, request.detail);
           }
           break;
-        case 'lockBidProcess':
-          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event lockBidProcess received: sender=%O, detail=%s",
-              sender, JSON.stringify(request.detail));
-            storeArticleInfo(request.articleId, request.detail);
-          }
-          break;
       }
     });
 

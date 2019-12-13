@@ -34,7 +34,19 @@
    * - reload when a modal was closed  -> resume bidding
    */
   function handleReload() {
-
+    parseInfoEntry(['#descItemNumber'], 'articleId');
+    // if bidInfo exists in sessionStorage, it means a bid process was started before reload
+    let bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
+    if (bidInfo != null) {
+      console.log("Biet-O-Matic: handleReload() Found bidInfo in sessionStorage: %s", JSON.stringify(bidInfo));
+      // todo should we do anything with the info?
+      // go back to previous page
+      // check if bid was successful
+      // remove bidinfo if the auction for sure ended
+      if (bidInfo.hasOwnProperty('ended') || bidInfo.endTime >= Date.now()) {
+        window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
+      }
+    }
   }
 
   /*
@@ -74,7 +86,6 @@
   function parseInfoEntry(value, key, map) {
     for (let v of value) {
       let domEntry = document.querySelector(v);
-      //console.log("%O", domEntry);
       if (domEntry != null) {
         let value = null;
         if (key === "articleEndTime") {
@@ -352,9 +363,9 @@
             let timeLeftInSeconds = (ebayArticleInfo.articleEndTime - Date.now()) / 1000;
             if (timeLeftInSeconds <= 10) {
               console.debug("Biet-O-Matic: Mutation received: %d seconds left", timeLeftInSeconds);
-              doBid()
+              doBid(false)
                 .catch(e => {
-                  console.info("Biet-O-Matic: doBid() was aborted: %O", JSON.stringify(e));
+                  console.info("Biet-O-Matic: doBid() was aborted: %s", JSON.stringify(e));
                   sendArticleLog(e);
                 });
             }
@@ -489,8 +500,8 @@
         };
       }
       // ensure window autoBid is checked
-      let settings = await browser.runtime.sendMessage({ action: 'getWindowSettings' });
-      if (typeof settings === 'undefined' || !settings.hasOwnProperty('autoBidEnabled' )) {
+      let settings = await browser.runtime.sendMessage({action: 'getWindowSettings'});
+      if (typeof settings === 'undefined' || !settings.hasOwnProperty('autoBidEnabled')) {
         throw {
           component: "Bietvorgang",
           level: "Interner Fehler",
@@ -506,33 +517,33 @@
       }
 
       /*
-       * region The following will ensure that the bid procedure will not be executed twice
+       * The following will ensure that the bid procedure will not be executed twice
        * due to mutation observer the function will be called again, even after the auction ended
        */
-      let result = await browser.storage.sync.get(ebayArticleInfo.articleId);
-      if (Object.keys(result).length === 1) {
-        let storInfo = result[ebayArticleInfo.articleId];
-        if (storInfo.hasOwnProperty('bidHasStarted') && storInfo.bidHasStarted) {
-          throw {
-            component: "Bietvorgang",
-            level: "Abbruch",
-            message: "Es wird bereits geboten."
-          };
+      let bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
+      if (bidInfo == null) {
+        // bid not yet running (or not anymore after page refresh)
+        bidInfo = {
+          maxBid: ebayArticleInfo.articleMaxBid,
+          endTime: ebayArticleInfo.articleEndTime,
+          started: Date.now()
+        };
+        window.sessionStorage.setItem(`bidInfo:${ebayArticleInfo.articleId}`, JSON.stringify(bidInfo));
+      } else {
+        if (bidInfo.hasOwnProperty('ended')) {
+          // bid has ended
+          console.debug("Biet-O-Matic: doBid(), bid already finished: %s", JSON.stringify(bidInfo));
+        } else {
+          // bid is already running
+          console.debug("Biet-O-Matic: doBid(), bid is already running: %s", JSON.stringify(bidInfo));
         }
+        return;
       }
-      await browser.runtime.sendMessage({
-        action: 'lockBidProcess',
-        articleId: ebayArticleInfo.articleId,
-        detail: {
-          bidHasStarted: true
-        },
-      });
-      //endregion
 
       storePerfInfo("Phase1: Gebotsvorbereitung");
       console.log("Biet-O-Matic: Performing bid for article %s: maxBid=%s", ebayArticleInfo.articleId, maxBidInput.value);
       // press bid button
-      const bidButton =  document.getElementById('bidBtn_btn');
+      const bidButton = document.getElementById('bidBtn_btn');
       if (bidButton == null) {
         console.warn("Biet-O-Matic: Article %s - Unable to get Bid Button!", ebayArticleInfo.articleId);
         throw {
@@ -560,7 +571,6 @@
        */
       storePerfInfo("Phase2: Gebot abgeben");
       bidButton.click();
-
       // wait for modal to open: vilens-modal-wrapper
       let modalBody = await waitFor('#MODAL_BODY', 2000)
         .catch((e) => {
@@ -573,9 +583,7 @@
         });
       // modal close button
       const closeButton = document.querySelector('.vilens-modal-close');
-
       const statusMsg = document.getElementById('STATUS_MSG');
-      //console.log("Status: obj=%O, msg=%s", statusMsg, statusMsg.textContent);
       // e.g. 'Bieten Sie mindestens EUR 47,50.'
 
       // some bidding issue, send status to popup (keep modal open, in case user wants to manually correct bid)
@@ -605,7 +613,7 @@
        We set a timeout which will perform the bid ~2 seconds before the auction ends
        */
       storePerfInfo("Phase3: Warten auf Bietzeitpunkt");
-      let wakeUpInMs = (ebayArticleInfo.articleEndTime - Date.now()) - 2000;
+      let wakeUpInMs = (ebayArticleInfo.articleEndTime - Date.now()) - 1500;
       await wait(wakeUpInMs);
 
       // Note: After closing the modal, the page will reload and the content script reinitialize!
@@ -624,6 +632,7 @@
         });
       } else {
         // confirm the bid
+        confirmButton.click();
         console.log("Biet-O-Matic: Bid submitted for Article %s", ebayArticleInfo.articleId);
         storePerfInfo("Phase3: Gebot wurde abgegeben");
         // send info to popup
@@ -635,9 +644,17 @@
       }
       // finally also submit performance info
       getPerfInfoString();
+      // set bid process to ended
+      bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
+      if (bidInfo != null) {
+        bidInfo.ended = Date.now();
+        window.sessionStorage.setItem(`bidInfo:${ebayArticleInfo.articleId}`, JSON.stringify(bidInfo));
+      }
     } catch (err) {
-      //console.log("XXX werfe %s", JSON.stringify(err));
+      // pass error through, will be forwarded to popup
       throw err;
+    } finally {
+      console.debug("Biet-O-Matic: doBid() reached the end.");
     }
   }
 
@@ -717,8 +734,7 @@
     });
     // calculate timeleft until auction end
     let timeLeft = ebayArticleInfo.articleEndTime - perfInfo[perfInfo.length - 1].date;
-    result += `timeLeft = ${timeLeft}ms (${ebayArticleInfo.articleEndTime} - ${perfInfo[perfInfo.length - 2].date}`;
-    console.log("XXX getPerfInfoString() %s", result);
+    result += `timeLeft = ${timeLeft}ms (${ebayArticleInfo.articleEndTime} - ${perfInfo[perfInfo.length - 2].date})`;
     sendArticleLog({
       component: "Bieten",
       level: "Performance",
