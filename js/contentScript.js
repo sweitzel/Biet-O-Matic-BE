@@ -29,19 +29,16 @@
 
   function registerEvents() {
     // event listener for messages from BE overview popup
-    browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    browser.runtime.onMessage.addListener((request, sender) => {
       // return ebayArticleInfo back to Popup script
       if (request.action === "GetArticleInfo") {
         return Promise.resolve({detail: ebayArticleInfo});
-      }
-      // receive updated MaxBid info from Popup - update the document
-      if (request.action === "UpdateArticleMaxBid") {
-        console.debug("Biet-O-Matic: onMessage(UpdateArticleMaxBid) request=%O, sender=%O, sendResponse=%O",
-          request, sender, sendResponse);
+      } else if (request.action === "UpdateArticleMaxBid") {
+        // receive updated MaxBid info from Popup - update the document
+        console.debug("Biet-O-Matic: onMessage(UpdateArticleMaxBid) request=%O, sender=%O", request, sender);
         updateMaxBidInfo(request.detail);
+        return Promise.resolve(true);
       }
-    }).catch(e => {
-      console.warn("Biet-O-Matic: Failed to add event listener: %s", e.message);
     });
   }
 
@@ -759,21 +756,20 @@
   }
 
   async function initialize() {
-    try {
       // first we check if the page is a expected Article Page
       let body = document.getElementById("Body");
       if (body == null) {
         console.log("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
-        return Promise.reject("Biet-O-Mat: skipping on this page; no Body element");
+        throw new Error("Biet-O-Mat: skipping on this page; no Body element");
       }
       let itemType = body.getAttribute("itemtype");
       if (itemType == null) {
         console.log("Biet-O-Mat: skipping on this page; no itemtype in body element");
-        return Promise.reject("Biet-O-Mat: skipping on this page; no itemtype in body element");
+        throw new Error("Biet-O-Mat: skipping on this page; no itemtype in body element");
       }
       if (itemType !== "https://schema.org/Product") {
         console.log("Biet-O-Mat: skipping on this page; invalid itemtype in body element (%s)", itemType);
-        return Promise.reject("Biet-O-Mat: skipping on this page; invalid itemtype in body element");
+        throw new Error("Biet-O-Mat: skipping on this page; invalid itemtype in body element");
       }
       // parse article information
       parsePage();
@@ -785,15 +781,12 @@
       // our tab id is available through the browsser event, if our and their tabId is different, it means
       // the tab is open in another window
       if (!result.hasOwnProperty('tabId')) {
-        return Promise.reject("Incomplete data received");
+        throw new Error("Incomplete data received");
       }
       if (result.hasOwnProperty('data') && result.tabId !== result.data.tabId) {
-        return Promise.reject("Biet-O-Matic: Stopping execution on this page, already active in another tab.");
+        throw new Error("Biet-O-Matic: Stopping execution on this page, already active in another tab.");
       }
-      return Promise.resolve("Successfully initialized");
-    } catch (e) {
-      return Promise.reject(new Error(e));
-    }
+      return "Successfully initialized";
   }
 
   /*
@@ -804,20 +797,20 @@
   handleReload();
 
   initialize()
-    .then(msg => {
-      console.debug("Biet-O-Matic: %s, Article Info: %s", msg, JSON.stringify(ebayArticleInfo));
-      extendPage();
-      monitorChanges();
-      // send info to extension popup directly after initialization
-      browser.runtime.sendMessage({
-        action: 'ebayArticleUpdated',
-        detail: ebayArticleInfo
-      }).catch(e => {
-        console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %s", JSON.stringify(e));
-      });
-      registerEvents();
-    }).catch(e => {
-      console.warn("Biet-O-Matic: Initialization failed: %s", JSON.stringify(e));
+    .catch(console.warn)
+    .then(result => {
+      if (result != null) {
+        console.debug("Biet-O-Matic: %O Article Info: %s", result, JSON.stringify(ebayArticleInfo));
+        extendPage();
+        monitorChanges();
+        // send info to extension popup directly after initialization
+        browser.runtime.sendMessage({
+          action: 'ebayArticleUpdated',
+          detail: ebayArticleInfo
+        }).catch(e => {
+          console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %s", JSON.stringify(e));
+        });
+        registerEvents();
+      }
     });
-
 })();
