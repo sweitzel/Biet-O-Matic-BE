@@ -57,8 +57,9 @@
       // go back to previous page
       // check if bid was successful
       // remove bidinfo if the auction for sure ended
-      if (bidInfo.hasOwnProperty('ended') || bidInfo.endTime <= Date.now()) {
+      if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
         window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
+        ebayArticleInfo.auctionEnded = true;
       }
     }
   }
@@ -507,14 +508,19 @@
    *   Phase1: Prepare Bid (~10 seconds before end) -> inform popup setArticleStatus "Gebotsbgabe vorbereiten."
    *   Phase2: Confirm Bid (1..3 seconds before end) -> inform popup setArticleStatus "Gebotsabgabe erfolgt."
    */
-  async function doBid(test = true) {
+  async function doBid() {
+    let simulate = false;
     let perfSnapshot = [];
     storePerfInfo("Initialisierung");
     try {
       // if end time reached, abort directly
-      if (ebayArticleInfo.endTime <= Date.now()) {
-        console.log("Biet-O-Matic: Auction ended %s seconds ago - do not trigger bidding procedure.",
-          Date.now() - ebayArticleInfo.endTime);
+      if ((ebayArticleInfo.hasOwnProperty('auctionEnded') && ebayArticleInfo.auctionEnded) ||
+          ebayArticleInfo.endTime <= Date.now()) {
+        throw {
+          component: "Bietvorgang",
+          level: "Abbruch",
+          message: "Auktion bereits vor " +(Date.now() - ebayArticleInfo.endTime)+ "ms beendet oder Gebot bereits abgegeben."
+        };
       }
       const maxBidInput = document.getElementById('MaxBidId');
       const autoBidInput = document.getElementById('BomAutoBid');
@@ -527,7 +533,7 @@
           message: "Automatisches bieten für Artikel inaktiv"
         };
       }
-      // ensure window autoBid is checked
+      // retrieve settings from popup
       let settings = await browser.runtime.sendMessage({action: 'getWindowSettings'});
       if (typeof settings === 'undefined' || !settings.hasOwnProperty('autoBidEnabled')) {
         throw {
@@ -535,13 +541,20 @@
           level: "Interner Fehler",
           message: "Konnte autoBidEnabled Option nicht prüfen"
         };
-      } else if (settings.autoBidEnabled === false) {
+      }
+      // ensure window autoBid is enabled
+      if (settings.autoBidEnabled === false) {
         console.debug("Biet-O-Matic: doBid() abort, Window autoBid is off");
         throw {
           component: "Bietvorgang",
           level: "Abbruch",
           message: "Automatisches bieten für Fenster inaktiv"
         };
+      }
+      // enable test mode if specified by popup
+      if (settings.hasOwnProperty('simulate') && settings.simulate) {
+        console.debug("Biet-O-Matic: Enable simulated bidding.");
+        simulate = true;
       }
 
       /*
@@ -645,7 +658,7 @@
       await wait(wakeUpInMs);
 
       // Note: After closing the modal, the page will reload and the content script reinitialize!
-      if (test) {
+      if (simulate) {
         // close modal
         if (closeButton != null) {
           closeButton.click();
@@ -664,10 +677,11 @@
         console.log("Biet-O-Matic: Bid submitted for Article %s", ebayArticleInfo.articleId);
         storePerfInfo("Phase3: Gebot wurde abgegeben");
         // send info to popup
+        let t = ebayArticleInfo.articleEndTime - Date.now();
         sendArticleLog({
           component: "Bietvorgang",
           level: "Erfolg",
-          message: "Bietvorgang abgeschlossen.",
+          message: `Bietvorgang ${t}ms vor Ablauf der Auktion abgeschlossen.`,
         });
       }
       // finally also submit performance info
@@ -675,7 +689,7 @@
       // set bid process to ended
       bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
       if (bidInfo != null) {
-        bidInfo.ended = Date.now();
+        bidInfo.bidPerformed = Date.now();
         window.sessionStorage.setItem(`bidInfo:${ebayArticleInfo.articleId}`, JSON.stringify(bidInfo));
       }
     } catch (err) {
@@ -786,6 +800,10 @@
         console.log("Biet-O-Mat: skipping on this page; invalid itemtype in body element (%s)", itemType);
         throw new Error("Biet-O-Mat: skipping on this page; invalid itemtype in body element");
       }
+      if (ebayArticleInfo.hasOwnProperty('auctionEnded') && ebayArticleInfo.auctionEnded) {
+        throw new Error("Biet-O-Mat: skipping on this page; bidding already performed.");
+      }
+
       // parse article information
       parsePage();
       // check if the same article is already handled by another tab

@@ -20,18 +20,17 @@
 <body>
 
 <div style="margin-bottom: 50px;">
-  <div>
     <fieldset style="margin-bottom: 20px">
       <legend>Optionen</legend>
       <label for="inpAutoBid" style="display: inline-block;white-space: nowrap;margin-right: 30px">
         <input id="inpAutoBid" name="autoBid" title="Sollen Gebote für Auktionen in diesem Browser Fenster automatisch abgegeben werden?"
                type="checkbox" style="width: 30px; height: 30px;vertical-align: middle;"/>
-        <span>Automatikmodus</span>
+        <span id="lblAutoBid">Automatikmodus</span>
       </label>
       <label for="inpBidAll" style="display: inline-block;white-space: nowrap;margin-right: 30px">
         <input id="inpBidAll" name="bidAll" title="Sollen alle Artikel in diesen Browser Fenster ersteigert werden?"
                type="checkbox" style="width: 20px; height: 20px;vertical-align: middle;"/>
-        <span>Alle Artikel ersteigern</span>
+        <span id="lblBidAll">Alle Artikel ersteigern</span>
       </label>
 <!--
       <label for="inpPrepareBidSecs" style="display: inline-block;white-space: nowrap;margin-right: 30px">
@@ -49,6 +48,7 @@
     <table id="articles" class="hover responsive dt-head-nowrap" style="width:100%">
       <thead>
       <tr>
+        <th></th>
         <th>Artikelnr.</th>
         <th>Beschreibung</th>
         <th>Auktions Ende</th>

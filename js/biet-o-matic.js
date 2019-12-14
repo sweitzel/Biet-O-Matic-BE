@@ -36,7 +36,8 @@ let popup = function () {
       switch (request.action) {
         case 'ebayArticleUpdated':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received: tab=%s, detail=%s", sender.tab.id, JSON.stringify(request.detail));
+            console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received: tab=%s, articleId=%s, articleDescription=%s",
+              sender.tab.id, request.detail.articleId, request.detail.articleDescription);
             addOrUpdateArticle(sender.tab, request.detail)
               .catch(e => {
                 console.debug ("Biet-O-Matic: addOrUpdateArticle() failed - %s", JSON.stringify(e));
@@ -48,7 +49,8 @@ let popup = function () {
         case 'ebayArticleRefresh':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
             console.debug("Biet-O-Matic: Browser Event ebayArticleRefresh received from tab %s", sender.tab.id);
-            let dateCell = pt.table.cell(`#${sender.tab.id}`, 2);
+            // redraw date (COLUMN 3)
+            let dateCell = pt.table.cell(`#${sender.tab.id}`, 'articleEndTime:name');
             // redraw date
             dateCell.invalidate('data').draw();
           }
@@ -59,7 +61,8 @@ let popup = function () {
               sender.tab.id, sender, JSON.stringify(request.detail));
             let row = pt.table.row(`#${sender.tab.id}`);
             let data = row.data();
-            let statusCell = pt.table.cell(`#${sender.tab.id}`, 5);
+            // redraw status (COLUMN 6)
+            let statusCell = pt.table.cell(`#${sender.tab.id}`, 'articleAuctionState:name');
             data.articleAuctionState = request.detail.message;
             statusCell.invalidate('data').draw();
           }
@@ -86,8 +89,8 @@ let popup = function () {
               sender.tab.id, JSON.stringify(request.detail));
             let row = pt.table.row(`#${sender.tab.id}`);
             let data = row.data();
-            // show latest message in table (status column)
-            let statusCell = pt.table.cell(`#${sender.tab.id}`, 5);
+            // redraw status (COLUMN 6)
+            let statusCell = pt.table.cell(`#${sender.tab.id}`, 'articleAuctionState:name');
             data.articleAuctionState = request.detail.message.message;
             statusCell.invalidate('data').draw();
             storeArticleLog(request.articleId, request.detail);
@@ -127,18 +130,20 @@ let popup = function () {
     });
      */
 
-    // toggle autoBid for window
+    // toggle autoBid for window when button in browser menu clicked
+    // the other button handler is setup below
     browser.browserAction.onClicked.addListener(function (tab, clickData) {
       if (pt.whoIAm.currentWindow.id === tab.windowId) {
         console.debug('Biet-O-Matic: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
         const toggle = $('#inpAutoBid');
         let checked = toggle.prop('checked');
         // only toggle favicon for ebay tabs
-        console.log("XXX %s , %s result=%s", tab.url, browser.extension.getURL(""), tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/));
         if (tab.url.startsWith(browser.extension.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/)) {
           toggle.prop('checked', !checked);
           updateSetting('autoBidEnabled', !checked);
-          updateFavicon(!checked);
+          // note, in chrome the action click cannot be modified with shift
+          updateSetting('simulate', false);
+          updateFavicon(!checked, null, false);
         }
       }
     });
@@ -148,8 +153,18 @@ let popup = function () {
     inpAutoBid.on('click', e => {
       e.stopPropagation();
       console.debug('Biet-O-Matic: Automatic mode toggled: %s - shift=%s, ctrl=%s', inpAutoBid.is(':checked'), e.shiftKey, e.ctrlKey);
-      updateFavicon(inpAutoBid.is(':checked'));
       updateSetting('autoBidEnabled', inpAutoBid.is(':checked'));
+      // when shift is pressed while clicking autobid checkbox, enable Simulation mode
+      if (inpAutoBid.is(':checked') && e.shiftKey) {
+        console.log("Biet-O-Matic: Enabling Simulation mode.");
+        updateFavicon(inpAutoBid.is(':checked'), null, true);
+        updateSetting('simulate', true);
+        $("#lblAutoBid").text('Automatikmodus (Test)');
+      } else {
+        updateFavicon(inpAutoBid.is(':checked'), null, false);
+        updateSetting('simulate', false);
+        $("#lblAutoBid").text('Automatikmodus');
+      }
     });
     const inpBidAll = $('#inpBidAll');
     inpBidAll.on('click', (e) => {
@@ -375,13 +390,17 @@ let popup = function () {
   /*
    * Append log entry for Article to local storage
    */
-  async function storeArticleLog(articleId, info) {
+  function storeArticleLog(articleId, info) {
     // get info for article from storage
     let log = JSON.parse(window.localStorage.getItem(`log:${articleId}`));
     console.debug("Biet-O-Matic: storeArticleLog(%s) info=%s", articleId, JSON.stringify(info));
     if (log == null) log = [];
     log.push(info.message);
     window.localStorage.setItem(`log:${articleId}`, JSON.stringify(log));
+  }
+  // get the log
+  function getArticleLog(articleId) {
+    return JSON.parse(window.localStorage.getItem(`log:${articleId}`));
   }
 
   /*
@@ -392,7 +411,7 @@ let popup = function () {
   function configureUi() {
     const table = $('.dataTable');
     // maxBid input field
-    table.on('change', 'tr input', function () {
+    table.on('change', 'tr input', () => {
       //console.debug('Biet-O-Matic: configureUi() INPUT Event e=%O, data=%O, val=%s', e, this, this.value);
       // parse articleId from id of both inputs
       let articleId = this.id
@@ -423,8 +442,23 @@ let popup = function () {
         });
     });
 
-    // if first cell is clicked, active the tab of that article
-    table.on('click', 'tbody tr a', function (e) {
+    // Add event listener for opening and closing details
+    pt.table.on('click', 'td.details-control', e => {
+      let tr = $(e.target).closest('tr');
+      let row = pt.table.row(tr);
+      if ( row.child.isShown() ) {
+        // This row is already open - close it
+        row.child.hide();
+        tr.toggleClass('ui-icon-plus ui-icon-minus');
+      } else {
+        // Open this row
+        row.child(renderArticleLog(row.data())).show();
+        tr.toggleClass('ui-icon-plus ui-icon-minus');
+      }
+    });
+
+    // if articleId cell is clicked, active the tab of that article
+    table.on('click', 'tbody tr a', e => {
       e.preventDefault();
       // first column, jumpo to open article tab
       let tabId = e.target.id.match(/^tabid:([0-9]+)$/);
@@ -534,7 +568,7 @@ let popup = function () {
     };
     //document.getElementsByTagName('head')[0].appendChild(link);
   }
-  function updateFavicon(checked = false, tab = null) {
+  function updateFavicon(checked = false, tab = null, test = false) {
     let title = 'B';
     let color = '#a6001a';
     if (checked) {
@@ -559,8 +593,17 @@ let popup = function () {
       query.then((tabs) => {
         for (let tab of tabs) {
           console.debug("Biet-O-Matic: updateFavicon(), Set icon on tab %d (%s)", tab.id, tab.url);
-          browser.browserAction.setIcon({imageData: favImg, tabId: tab.id})
+          browser.browserAction.setIcon({
+            imageData: favImg,
+            tabId: tab.id
+          })
             .catch(onError);
+          if (test) {
+            browser.browserAction.setBadgeText({text: 'T'});
+            //browser.browserAction.setBadgeBackgroundColor({color: '#fff'});
+          } else {
+            browser.browserAction.setBadgeText({text: ''});
+          }
         }
       }, onError);
     } else {
@@ -686,6 +729,47 @@ let popup = function () {
     return divArticleMaxBid.outerHTML;
   }
 
+  // render the log data for the specified article
+  // returns the HTML content
+  function renderArticleLog(data) {
+    if (!data.hasOwnProperty('articleId')) return;
+    let div = document.createElement('div');
+    let table = document.createElement('table');
+    table.style.paddingLeft = '50px';
+    // get log entries
+    let log = getArticleLog(data.articleId);
+    log.forEach(e => {
+      let tr = document.createElement('tr');
+      let tdDate = document.createElement('td');
+      if (e.hasOwnProperty('timestamp'))
+        tdDate.textContent = moment(e.timestamp).format();
+      else
+        tdDate.textContent = '?';
+      tr.append(tdDate);
+      let tdComp = document.createElement('td');
+      if (e.hasOwnProperty('component'))
+        tdComp.textContent = e.component;
+      else
+        tdComp.textContent = '?';
+      tr.append(tdComp);
+      let tdLevel = document.createElement('td');
+      if (e.hasOwnProperty('level'))
+        tdLevel.textContent = e.level;
+      else
+        tdLevel.textContent = '?';
+      tr.append(tdLevel);
+      let tdMsg = document.createElement('td');
+      if (e.hasOwnProperty('level'))
+        tdMsg.textContent = e.message;
+      else
+        tdMsg.textContent = 'n/a';
+      tr.append(tdMsg);
+      table.appendChild(tr);
+    });
+    div.appendChild(table);
+    return div.innerHTML;
+  }
+
   /*
    * MAIN
    */
@@ -696,13 +780,28 @@ let popup = function () {
         registerEvents();
         // restore settings from session storage (autoBidEnabled, bidAllEnabled)
         restoreSettings();
-        updateFavicon();
+        updateFavicon($('#inpAutoBid').is(':checked'));
 
         pt.table = $('#articles').DataTable({
           columns: [
             {
+              className: 'details-control',
+              orderable: false,
+              data: null,
+              width: '15px',
+              defaultContent: '',
+              "render": function (data, type, row) {
+                if (getArticleLog(row.articleId) != null)
+                  return '<i class="ui-icon ui-icon-plus" aria-hidden="true"></i>';
+                else
+                  return '';
+              },
+            },
+            {
+              name: 'articleId',
               data: 'articleId',
               visible: true,
+              width: '100px',
               render: function (data, type, row) {
                 if (type !== 'display' && type !== 'filter') return data;
                 let div = document.createElement("div");
@@ -716,11 +815,13 @@ let popup = function () {
               }
             },
             {
+              name: 'articleDescription',
               data: 'articleDescription',
               render: $.fn.dataTable.render.ellipsis(100, true, false),
               defaultContent: 'Unbekannt'
             },
             {
+              name: 'articleEndTime',
               data: 'articleEndTime',
               render: function (data, type, row) {
                 if (typeof data !== 'undefined') {
@@ -736,18 +837,29 @@ let popup = function () {
               defaultContent: '?'
             },
             {
+              name: 'articleBidPrice',
               data: 'articleBidPrice',
               defaultContent: 0,
               render: renderArticleBidPrice
             },
-            {data: 'articleShippingCost', 'defaultContent': '0.00'},
-            {data: 'articleAuctionState', 'defaultContent': ''},
             {
+              name: 'articleShippingCost',
+              data: 'articleShippingCost',
+              defaultContent: '0.00'
+            },
+            {
+              name: 'articleAuctionState',
+              data: 'articleAuctionState',
+              defaultContent: ''
+            },
+            {
+              name: 'articleAutoBid',
               data: 'articleAutoBid',
               visible: false,
               defaultContent: "false"
             },
             {
+              name: 'articleMaxBid',
               data: 'articleMaxBid',
               render: renderArticleMaxBid,
               defaultContent: 0
@@ -755,12 +867,12 @@ let popup = function () {
           ],
           order: [[2, "asc"]],
           columnDefs: [
-            {searchable: false, "orderable": false, targets: [4, 6, 7]},
-            {type: "num", targets: [0, 7]},
-            {className: "dt-body-center dt-body-nowrap", targets: [0, 7]},
-            {width: "100px", targets: [0, 3, 4, 6, 7]},
-            {width: "220px", targets: [2]},
-            {width: "300px", targets: [1, 5]}
+            {searchable: false, "orderable": false, targets: [6, 7, 8]},
+            {type: "num", targets: [1, 8]},
+            {className: "dt-body-center dt-body-nowrap", targets: [0, 1, 8]},
+            {width: "100px", targets: [4, 5, 7, 8]},
+            {width: "220px", targets: [3]},
+            {width: "300px", targets: [2, 6]}
           ],
           searchDelay: 400,
           rowId: 'tabId',
