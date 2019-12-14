@@ -144,14 +144,17 @@ let popup = function () {
     });
 
     // inpAutoBid checkbox
-    $('#inpAutoBid').on('input', (e) => {
-      console.debug('Biet-O-Matic: Automatic mode toggled: %s', e.target.checked);
-      updateFavicon(e.target.checked);
-      updateSetting('autoBidEnabled', e.target.checked);
+    const inpAutoBid = $('#inpAutoBid');
+    inpAutoBid.on('click', e => {
+      e.stopPropagation();
+      console.debug('Biet-O-Matic: Automatic mode toggled: %s - shift=%s, ctrl=%s', inpAutoBid.is(':checked'), e.shiftKey, e.ctrlKey);
+      updateFavicon(inpAutoBid.is(':checked'));
+      updateSetting('autoBidEnabled', inpAutoBid.is(':checked'));
     });
-    $('#inpBidAll').on('input', (e) => {
-      console.debug('Biet-O-Matic: Bid all articles mode toggled: %s', e.target.checked);
-      updateSetting('bidAllEnabled', e.target.checked);
+    const inpBidAll = $('#inpBidAll');
+    inpBidAll.on('click', (e) => {
+      console.debug('Biet-O-Matic: Bid all articles mode toggled: %s', inpBidAll.is(':checked'));
+      updateSetting('bidAllEnabled', inpBidAll.is(':checked'));
     });
   }
 
@@ -204,7 +207,7 @@ let popup = function () {
     let result = await browser.storage.sync.get(articleId);
     if (Object.keys(result).length === 1) {
       let storInfo = result[articleId];
-      console.debug("Biet-O-Matic: Found info for Article %s in storage: %O", articleId, result);
+      console.debug("Biet-O-Matic: Found info for Article %s in storage: %s", articleId, JSON.stringify(result));
       // maxBid
       if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null) {
         if (typeof storInfo.maxBid === 'string') {
@@ -218,12 +221,10 @@ let popup = function () {
         autoBid = storInfo.autoBid;
       }
       // if articleEndTime changed, update it in storage
-      if (storInfo.hasOwnProperty('endTime')) {
-        if (storInfo.endTime !== info.articleEndTime) {
-          storInfo.endTime = info.articleEndTime;
-          console.log("Biet-O-Matic: Updating article %s end time to %s", articleId, storInfo.endTime);
-          storeArticleInfo(articleId, storInfo);
-        }
+      if (!storInfo.hasOwnProperty('endTime') || storInfo.endTime !== info.articleEndTime) {
+        storInfo.endTime = info.articleEndTime;
+        console.log("Biet-O-Matic: Updating article %s end time to %s", articleId, storInfo.endTime);
+        storeArticleInfo(articleId, storInfo);
       }
     }
     info.articleMaxBid = maxBid;
@@ -389,8 +390,9 @@ let popup = function () {
    * - autoBid checkbox: when checked, the bid and autoBid status is updated in the storage
    */
   function configureUi() {
+    const table = $('.dataTable');
     // maxBid input field
-    $('.dataTable').on('change', 'tr input', function () {
+    table.on('change', 'tr input', function () {
       //console.debug('Biet-O-Matic: configureUi() INPUT Event e=%O, data=%O, val=%s', e, this, this.value);
       // parse articleId from id of both inputs
       let articleId = this.id
@@ -422,7 +424,7 @@ let popup = function () {
     });
 
     // if first cell is clicked, active the tab of that article
-    $('.dataTable').on('click', 'tbody tr a', function (e) {
+    table.on('click', 'tbody tr a', function (e) {
       e.preventDefault();
       // first column, jumpo to open article tab
       let tabId = e.target.id.match(/^tabid:([0-9]+)$/);
@@ -605,6 +607,28 @@ let popup = function () {
   }
 
   /*
+   * same logic as activateAutoBidButton from contentScript
+   */
+  function activateAutoBidButton(maxBidValue, minBidValue, bidPrice) {
+    console.debug("Biet-O-Matic: activateAutoBidButton(), maxBidValue=%s (%s), minBidValue=%s (%s)",
+      maxBidValue, typeof maxBidValue,  minBidValue, typeof minBidValue);
+    //let isMaxBidEntered = (Number.isNaN(maxBidValue) === false);
+    const isMinBidLargerOrEqualBidPrice = (minBidValue >= bidPrice);
+    const isMaxBidLargerOrEqualMinBid = (maxBidValue >= minBidValue);
+    const isMaxBidLargerThanBidPrice = (maxBidValue > bidPrice);
+    if ((isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid) === true) {
+      //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
+      //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
+      return true;
+    } else if (isMaxBidLargerThanBidPrice === true) {
+      //console.debug("Enable bid button: isMaxBidLargerThanBidPrice=%s", isMaxBidLargerThanBidPrice);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /*
    * datatable: render column articleMaxBid
    * - input:number for maxBid
    * - label for autoBid and in it:
@@ -626,8 +650,8 @@ let popup = function () {
     inpMaxBid.id = 'inpMaxBid_' + row.articleId;
     inpMaxBid.type = 'number';
     inpMaxBid.min = '0';
-    inpMaxBid.step = '0.5';
-    inpMaxBid.defaultValue = maxBid;
+    inpMaxBid.step = '0.01';
+    inpMaxBid.defaultValue = maxBid.toString();
     inpMaxBid.style.width = "60px";
     const labelAutoBid = document.createElement('label');
     const chkAutoBid = document.createElement('input');
@@ -643,28 +667,14 @@ let popup = function () {
     labelAutoBid.appendChild(spanAutoBid);
 
     // maxBid was entered, check if the autoBid field can be enabled
-    if (row.hasOwnProperty('articleBidPrice') && row.articleBidPrice != null) {
-      // if the maxBid is > current Price, unlock the autoBid checkbox
-      // also minBid must be > articleBid (could be stale info)
-      if (row.hasOwnProperty('articleMinimumBid') &&
-        (row.hasOwnProperty('articleBidPrice') && row.articleMinimumBid *1 > row.articleBidPrice *1)) {
-        chkAutoBid.disabled = false;
-      } else if (row.hasOwnProperty('articleBidPrice') && row.articleMaxBid *1 > row.articleBidPrice *1) {
-        // fallback if the minimum bid price is not set by article page
-        chkAutoBid.disabled = false;
-      } else if (chkAutoBid.checked === false) {
-        // only deactivate checkbox if no active bid is defined
-        chkAutoBid.disabled = true;
-      }
-      // if the maxBid is < minimum bidding price or current Price, add highlight color
-      // *1 to ensure all values are numbers
-      if ((row.articleMinimumBid *1 >= row.articleBidPrice *1 && row.articleMaxBid *1 < row.articleMinimumBid *1) ||
-        row.articleMaxBid *1 <= row.articleBidPrice *1) {
-        inpMaxBid.classList.add('bomHighlightBorder');
-      } else {
-        inpMaxBid.classList.remove('bomHighlightBorder');
-      }
+    chkAutoBid.disabled =  !activateAutoBidButton(row.articleMaxBid, row.articleMinimumBid, row.articleBidPrice);
+    // if the maxBid is < minimum bidding price or current Price, add highlight color
+    if (chkAutoBid.disabled) {
+      inpMaxBid.classList.add('bomHighlightBorder');
+    } else {
+      inpMaxBid.classList.remove('bomHighlightBorder');
     }
+
     // disable maxBid/autoBid if article ended
     if (row.articleEndTime - Date.now() <= 0) {
       //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);

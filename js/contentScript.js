@@ -269,22 +269,32 @@
    * - a value has been entered in MaxBidId Input field
    * - the value is higher than the minimum or current price of the article
    */
-  function activateAutoBidButton(maxBidValue, minBidValue) {
+  function activateAutoBidButton(maxBidValue, minBidValue = null) {
     let buttonInput = document.getElementById('BomAutoBid');
     if (buttonInput == null) {
-      console.warn("ButtonInput invalid - shouldnt happen");
+      console.warn("activateAutoBidButton() ButtonInput invalid - should not happen!?");
       return;
     }
-    buttonInput.disabled = true;
-    // if no maxBid entered or maxBid < minBid, then autoBid button disabled (cannot be activated)
-    if (Number.isNaN(maxBidValue) ||
-      (minBidValue *1 >= ebayArticleInfo.articleBidPrice && maxBidValue *1 < minBidValue *1) ||
-      maxBidValue *1 <= ebayArticleInfo.articleBidPrice) {
-      // no bid, or bid too low
+    if (minBidValue == null && ebayArticleInfo.hasOwnProperty('articleMinimumBid')) {
+      minBidValue = ebayArticleInfo.articleMinimumBid;
+    }
+    console.debug("Biet-O-Matic: activateAutoBidButton(), maxBidValue=%s (%s), minBidValue=%s (%s)",
+      maxBidValue, typeof maxBidValue,  minBidValue, typeof minBidValue);
+    //let isMaxBidEntered = (Number.isNaN(maxBidValue) === false);
+    const isMinBidLargerOrEqualBidPrice = (minBidValue >= ebayArticleInfo.articleBidPrice);
+    const isMaxBidLargerOrEqualMinBid = (maxBidValue >= minBidValue);
+    const isMaxBidLargerThanBidPrice = (maxBidValue > ebayArticleInfo.articleBidPrice);
+
+    if ((isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid) === true) {
+      //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
+      //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
+      buttonInput.disabled = false;
+    } else if (isMaxBidLargerThanBidPrice === true) {
+      //console.debug("Enable bid button: isMaxBidLargerThanBidPrice=%s", isMaxBidLargerThanBidPrice);
+      buttonInput.disabled = false;
+    } else {
       buttonInput.disabled = true;
       buttonInput.checked = false;
-    } else {
-      buttonInput.disabled = false;
     }
   }
 
@@ -501,6 +511,11 @@
     let perfSnapshot = [];
     storePerfInfo("Initialisierung");
     try {
+      // if end time reached, abort directly
+      if (ebayArticleInfo.endTime <= Date.now()) {
+        console.log("Biet-O-Matic: Auction ended %s seconds ago - do not trigger bidding procedure.",
+          Date.now() - ebayArticleInfo.endTime);
+      }
       const maxBidInput = document.getElementById('MaxBidId');
       const autoBidInput = document.getElementById('BomAutoBid');
       // ensure article autoBid is checked
@@ -789,18 +804,25 @@
       return "Successfully initialized";
   }
 
+  function replacer(key, value) {
+    if (key === "articleAuctionState")
+      return '<REMOVED>';
+    else
+      return value;
+  }
+
   /*
    * MAIN
    */
 
-  // handle reload
+  // handle reload of the tab,
   handleReload();
 
   initialize()
     .catch(console.warn)
     .then(result => {
       if (result != null) {
-        console.debug("Biet-O-Matic: %O Article Info: %s", result, JSON.stringify(ebayArticleInfo));
+        console.debug("Biet-O-Matic: %s - Article Info: %s", result, JSON.stringify(ebayArticleInfo, replacer));
         extendPage();
         monitorChanges();
         // send info to extension popup directly after initialization
