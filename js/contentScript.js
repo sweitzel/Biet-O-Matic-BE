@@ -49,6 +49,7 @@
    */
   function handleReload() {
     parseInfoEntry(['#descItemNumber'], 'articleId');
+    parseInfoEntry(['#msgPanel'], 'articleAuctionState');
     // if bidInfo exists in sessionStorage, it means a bid process was started before reload
     let bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
     if (bidInfo != null) {
@@ -58,6 +59,7 @@
       // check if bid was successful
       // remove bidinfo if the auction for sure ended
       if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
+        console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s", ebayArticleInfo.articleAuctionStateText);
         window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
         ebayArticleInfo.auctionEnded = true;
       }
@@ -154,6 +156,10 @@
         } else if (key === "articleAuctionState") {
           // todo it could be wise to sanitize the HTML, e.g. remove aria, style and id tags
           value = domEntry.outerHTML;
+          let text = domEntry.textContent.trim()
+            .replace(/\n/g, "")
+            .replace(/\s+/g, " ");
+          ebayArticleInfo.articleAuctionStateText = text;
         } else {
           value = domEntry.textContent.trim();
           // replace newline and multiple spaces
@@ -583,6 +589,11 @@
 
       storePerfInfo("Phase1: Gebotsvorbereitung");
       console.log("Biet-O-Matic: Performing bid for article %s: maxBid=%s", ebayArticleInfo.articleId, maxBidInput.value);
+      sendArticleLog({
+        component: "Bietvorgang",
+        level: "Info",
+        message: "Bietvorgang wird vorbereitet...",
+      });
       // press bid button
       const bidButton = document.getElementById('bidBtn_btn');
       if (bidButton == null) {
@@ -613,13 +624,13 @@
       storePerfInfo("Phase2: Gebot abgeben");
       bidButton.click();
       // wait for modal to open: vilens-modal-wrapper
-      let modalBody = await waitFor('#MODAL_BODY', 2000)
+      const modalBody = await waitFor('#MODAL_BODY', 5000)
         .catch((e) => {
           console.warn("Biet-O-Matic: Waiting for Bidding Modal timed out: %s", e.toString());
           throw {
             component: "Bietvorgang",
             level: "Interner Fehler",
-            message: "Element #MODAL_BODY nicht gefunden!"
+            message: "Element #MODAL_BODY konnte innerhalb von 5s nicht gefunden werden!"
           };
         });
       // modal close button
@@ -666,10 +677,11 @@
         console.log("Biet-O-Matic: Test bid performed for Article %s", ebayArticleInfo.articleId);
         storePerfInfo("Phase3: Testgebot beendet");
         // send info to popup about (almost) successful bid
+        let t = ebayArticleInfo.articleEndTime - Date.now();
         sendArticleLog({
           component: "Bietvorgang",
           level: "Erfolg",
-          message: "Test-Bietvorgang erfolgreich.",
+          message: `Test-Bietvorgang (bis zur Bestätigung) ${t}ms vor Ablauf der Auktion abgeschlossen.`,
         });
       } else {
         // confirm the bid
@@ -686,7 +698,7 @@
       }
       // finally also submit performance info
       getPerfInfoString();
-      // set bid process to ended
+      // set bid process to "bidPerformed" - this
       bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
       if (bidInfo != null) {
         bidInfo.bidPerformed = Date.now();

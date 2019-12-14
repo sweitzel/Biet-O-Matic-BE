@@ -90,9 +90,12 @@ let popup = function () {
             let row = pt.table.row(`#${sender.tab.id}`);
             let data = row.data();
             // redraw status (COLUMN 6)
-            let statusCell = pt.table.cell(`#${sender.tab.id}`, 'articleAuctionState:name');
-            data.articleAuctionState = request.detail.message.message;
-            statusCell.invalidate('data').draw();
+            if (request.detail.message.level !== "Performance") {
+              // only if its not performance info (too verboose)
+              let statusCell = pt.table.cell(`#${sender.tab.id}`, 'articleAuctionState:name');
+              data.articleAuctionState = request.detail.message.message;
+              statusCell.invalidate('data').draw();
+            }
             storeArticleLog(request.articleId, request.detail);
           }
           break;
@@ -313,21 +316,49 @@ let popup = function () {
    * - also add listener for storageClearAll button and clear complete storage on request.
    *
    */
-  function checkBrowserStorage() {
+  async function checkBrowserStorage() {
     // total elements
-    browser.storage.sync.get(null).then((result) => {
-      // update html element storageCount
-      $('#inpStorageCount').val(Object.keys(result).length);
-    });
+    let inpStorageCount  = await browser.storage.sync.get(null);
+    // update html element storageCount
+    $('#inpStorageCount').val(Object.keys(inpStorageCount).length);
+
     // total size
-    browser.storage.sync.getBytesInUse(null).then((result) => {
-      $('#inpStorageSize').val(result);
-    });
-    $('#inpStorageClearAll').on('click', (e) => {
-      console.debug('Biet-O-Matic: Alle Storage Einträge entfernt (Gebote, Einstellungen) %O', e);
-      browser.storage.sync.clear().catch(onError);
+    let inpStorageSize = await browser.storage.sync.getBytesInUse(null);
+    $('#inpStorageSize').val(inpStorageSize);
+
+    $('#inpStorageClearAll').on('click', async e => {
+      console.debug('Biet-O-Matic: Clear all data from local and sync storage, %O', e);
+      await browser.storage.sync.clear();
+      window.localStorage.clear();
       // reload page
       browser.tabs.reload();
+    });
+    $('#inpRemoveOldArticles').on('click', async function() {
+      // sync storage
+      let result = await browser.storage.sync.get(null);
+      Object.keys(result).forEach(function(articleId) {
+        let data = result[articleId];
+        //Date.now = 1576359588  yesterday = 1576265988;
+        let diff = (Date.now() - data.endTime) / 1000;
+        if (data.hasOwnProperty('endTime') && diff > 86400) {
+          console.debug("Biet-O-Matic: Deleting Article %s from sync storage, older 1 day (%s > 86000s)", articleId, diff);
+          browser.storage.sync.remove(articleId).catch(e => {
+            console.warn("Biet-O-Matic: Unable to remove article %s from sync storage: %s", e.message);
+          });
+        }
+        // localStorage (logs)
+        Object.keys(window.localStorage).forEach(key => {
+          let value = JSON.parse(window.localStorage.getItem(key));
+          let diff = (Date.now() - value[0].timestamp) / 1000;
+          if (diff > 10000) {
+            console.debug("Biet-O-Matic: Deleting Article %s log entries from localStorage, older 1 day (%s, %s > 86000s)",
+              key, value[0].timestamp, diff);
+            window.localStorage.removeItem(key);
+          }
+        });
+      });
+      // reload page
+      //browser.tabs.reload();
     });
   }
 
@@ -411,21 +442,21 @@ let popup = function () {
   function configureUi() {
     const table = $('.dataTable');
     // maxBid input field
-    table.on('change', 'tr input', () => {
-      //console.debug('Biet-O-Matic: configureUi() INPUT Event e=%O, data=%O, val=%s', e, this, this.value);
+    table.on('change', 'tr input', e => {
+      //console.debug('Biet-O-Matic: configureUi() INPUT Event this=%O', e);
       // parse articleId from id of both inputs
-      let articleId = this.id
+      let articleId = e.target.id
         .replace('chkAutoBid_', '')
         .replace('inpMaxBid_', '');
       // determine row by articleId
       const row = pt.table.row(`:contains(${articleId})`);
       let data = row.data();
-      if (this.id.startsWith('inpMaxBid_')) {
+      if (e.target.id.startsWith('inpMaxBid_')) {
         // maxBid was entered
-        data.articleMaxBid = Number.parseFloat(this.value);
-      } else if (this.id.startsWith('chkAutoBid_')) {
+        data.articleMaxBid = Number.parseFloat(e.target.value);
+      } else if (e.target.id.startsWith('chkAutoBid_')) {
         // autoBid checkbox was clicked
-        data.articleAutoBid = this.checked;
+        data.articleAutoBid = e.target.checked;
       }
       // update local with maxBid/autoBid changes
       updateRowMaxBid(row);
@@ -444,6 +475,7 @@ let popup = function () {
 
     // Add event listener for opening and closing details
     pt.table.on('click', 'td.details-control', e => {
+      e.preventDefault();
       let tr = $(e.target).closest('tr');
       let row = pt.table.row(tr);
       if ( row.child.isShown() ) {
@@ -732,12 +764,13 @@ let popup = function () {
   // render the log data for the specified article
   // returns the HTML content
   function renderArticleLog(data) {
-    if (!data.hasOwnProperty('articleId')) return;
+    if (!data.hasOwnProperty('articleId')) return "";
     let div = document.createElement('div');
     let table = document.createElement('table');
     table.style.paddingLeft = '50px';
     // get log entries
     let log = getArticleLog(data.articleId);
+    if (log == null) return "";
     log.forEach(e => {
       let tr = document.createElement('tr');
       let tdDate = document.createElement('td');
@@ -865,7 +898,7 @@ let popup = function () {
               defaultContent: 0
             }
           ],
-          order: [[2, "asc"]],
+          order: [[3, "asc"]],
           columnDefs: [
             {searchable: false, "orderable": false, targets: [6, 7, 8]},
             {type: "num", targets: [1, 8]},
