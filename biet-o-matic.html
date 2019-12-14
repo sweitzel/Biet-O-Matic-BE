@@ -28,6 +28,11 @@
                type="checkbox" style="width: 30px; height: 30px;vertical-align: middle;"/>
         <span>Automatikmodus</span>
       </label>
+      <label for="inpBidAll" style="display: inline-block;white-space: nowrap;margin-right: 30px">
+        <input id="inpBidAll" name="bidAll" title="Sollen alle Artikel in diesen Browser Fenster ersteigert werden?"
+               type="checkbox" style="width: 20px; height: 20px;vertical-align: middle;"/>
+        <span>Alle Artikel ersteigern</span>
+      </label>
 <!--
       <label for="inpPrepareBidSecs" style="display: inline-block;white-space: nowrap;margin-right: 30px">
         <input id="inpPrepareBidSecs" name="prepareBidSecs"
@@ -41,7 +46,7 @@
   <div id="tableButtons"></div>
   <fieldset>
     <legend>Aktive Ebay Artikel Tabs</legend>
-    <table id="articles" class="hover responsive nowrap" style="width:100%">
+    <table id="articles" class="hover responsive dt-head-nowrap" style="width:100%">
       <thead>
       <tr>
         <th>Artikelnr.</th>

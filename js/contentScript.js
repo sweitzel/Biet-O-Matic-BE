@@ -27,6 +27,23 @@
   // array with performance information (related to bidding)
   let perfInfo = [];
 
+  function registerEvents() {
+    // event listener for messages from BE overview popup
+    browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      // return ebayArticleInfo back to Popup script
+      if (request.action === "GetArticleInfo") {
+        return Promise.resolve({detail: ebayArticleInfo});
+      }
+      // receive updated MaxBid info from Popup - update the document
+      if (request.action === "UpdateArticleMaxBid") {
+        console.debug("Biet-O-Matic: onMessage(UpdateArticleMaxBid) request=%O, sender=%O, sendResponse=%O",
+          request, sender, sendResponse);
+        updateMaxBidInfo(request.detail);
+      }
+    }).catch(e => {
+      console.warn("Biet-O-Matic: Failed to add event listener: %s", e.message);
+    });
+  }
 
   /*
    * handle reload: for various reasons the page can reload or go even to a different page
@@ -43,7 +60,7 @@
       // go back to previous page
       // check if bid was successful
       // remove bidinfo if the auction for sure ended
-      if (bidInfo.hasOwnProperty('ended') || bidInfo.endTime >= Date.now()) {
+      if (bidInfo.hasOwnProperty('ended') || bidInfo.endTime <= Date.now()) {
         window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
       }
     }
@@ -137,6 +154,7 @@
           //console.debug("articleBidCount=%s", domEntry.textContent.trim());
           value = parseInt(domEntry.textContent.trim(), 10);
         } else if (key === "articleAuctionState") {
+          // todo it could be wise to sanitize the HTML, e.g. remove aria, style and id tags
           value = domEntry.outerHTML;
         } else {
           value = domEntry.textContent.trim();
@@ -740,6 +758,44 @@
     });
   }
 
+  async function initialize() {
+    try {
+      // first we check if the page is a expected Article Page
+      let body = document.getElementById("Body");
+      if (body == null) {
+        console.log("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
+        return Promise.reject("Biet-O-Mat: skipping on this page; no Body element");
+      }
+      let itemType = body.getAttribute("itemtype");
+      if (itemType == null) {
+        console.log("Biet-O-Mat: skipping on this page; no itemtype in body element");
+        return Promise.reject("Biet-O-Mat: skipping on this page; no itemtype in body element");
+      }
+      if (itemType !== "https://schema.org/Product") {
+        console.log("Biet-O-Mat: skipping on this page; invalid itemtype in body element (%s)", itemType);
+        return Promise.reject("Biet-O-Mat: skipping on this page; invalid itemtype in body element");
+      }
+      // parse article information
+      parsePage();
+      // check if the same article is already handled by another tab
+      let result = await browser.runtime.sendMessage({
+        action: 'getArticleInfo',
+        articleId: ebayArticleInfo.articleId
+      });
+      // our tab id is available through the browsser event, if our and their tabId is different, it means
+      // the tab is open in another window
+      if (!result.hasOwnProperty('tabId')) {
+        return Promise.reject("Incomplete data received");
+      }
+      if (result.hasOwnProperty('data') && result.tabId !== result.data.tabId) {
+        return Promise.reject("Biet-O-Matic: Stopping execution on this page, already active in another tab.");
+      }
+      return Promise.resolve("Successfully initialized");
+    } catch (e) {
+      return Promise.reject(new Error(e));
+    }
+  }
+
   /*
    * MAIN
    */
@@ -747,47 +803,21 @@
   // handle reload
   handleReload();
 
-  // first we check if the page is a expected Article Page
-  let body = document.getElementById("Body");
-  if (body == null) {
-    console.log("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
-    return;
-  }
-  let itemType = body.getAttribute("itemtype");
-  if ( itemType == null ) {
-    console.log("Biet-O-Mat: skipping on this page; no itemtype in body element");
-    return;
-  }
-  if ( itemType !== "https://schema.org/Product"  ) {
-    console.log(`Biet-O-Mat: skipping on this page; invalid itemtype in body element (${itemType})`);
-    return;
-  }
+  initialize()
+    .then(msg => {
+      console.debug("Biet-O-Matic: %s, Article Info: %s", msg, JSON.stringify(ebayArticleInfo));
+      extendPage();
+      monitorChanges();
+      // send info to extension popup directly after initialization
+      browser.runtime.sendMessage({
+        action: 'ebayArticleUpdated',
+        detail: ebayArticleInfo
+      }).catch(e => {
+        console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %s", JSON.stringify(e));
+      });
+      registerEvents();
+    }).catch(e => {
+      console.warn("Biet-O-Matic: Initialization failed: %s", JSON.stringify(e));
+    });
 
-  // parse article information
-  parsePage();
-  console.debug("Biet-O-Matic: Article Info: %s", JSON.stringify(ebayArticleInfo));
-  extendPage();
-  monitorChanges();
-
-  // send info to extension popup directly after initialization
-  browser.runtime.sendMessage({
-    action: 'ebayArticleUpdated',
-    detail: ebayArticleInfo
-  }).catch((e) => {
-    console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %O", e);
-  });
-
-  // event listener for messages from BE overview popup
-  browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    // return ebayArticleInfo back to Popup script
-    if (request.action === "GetArticleInfo") {
-      return Promise.resolve({detail: ebayArticleInfo});
-    }
-    // receive updated MaxBid info from Popup - update the document
-    if (request.action === "UpdateArticleMaxBid") {
-      console.log("Biet-O-Matic: onMessage(UpdateArticleMaxBid) request=%O, sender=%O, sendResponse=%O",
-        request, sender, sendResponse);
-      updateMaxBidInfo(request.detail);
-    }
-  });
 })();

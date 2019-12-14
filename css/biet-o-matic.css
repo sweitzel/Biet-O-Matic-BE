@@ -6,52 +6,24 @@
 }
 
 /*region ebay css */
-.tmpnl{
-  position:relative;
-  margin-bottom:0
-}
-.tmpnl .sprtr{
-  padding:0 7px
-}
-.tmpnl .msgPad{
-  padding:10px 15px
-}
-.tmpnl .btnPad{
-  padding-top:5px;
-  padding-bottom:5px
-}
-.tmpnl .trait{
-  padding:8px 0 11px 35px;
-  border-bottom:1px solid #999;
-  border-right:1px solid #999;
-  white-space:nowrap
-}
-.tmpnl .traitN{
-  color:#666;
-  font-size:small;
-  font-weight:normal
-}
-.tmpnl .traitV{
-  padding-right:10px
-}
-.tmpnl .freeApp{
-  padding-top:7px;
-  display:inline-block
-}
 #s_w_pipe{
   display:none;
   padding-left:6px;
   padding-right:6px
 }
-.tmpnl .statusLeftContent{
+.statusLeftContent{
   float:left
 }
-.tmpnl .statusContent{
-  text-align:right;
+.statusContent{
+  /*text-align:right;*/
   display:block
 }
 div#msgPanel .msg span.statusContent a{
   font-weight:normal
+}
+
+.addSpace{
+  display:none;
 }
 
 .pnl{

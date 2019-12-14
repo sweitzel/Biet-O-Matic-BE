@@ -38,7 +38,9 @@ let popup = function () {
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
             console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received: tab=%s, detail=%s", sender.tab.id, JSON.stringify(request.detail));
             addOrUpdateArticle(sender.tab, request.detail)
-              .catch(onError);
+              .catch(e => {
+                console.debug ("Biet-O-Matic: addOrUpdateArticle() failed - %s", JSON.stringify(e));
+              });
             // update BE favicon for this tab
             updateFavicon($('#inpAutoBid').prop('checked'), sender.tab);
           }
@@ -67,13 +69,15 @@ let popup = function () {
             console.debug("Biet-O-Matic: Browser Event ebayArticleMaxBidUpdate received: sender=%O, detail=%O", sender, request.detail);
             let row = pt.table.row(`#${sender.tab.id}`);
             updateRowMaxBid(row, request.detail);
-            storeArticleInfo(request.articleId, request.detail);
+            storeArticleInfo(request.articleId, request.detail).catch(e => {
+              console.log("Biet-O-Matic: Unable to store article info: %O", e);
+            });
           }
           break;
         case 'getWindowSettings':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
             console.debug("Biet-O-Matic: Browser Event getWindowSettings received: sender=%O", sender);
-            return Promise.resolve(getWindowSettings());
+            return Promise.resolve(JSON.parse(window.sessionStorage.getItem('settings')));
           }
           break;
         case 'addArticleLog':
@@ -87,6 +91,19 @@ let popup = function () {
             data.articleAuctionState = request.detail.message.message;
             statusCell.invalidate('data').draw();
             storeArticleLog(request.articleId, request.detail);
+          }
+          break;
+        case 'getArticleInfo':
+          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
+            console.debug("Biet-O-Matic: Browser Event getArticleInfo received: sender=%O", sender);
+            if (request.hasOwnProperty('articleId')) {
+              // determine row by articleId
+              let row = pt.table.row(`:contains(${request.articleId})`);
+              return Promise.resolve({
+                data: row.data(),
+                tabId: sender.tab.id
+              });
+            }
           }
           break;
       }
@@ -116,8 +133,13 @@ let popup = function () {
         console.debug('Biet-O-Matic: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
         const toggle = $('#inpAutoBid');
         let checked = toggle.prop('checked');
-        toggle.prop('checked', !checked);
-        updateFavicon(!checked);
+        // only toggle favicon for ebay tabs
+        console.log("XXX %s , %s result=%s", tab.url, browser.extension.getURL(""), tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/));
+        if (tab.url.startsWith(browser.extension.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/)) {
+          toggle.prop('checked', !checked);
+          updateSetting('autoBidEnabled', !checked);
+          updateFavicon(!checked);
+        }
       }
     });
 
@@ -125,6 +147,11 @@ let popup = function () {
     $('#inpAutoBid').on('input', (e) => {
       console.debug('Biet-O-Matic: Automatic mode toggled: %s', e.target.checked);
       updateFavicon(e.target.checked);
+      updateSetting('autoBidEnabled', e.target.checked);
+    });
+    $('#inpBidAll').on('input', (e) => {
+      console.debug('Biet-O-Matic: Bid all articles mode toggled: %s', e.target.checked);
+      updateSetting('bidAllEnabled', e.target.checked);
     });
   }
 
@@ -168,7 +195,7 @@ let popup = function () {
       return;
     }
     let articleId = info.articleId;
-    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%O', info.articleId, tab, info);
+    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%O', articleId, tab, info);
     info.tabId = tab.id;
 
     // complement with DB info
@@ -203,20 +230,29 @@ let popup = function () {
     info.articleAutoBid = autoBid;
 
     // article already in table
-    let row = pt.table.row(`#${tab.id}`);
-    if (row.length === 0 || typeof row === 'undefined') {
+    let rowByTabId = pt.table.row(`#${tab.id}`);
+    // determine row by articleId
+    let rowByArticleId = pt.table.row(`:contains(${articleId})`);
+    //console.log("XXX tabid=%O, articleid=%O, this TabId=%d", rowByTabId.data(), rowByArticleId.data(), info.tabId);
+    // check if article is already open in another tab
+    if (rowByArticleId.length !== 0 && typeof rowByArticleId !== 'undefined') {
+      if (rowByArticleId.data().tabId !== info.tabId) {
+        throw new Error(`Article ${info.articleId} already open in another tab!`);
+      }
+    }
+    if (rowByTabId.length === 0 || typeof rowByTabId === 'undefined') {
       // article not in table - simply add it
       addActiveArticleTab(info);
     } else {
       // article in table - update it
-      updateActiveArticleTab(info, row);
+      updateActiveArticleTab(info, rowByTabId);
     }
 
     // assign again, the row might have been just initialized
-    row = pt.table.row(`#${tab.id}`);
+    rowByTabId = pt.table.row(`#${tab.id}`);
 
     // add highlight colors for expired auctions
-    highlightExpired(row, info);
+    highlightExpired(rowByTabId, info);
   }
 
   /*
@@ -280,22 +316,29 @@ let popup = function () {
   }
 
   /*
-   * Restore settings from browser storage
+   * Restore settings from window session storage
    */
   function restoreSettings() {
     // inpAutoBid
-    pt.settings = {};
-    browser.storage.sync.get('settings').then((result) => {
-      console.debug("Biet-O-Matic: restoreSettings() updating from sync storage: settings=%O", result);
-      if (typeof result.settings !== undefined) {
-        pt.settings = result.settings;
+    let result = JSON.parse(window.sessionStorage.getItem('settings'));
+    if (result != null) {
+      console.debug("Biet-O-Matic: restoreSettings() updating from session storage: settings=%s", JSON.stringify(result));
+      if (result.hasOwnProperty('autoBidEnabled')) {
+        $('#inpAutoBid').prop('checked', result.autoBidEnabled);
       }
-      /* Note: This doesnt make sense, autoBid is per browser window
-      if (typeof pt.settings !== 'undefined' && pt.settings.hasOwnProperty('autoBidEnabled')) {
-        $('#inpAutoBid').attr('checked', pt.settings.autoBidEnabled);
+      if (result.hasOwnProperty('bidAllEnabled')) {
+        $('#inpBidAll').prop('checked', result.bidAllEnabled);
       }
-      */
-    });
+    }
+  }
+  // update setting in session storage
+  function updateSetting(key, value) {
+    let result = JSON.parse(window.sessionStorage.getItem('settings'));
+    if (result == null) {
+      result = {};
+    }
+    result[key] = value;
+    window.sessionStorage.setItem('settings', JSON.stringify(result));
   }
 
   /*
@@ -346,9 +389,6 @@ let popup = function () {
    * - autoBid checkbox: when checked, the bid and autoBid status is updated in the storage
    */
   function configureUi() {
-    // settings
-    $('#inpAutoBid').prop('checked', false);
-
     // maxBid input field
     $('.dataTable').on('change', 'tr input', function () {
       //console.debug('Biet-O-Matic: configureUi() INPUT Event e=%O, data=%O, val=%s', e, this, this.value);
@@ -375,7 +415,28 @@ let popup = function () {
         autoBid: data.articleAutoBid
       };
       // update storage info
-      storeArticleInfo(data.articleId, info, data.tabId);
+      storeArticleInfo(data.articleId, info, data.tabId)
+        .catch(e => {
+          console.warn("Biet-O-Matic: Failed to store article info: %O", e);
+        });
+    });
+
+    // if first cell is clicked, active the tab of that article
+    $('.dataTable').on('click', 'tbody tr a', function (e) {
+      e.preventDefault();
+      // first column, jumpo to open article tab
+      let tabId = e.target.id.match(/^tabid:([0-9]+)$/);
+      if (tabId != null) {
+        tabId = Number.parseInt(tabId[1]);
+        browser.tabs.update(tabId, {active: true})
+          .catch(onError);
+      } else {
+        // check link and open in new tab
+        let href = e.target.href;
+        if (href !== "#") {
+          window.open(href, '_blank');
+        }
+      }
     });
   }
 
@@ -502,7 +563,7 @@ let popup = function () {
       }, onError);
     } else {
       // update for single tab
-      console.debug("Biet-O-Matic: updateFavicon(), Set icon on tab %d (%s)", tab.id, tab.url);
+      console.debug("Biet-O-Matic: updateFavicon(), Set icon on single tab %d (%s)", tab.id, tab.url);
       browser.browserAction.setIcon({imageData: favImg, tabId: tab.id})
         .catch(onError);
     }
@@ -567,6 +628,7 @@ let popup = function () {
     inpMaxBid.min = '0';
     inpMaxBid.step = '0.5';
     inpMaxBid.defaultValue = maxBid;
+    inpMaxBid.style.width = "60px";
     const labelAutoBid = document.createElement('label');
     const chkAutoBid = document.createElement('input');
     chkAutoBid.id = 'chkAutoBid_' + row.articleId;
@@ -615,167 +677,156 @@ let popup = function () {
   }
 
   /*
-   * Return settings for the current window
-   * autoBidEnabled: Is autoBid enabled for this window?
-   * bidMoment: When to execute the bid, early (10s) or late (2s)
-   * howMany: How many articles to bid for this window (one or all)
-   *
-   */
-  function getWindowSettings() {
-    let settings = { autoBidEnabled: false, prepareBidSecs: 5};
-    settings.autoBidEnabled = $('#inpAutoBid').is(':checked');
-    settings.prepareBidSecs = Number.parseInt($('#inpPrepareBidSecs').val(), 10);
-    return settings;
-  }
-
-  /*
    * MAIN
    */
 
-  document.addEventListener('DOMContentLoaded', function () {
-    detectWhoIAm().then(whoIAm => {
-      pt.whoIAm = whoIAm;
-      registerEvents();
-      restoreSettings();
-      updateFavicon();
+    document.addEventListener('DOMContentLoaded', function () {
+      detectWhoIAm().then(whoIAm => {
+        pt.whoIAm = whoIAm;
+        registerEvents();
+        // restore settings from session storage (autoBidEnabled, bidAllEnabled)
+        restoreSettings();
+        updateFavicon();
 
-      pt.table = $('#articles').DataTable({
-        columns: [
-          {
-            data: 'articleId',
-            visible: true,
-            /*render: function(data) {
-              return '<img src="ebay.png"><p>'+data+'</p>';
-            }*/
-          },
-          {
-            data: 'articleDescription',
-            render: $.fn.dataTable.render.ellipsis(100, true, false),
-            defaultContent: 'Unbekannt'
-          },
-          {
-            data: 'articleEndTime',
-            render: function (data, type, row) {
-              if (typeof data !== 'undefined') {
+        pt.table = $('#articles').DataTable({
+          columns: [
+            {
+              data: 'articleId',
+              visible: true,
+              render: function (data, type, row) {
                 if (type !== 'display' && type !== 'filter') return data;
-                let timeLeft = moment(data);  // jshint ignore:line
-                moment.relativeTimeThreshold('ss', 0);
-                timeLeft.locale('de');
-                return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
-              } else {
-                return "unbegrenzt";
+                let div = document.createElement("div");
+                div.id = data;
+                let a = document.createElement('a');
+                a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
+                a.id = 'tabid:' + row.tabId;
+                a.text = data;
+                div.appendChild(a);
+                return div.outerHTML;
               }
             },
-            defaultContent: '?'
-          },
-          {
-            data: 'articleBidPrice',
-            defaultContent: 0,
-            render: renderArticleBidPrice
-          },
-          {data: 'articleShippingCost', 'defaultContent': '0.00'},
-          {data: 'articleAuctionState', 'defaultContent': ''},
-          {
-            data: 'articleAutoBid',
-            visible: false,
-            defaultContent: "false"
-          },
-          {
-            data: 'articleMaxBid',
-            render: renderArticleMaxBid,
-            defaultContent: 0
-          }
-        ],
-        order: [[2, "asc"]],
-        columnDefs: [
-          {"searchable": false, "orderable": false, "targets": [4, 5, 6, 7]},
-          { "type": "num", "targets": 7 },
-          {"width": "100px", "targets": [0, 3, 4]},
-          {"width": "220px", "targets": [2, 5, 6, 7]},
-        ],
-        searchDelay: 400,
-        rowId: 'tabId',
-        pageLength: 25,
-        language:
-        //"url": "https://cdn.datatables.net/plug-ins/1.10.20/i18n/German.json"
-          {
-            "sEmptyTable": "Keine Daten in der Tabelle vorhanden",
-            "sInfo": "_START_ bis _END_ von _TOTAL_ Einträgen",
-            "sInfoEmpty": "Keine Daten vorhanden",
-            "sInfoFiltered": "(gefiltert von _MAX_ Einträgen)",
-            "sInfoPostFix": "",
-            "sInfoThousands": ".",
-            "sLengthMenu": "_MENU_ Einträge anzeigen",
-            "sLoadingRecords": "Wird geladen ..",
-            "sProcessing": "Bitte warten ..",
-            "sSearch": "Suchen",
-            "sZeroRecords": "Keine Einträge vorhanden",
-            "oPaginate": {
-              "sFirst": "Erste",
-              "sPrevious": "Zurück",
-              "sNext": "Nächste",
-              "sLast": "Letzte"
+            {
+              data: 'articleDescription',
+              render: $.fn.dataTable.render.ellipsis(100, true, false),
+              defaultContent: 'Unbekannt'
             },
-            "oAria": {
-              "sSortAscending": ": aktivieren, um Spalte aufsteigend zu sortieren",
-              "sSortDescending": ": aktivieren, um Spalte absteigend zu sortieren"
-            },
-            "select": {
-              "rows": {
-                "_": "%d Zeilen ausgewählt",
-                "0": "",
-                "1": "1 Zeile ausgewählt"
-              }
-            },
-            "buttons": {
-              "print": "Drucken",
-              "colvis": "Spalten",
-              "copy": "Kopieren",
-              "copyTitle": "In Zwischenablage kopieren",
-              "copyKeys": "Taste <i>ctrl</i> oder <i>\u2318</i> + <i>C</i> um Tabelle<br>in Zwischenspeicher zu kopieren.<br><br>Um abzubrechen die Nachricht anklicken oder Escape drücken.",
-              "copySuccess": {
-                "_": "%d Zeilen kopiert",
-                "1": "1 Zeile kopiert"
+            {
+              data: 'articleEndTime',
+              render: function (data, type, row) {
+                if (typeof data !== 'undefined') {
+                  if (type !== 'display' && type !== 'filter') return data;
+                  let timeLeft = moment(data);  // jshint ignore:line
+                  moment.relativeTimeThreshold('ss', 0);
+                  timeLeft.locale('de');
+                  return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+                } else {
+                  return "unbegrenzt";
+                }
               },
-              "pageLength": {
-                "-1": "Zeige alle Zeilen",
-                "_": "Zeige %d Zeilen"
+              defaultContent: '?'
+            },
+            {
+              data: 'articleBidPrice',
+              defaultContent: 0,
+              render: renderArticleBidPrice
+            },
+            {data: 'articleShippingCost', 'defaultContent': '0.00'},
+            {data: 'articleAuctionState', 'defaultContent': ''},
+            {
+              data: 'articleAutoBid',
+              visible: false,
+              defaultContent: "false"
+            },
+            {
+              data: 'articleMaxBid',
+              render: renderArticleMaxBid,
+              defaultContent: 0
+            }
+          ],
+          order: [[2, "asc"]],
+          columnDefs: [
+            {searchable: false, "orderable": false, targets: [4, 6, 7]},
+            {type: "num", targets: [0, 7]},
+            {className: "dt-body-center dt-body-nowrap", targets: [0, 7]},
+            {width: "100px", targets: [0, 3, 4, 6, 7]},
+            {width: "220px", targets: [2]},
+            {width: "300px", targets: [1, 5]}
+          ],
+          searchDelay: 400,
+          rowId: 'tabId',
+          pageLength: 25,
+          language:
+          //"url": "https://cdn.datatables.net/plug-ins/1.10.20/i18n/German.json"
+            {
+              "sEmptyTable": "Keine Daten in der Tabelle vorhanden",
+              "sInfo": "_START_ bis _END_ von _TOTAL_ Einträgen",
+              "sInfoEmpty": "Keine Daten vorhanden",
+              "sInfoFiltered": "(gefiltert von _MAX_ Einträgen)",
+              "sInfoPostFix": "",
+              "sInfoThousands": ".",
+              "sLengthMenu": "_MENU_ Einträge anzeigen",
+              "sLoadingRecords": "Wird geladen ..",
+              "sProcessing": "Bitte warten ..",
+              "sSearch": "Suchen",
+              "sZeroRecords": "Keine Einträge vorhanden",
+              "oPaginate": {
+                "sFirst": "Erste",
+                "sPrevious": "Zurück",
+                "sNext": "Nächste",
+                "sLast": "Letzte"
+              },
+              "oAria": {
+                "sSortAscending": ": aktivieren, um Spalte aufsteigend zu sortieren",
+                "sSortDescending": ": aktivieren, um Spalte absteigend zu sortieren"
+              },
+              "select": {
+                "rows": {
+                  "_": "%d Zeilen ausgewählt",
+                  "0": "",
+                  "1": "1 Zeile ausgewählt"
+                }
+              },
+              "buttons": {
+                "print": "Drucken",
+                "colvis": "Spalten",
+                "copy": "Kopieren",
+                "copyTitle": "In Zwischenablage kopieren",
+                "copyKeys": "Taste <i>ctrl</i> oder <i>\u2318</i> + <i>C</i> um Tabelle<br>in Zwischenspeicher zu kopieren.<br><br>Um abzubrechen die Nachricht anklicken oder Escape drücken.",
+                "copySuccess": {
+                  "_": "%d Zeilen kopiert",
+                  "1": "1 Zeile kopiert"
+                },
+                "pageLength": {
+                  "-1": "Zeige alle Zeilen",
+                  "_": "Zeige %d Zeilen"
+                }
               }
             }
-          }
-      });
-      // initialize tabs
-      pt.whoIAm.currentWindow.tabs.forEach((tab) => {
-        getArticleInfoForTab(tab)
-          .then((articleInfo) => {
-            if (articleInfo.hasOwnProperty('detail')) {
-              addOrUpdateArticle(tab, articleInfo.detail);
-            }
-          });
-      });
+        });
+        // initialize tabs
+        pt.whoIAm.currentWindow.tabs.forEach((tab) => {
+          getArticleInfoForTab(tab)
+            .then(articleInfo => {
+              if (articleInfo.hasOwnProperty('detail')) {
+                addOrUpdateArticle(tab, articleInfo.detail)
+                  .catch(e => {
+                    console.debug("Biet-O-Matic: addOrUpdateArticle() failed - %s", e.toString());
+                  });
+              }
+            })
+            .catch(e => {
+              console.warn("Biet-O-Matic: Failed to get Article Info from Tab %d: %s", tab.id, e.message);
+            });
+        });
 
-      // if first cell is clicked, active the tab of that article
-      $('.dataTable').on('click', 'tbody tr', function (e) {
-        //console.log('API row values : e=%O, data=%O', e, settings, pt.table.row(this).data());
-        // first cell of a row clicked?
-        if (e.target.cellIndex === 0) {
-          let data = pt.table.row(this).data();
-          if (typeof data !== 'undefined' && data.hasOwnProperty('tabId')) {
-            browser.tabs.update(data.tabId, {active: true})
-              .catch(onError);
-          } else {
-            console.debug('Biet-O-Matic: Unable to activate tab(2): data=%O', data);
-          }
-        }
+        configureUi();
+        checkBrowserStorage();
+        console.debug("DOMContentLoaded handler for window with id = %d completed (%O).", pt.whoIAm.currentWindow.id, pt.whoIAm.currentWindow);
+        pt.whoIAm.currentWindow.helloFromBom = "Date: " + moment().format();
+      }).catch((err) => {
+        console.error("Biet-O-Matic:; DOMContentLoaded post initialisation failed; %s", err);
       });
-
-      configureUi();
-      checkBrowserStorage();
-      console.debug("DOMContentLoaded handler for window with id = %d completed (%O).", pt.whoIAm.currentWindow.id, pt.whoIAm.currentWindow.helloFromBom);
-      pt.whoIAm.currentWindow.helloFromBom = "Date: " + moment().format();
-    }).catch((err) => {
-      console.error("Biet-O-Matic:; DOMContentLoaded post initialisation failed; %s", err);
     });
-  });
 };
+
 popup();

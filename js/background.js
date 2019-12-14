@@ -9,7 +9,7 @@
 
 let BomTab = (function () {
   'use strict';
-  let debug = true;
+  let debug = false;
   // LISTENERS
 
   //add listeners for message requests from other extension pages (biet-o-matic.html)
