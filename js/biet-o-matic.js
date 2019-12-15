@@ -760,10 +760,10 @@ let popup = function () {
     const isMinBidLargerOrEqualBidPrice = (minBidValue >= bidPrice);
     const isMaxBidLargerOrEqualMinBid = (maxBidValue >= minBidValue);
     const isMaxBidLargerThanBidPrice = (maxBidValue > bidPrice);
-    if ((isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid) === true) {
+    if (isMinBidLargerOrEqualBidPrice) {
       //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
       //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
-      return true;
+      return isMaxBidLargerOrEqualMinBid;
     } else if (isMaxBidLargerThanBidPrice === true) {
       //console.debug("Enable bid button: isMaxBidLargerThanBidPrice=%s", isMaxBidLargerThanBidPrice);
       return true;
@@ -780,7 +780,7 @@ let popup = function () {
    */
   function renderArticleMaxBid(data, type, row) {
     if (type !== 'display' && type !== 'filter') return data;
-    console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
+    //console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
     let autoBid = false;
     let closedArticle = false;
     if (row.hasOwnProperty('articleAutoBid')) {
@@ -814,7 +814,7 @@ let popup = function () {
     spanAutoBid.textContent = 'Aktiv';
     labelAutoBid.appendChild(spanAutoBid);
 
-    if (closedArticle == true) {
+    if (closedArticle === true) {
       inpMaxBid.disabled = true;
       chkAutoBid.disabled = true;
     } else {
@@ -1113,8 +1113,23 @@ let popup = function () {
         },
         {
           name: 'articleAuctionState',
-          data: 'auctionState',
-          defaultContent: ''
+          data: 'auctionEndState',
+          defaultContent: '',
+          render: function (data, type, row) {
+            const auctionEndStates = {
+              0: 'Beendet',
+              1: 'Höchstbietender',
+              2: 'Überboten',
+              null: 'Unbekannt'
+            };
+            if (typeof data !== 'undefined') {
+              if (type !== 'display' && type !== 'filter') return data;
+              //return Object.keys(auctionEndStates).find(key => auctionEndStates[key] === data);
+              return auctionEndStates[data];
+            } else {
+              return 'unbekannt';
+            }
+          }
         },
         {
           name: 'articleAutoBid',
@@ -1130,10 +1145,10 @@ let popup = function () {
           render: renderArticleMaxBid
         }
       ],
-      order: [[3, "asc"]],
+      order: [[2, "desc"]],
       columnDefs: [
-        {searchable: false, "orderable": false, targets: [4]},
-        {type: "num", targets: [0]},
+        {searchable: false, "orderable": false, targets: [3, 4, 5]},
+        {type: "num", targets: [0, 5]},
         {className: "dt-body-center dt-body-nowrap", targets: [0,1,2,5]}
       ],
       searchDelay: 400,
@@ -1143,7 +1158,7 @@ let popup = function () {
     });
 
     // get closed tabs from sync storage and add them to the table
-    // Note: we do not filter here at all, old entries which shouldnt be display should be removed from DB
+    // Note: we do not filter here at all, old entries which shouldnt be displayed should be removed from DB
     browser.storage.sync.get(null)
       .then(result => {
         Object.keys(result).forEach(key => {
