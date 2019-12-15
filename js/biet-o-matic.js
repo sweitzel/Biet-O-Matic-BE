@@ -29,6 +29,7 @@ let popup = function () {
      - addArticleLog: from content script to store log info for article
      - getArticleInfo: return article info from row
      - getArticleSyncInfo: return article info from sync storage
+     - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
      - browser.tabs.onremoved: Tab closed
    */
   function registerEvents() {
@@ -126,16 +127,36 @@ let popup = function () {
         case 'ebayArticleSetAuctionEndState':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
             let v = (typeof request.detail.auctionEndState !== 'undefined') ? request.detail.auctionEndState : null;
-            console.debug("Biet-O-Matic: Browser Event ebayArticleSetAuctionEndState received: sender=%O, state=%s", sender, v);
+            console.debug("Biet-O-Matic: Browser Event ebayArticleSetAuctionEndState received: sender=%O, state=%s",
+              sender, v);
             if (request.hasOwnProperty('articleId')) {
-              // determine row by articleId
-              // let row = pt.table.row(`:contains(${request.articleId})`);
-              //let row = pt.table.row(`#${sender.tab.id}`);
-              // todo more logic needed for other articles
+              if (request.detail.hasOwnProperty('auctionEndState') && request.detail.auctionEndState === 1) {
+                if ($('#inpBidAll').is(':checked') === false) {
+                  console.debug("Biet-O-Matic: ebayArticleSetAuctionEndState() disabling autoBid - Article %s was successful.",
+                    request.articleId);
+                  //$('#inpAutoBid').prop('checked', false);
+                  //updateSetting('autoBidEnabled', false);
+                  $('#inpAutoBid').prop('checked', false);
+                }
+              }
               storeArticleInfo(request.articleId, request.detail).catch(e => {
                 console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
               });
             }
+          }
+          break;
+        /*
+         * If two article end at the same time (+/- 1 seconds), then one of these should bid earlier to
+         * prevent that we purchase both
+         */
+        case 'ebayArticleGetAdjustedBidTime':
+          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
+            console.debug("Biet-O-Matic: Browser Event ebayArticleGetAdjustedBidTime received: article=%s, sender=%O",
+              request.articleId, sender);
+            if (!request.hasOwnProperty('articleId')) {
+              return Promise.reject("Missing parameter articleId");
+            }
+            return Promise.resolve(getAdjustedBidTime(request.articleId, request.articleEndTime));
           }
           break;
       }
@@ -716,6 +737,54 @@ let popup = function () {
   }
   //endregion
 
+  /*
+   * return adjusted endtime for an article
+   * - if bidAll option is set, then return original time
+   * - if 1..n articles with endTime+-1 are found, then sort by articleId and return idx0+0s, idx1+1s, idx2+2s ...
+   */
+  function getAdjustedBidTime(articleId, articleEndTime) {
+    // bidAll, then we dont need to special handle articles ending at the same time
+    if ($('#inpBidAll').is(':checked')) {
+      return articleEndTime;
+    }
+
+    // filter from https://stackoverflow.com/a/37616104
+    Object.filter = (obj, predicate) =>
+      Object.keys(obj)
+        .filter( key => predicate(obj[key]) )
+        .reduce( (res, key) => Object.assign(res, { [key]: obj[key] }), {} );
+
+    const rows = pt.table.rows();
+    if (rows == null) return null;
+    const articles = rows.data();
+    // filter articles with endtime same as for the given article +/- 1
+    let filtered = Object.filter(articles, article => {
+      if (!article.hasOwnProperty('articleEndTime')) return false;
+      //if (article.articleId === articleId) return false;
+      return (Math.abs(article.articleEndTime - articleEndTime) < 1000);
+    });
+    if (filtered.length === 1) {
+      return articleEndTime;
+    }
+    // sort by articleId
+    let keys = Object.keys(filtered).sort(function(a,b) {
+      return filtered[a].articleId - filtered[b].articleId;
+    });
+    const findKey = function (obj, value) {
+      let key = null;
+      for (let prop in obj) {
+        if (obj.hasOwnProperty(prop)) {
+          if (obj[prop].articleId === value) key = prop;
+        }
+      }
+      return key;
+    };
+    // the index determines how many seconds an article bid will be earlier
+    let idx = findKey(filtered, articleId);
+    console.debug("Biet-O-Matic: getAdjustedBidTime() Adjusted Article %s bidTime by %ss, %d articles end at the same time (%O).",
+      articleId, keys.indexOf(idx), keys.length, filtered);
+    return (articleEndTime - (keys.indexOf(idx) * 1000));
+  }
 
   /*
    * If an article is close to ending or ended, highlight the date
@@ -822,7 +891,7 @@ let popup = function () {
       chkAutoBid.disabled = !activateAutoBidButton(row.articleMaxBid, row.articleMinimumBid, row.articleBidPrice);
       // set tooltip for button to minBidValue
       // if the maxBid is < minimum bidding price or current Price, add highlight color
-      if (chkAutoBid.disabled) {
+      if ((row.articleEndTime - Date.now() > 0) && chkAutoBid.disabled) {
         inpMaxBid.classList.add('bomHighlightBorder');
         inpMaxBid.title = `Geben sie minimal ${row.articleMinimumBid} ein`;
       } else {
@@ -1053,6 +1122,7 @@ let popup = function () {
         })
         .catch(e => {
           console.warn("Biet-O-Matic: Failed to get Article Info from Tab %d: %s", tab.id, e.message);
+          browser.tabs.reload(tab.id);
         });
     });
   }
@@ -1156,7 +1226,7 @@ let popup = function () {
       ],
       searchDelay: 400,
       rowId: 'articleId',
-      pageLength: 25,
+      pageLength: 10,
       language: getDatatableTranslation('de_DE')
     });
 
@@ -1194,6 +1264,7 @@ let popup = function () {
 
         configureUi();
         checkBrowserStorage().catch(onError);
+
         console.debug("DOMContentLoaded handler for window with id = %d completed (%O).", pt.whoIAm.currentWindow.id, pt.whoIAm.currentWindow);
       }).catch((err) => {
         console.error("Biet-O-Matic:; DOMContentLoaded post initialisation failed; %s", err);

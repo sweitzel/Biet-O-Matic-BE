@@ -74,8 +74,8 @@
         // its not really overbid, but we will not win the auction due to defined minimum price
         state = auctionEndStates.overbid;
       }
+      console.debug("Biet-O-Matic: handleReload() state=%s (%d)", ebayArticleInfo.articleAuctionStateText, state);
     }
-    console.debug("handleReload() state=%s (%d)", ebayArticleInfo.articleAuctionStateText, state);
 
     // retrieve settings from popup
     // if simulation is on, then we define successful bid status randomly with 33% chance (ended, overbid, purchased)
@@ -370,6 +370,7 @@
       let t = document.querySelector('.tgl-btn');
       if (buttonInput.disabled) {
         t.title = `Geben sie minimal ${minBidValue} ein`;
+        buttonInput.checked =  false;
       } else {
         t.title = "Minimale Erhöhung erreicht";
       }
@@ -510,8 +511,9 @@
               browser.runtime.sendMessage({
                 action: 'ebayArticleRefresh',
               }).catch((e) => {
-                console.warn("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed: %O", e);
-                // todo reload page to repair the BE
+                console.info("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed - reloading page!: %s (%s)",
+                  e.message);
+                location.reload();
               });
             }
           }
@@ -741,8 +743,23 @@
        We want to perform the confirmation of the bid as close as possible to the end
        We set a timeout which will perform the bid ~2 seconds before the auction ends
        */
+
+      // contact popup to check if we should perform the bid earlier (multiple articles could end at the same time)
+      let modifiedEndTime = await browser.runtime.sendMessage({
+        action: 'ebayArticleGetAdjustedBidTime',
+        articleId: ebayArticleInfo.articleId,
+        articleEndTime: ebayArticleInfo.articleEndTime
+      });
+      if (modifiedEndTime == null) {
+        console.warn("Biet-O-Matic: Unable to get ebayArticleGetAdjustedBidTime result!");
+        modifiedEndTime = ebayArticleInfo.articleEndTime;
+      } else {
+        console.debug("Biet-O-Matic: Modified bidTime: %ds earlier.",
+          (ebayArticleInfo.articleEndTime - modifiedEndTime) / 1000);
+      }
+
       storePerfInfo("Phase3: Warten auf Bietzeitpunkt");
-      let wakeUpInMs = (ebayArticleInfo.articleEndTime - Date.now()) - 1500;
+      let wakeUpInMs = (modifiedEndTime - Date.now()) - 1500;
       await wait(wakeUpInMs);
 
       // Note: After closing the modal, the page will reload and the content script reinitialize!
@@ -793,7 +810,7 @@
   function wait(ms) {
     return new Promise(function (resolve) {
       if (ms < 100) {
-        console.log("Biet-O-Mat: wait(%s), too short, abort wait.", ms);
+        console.warn("Biet-O-Mat: wait(%s), too short, abort wait.", ms);
         resolve();
       } else {
         window.setTimeout(function () {
@@ -902,8 +919,8 @@
       });
       // our tab id is available through the browsser event, if our and their tabId is different, it means
       // the tab is open in another window
-      if (!result.hasOwnProperty('tabId')) {
-        throw new Error("Incomplete data received");
+      if (typeof result === 'undefined' || !result.hasOwnProperty('tabId')) {
+        throw new Error("Incomplete data received from sendMessage callback (browser action open?)");
       }
       if (result.hasOwnProperty('data') && result.tabId !== result.data.tabId) {
         throw new Error("Biet-O-Matic: Stopping execution on this page, already active in another tab.");
