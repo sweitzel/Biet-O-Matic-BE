@@ -819,12 +819,15 @@ let popup = function () {
       chkAutoBid.disabled = true;
     } else {
       // maxBid was entered, check if the autoBid field can be enabled
-      chkAutoBid.disabled =  !activateAutoBidButton(row.articleMaxBid, row.articleMinimumBid, row.articleBidPrice);
+      chkAutoBid.disabled = !activateAutoBidButton(row.articleMaxBid, row.articleMinimumBid, row.articleBidPrice);
+      // set tooltip for button to minBidValue
       // if the maxBid is < minimum bidding price or current Price, add highlight color
       if (chkAutoBid.disabled) {
         inpMaxBid.classList.add('bomHighlightBorder');
+        inpMaxBid.title = `Geben sie minimal ${row.articleMinimumBid} ein`;
       } else {
         inpMaxBid.classList.remove('bomHighlightBorder');
+        inpMaxBid.title = "Minimale Erhöhung erreicht";
       }
 
       // disable maxBid/autoBid if article ended

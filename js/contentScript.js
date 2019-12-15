@@ -362,10 +362,17 @@
     const isMaxBidLargerOrEqualMinBid = (maxBidValue >= minBidValue);
     const isMaxBidLargerThanBidPrice = (maxBidValue > ebayArticleInfo.articleBidPrice);
 
-    if ((isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid) === true) {
+    if (isMinBidLargerOrEqualBidPrice) {
       //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
       //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
-      buttonInput.disabled = false;
+      buttonInput.disabled = !isMaxBidLargerOrEqualMinBid;
+      // set tooltip for button to minBidValue
+      let t = document.querySelector('.tgl-btn');
+      if (buttonInput.disabled) {
+        t.title = `Geben sie minimal ${minBidValue} ein`;
+      } else {
+        t.title = "Minimale Erhöhung erreicht";
+      }
     } else if (isMaxBidLargerThanBidPrice === true) {
       //console.debug("Enable bid button: isMaxBidLargerThanBidPrice=%s", isMaxBidLargerThanBidPrice);
       buttonInput.disabled = false;
