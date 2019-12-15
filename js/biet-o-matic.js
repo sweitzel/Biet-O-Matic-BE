@@ -27,6 +27,8 @@ let popup = function () {
      - ebayArticleMaxBidUpdated: from content script to update maxBid info
      - getWindowSettings: from content script to retrieve the settings for this window (e.g. autoBidEnabled)
      - addArticleLog: from content script to store log info for article
+     - getArticleInfo: return article info from row
+     - getArticleSyncInfo: return article info from sync storage
      - browser.tabs.onremoved: Tab closed
    */
   function registerEvents() {
@@ -108,6 +110,30 @@ let popup = function () {
               return Promise.resolve({
                 data: row.data(),
                 tabId: sender.tab.id
+              });
+            }
+          }
+          break;
+        case 'getArticleSyncInfo':
+          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
+            console.debug("Biet-O-Matic: Browser Event getArticleSyncInfo received: sender=%O, article=%s",
+              sender, request.articleId);
+            if (request.hasOwnProperty('articleId')) {
+              return Promise.resolve(browser.storage.sync.get(request.articleId));
+            }
+          }
+          break;
+        case 'ebayArticleSetAuctionEndState':
+          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
+            let v = (typeof request.detail.auctionEndState !== 'undefined') ? request.detail.auctionEndState : null;
+            console.debug("Biet-O-Matic: Browser Event ebayArticleSetAuctionEndState received: sender=%O, state=%s", sender, v);
+            if (request.hasOwnProperty('articleId')) {
+              // determine row by articleId
+              // let row = pt.table.row(`:contains(${request.articleId})`);
+              //let row = pt.table.row(`#${sender.tab.id}`);
+              // todo more logic needed for other articles
+              storeArticleInfo(request.articleId, request.detail).catch(e => {
+                console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
               });
             }
           }
@@ -318,7 +344,7 @@ let popup = function () {
    */
   async function checkBrowserStorage() {
     // total elements
-    let inpStorageCount  = await browser.storage.sync.get(null);
+    let inpStorageCount = await browser.storage.sync.get(null);
     // update html element storageCount
     $('#inpStorageCount').val(Object.keys(inpStorageCount).length);
 
@@ -416,6 +442,7 @@ let popup = function () {
         detail: info
       });
     }
+    return true;
   }
 
   /*

@@ -10,7 +10,7 @@
  * Apache License Version 2.0, January 2004, http://www.apache.org/licenses/
  */
 
-(function() {
+(function () {
   'use strict';
 
   // check if the contentScript was already loaded (each Tab will get its own window object)
@@ -26,6 +26,14 @@
 
   // array with performance information (related to bidding)
   let perfInfo = [];
+
+  // auction states as communicated to the overview page
+  const auctionEndStates = {
+    ended: 0,
+    purchased: 1,
+    overbid: 2,
+    unknown: null
+  };
 
   function registerEvents() {
     // event listener for messages from BE overview popup
@@ -47,20 +55,82 @@
    * - article ended and redirects to a recommended article -> redirect back
    * - reload when a modal was closed  -> resume bidding
    */
-  function handleReload() {
+  async function handleReload() {
     parseInfoEntry(['#descItemNumber'], 'articleId');
     parseInfoEntry(['#msgPanel'], 'articleAuctionState');
+
+    // determine auction state - if any yet
+    // TODO: think of a better way, to support languages or be robust against changing strings
+    let state = auctionEndStates.unknown;
+    if (ebayArticleInfo.hasOwnProperty('articleAuctionStateText')) {
+      if (ebayArticleInfo.articleAuctionStateText.includes('Dieses Angebot wurde beendet')) {
+        state = auctionEndStates.ended;
+      } else if (ebayArticleInfo.articleAuctionStateText.includes('Sie waren der Höchstbietende')) {
+        state = auctionEndStates.purchased;
+      } else if (ebayArticleInfo.articleAuctionStateText.includes('Sie wurden überboten')) {
+        state = auctionEndStates.overbid;
+      } else if (ebayArticleInfo.articleAuctionStateText.includes('Mindestpreis wurde noch nicht erreicht')) {
+        // Sie sind derzeit Höchstbietender, aber der Mindestpreis wurde noch nicht erreicht.
+        // its not really overbid, but we will not win the auction due to defined minimum price
+        state = auctionEndStates.overbid;
+      }
+    }
+    console.debug("handleReload() state=%s (%d)", ebayArticleInfo.articleAuctionStateText, state);
+
+    // retrieve settings from popup
+    // if simulation is on, then we define successful bid status randomly with 33% chance (ended, overbid, purchased)
+    const settings = await browser.runtime.sendMessage({
+      action: 'getWindowSettings',
+    });
+    let simulate = false;
+    if (settings != null && typeof settings !== 'undefined' && settings.hasOwnProperty('simulate')) {
+      simulate = settings.simulate;
+      if (simulate) {
+        // https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/Global_Objects/Math/math.random
+        state = Math.floor(Math.random() * (3));
+        console.debug("Biet-O-Matic: Simulation is on, returning random state: %d", state);
+      }
+    }
+
+    /*
+     * Retrieve stored article info from popup
+     * - if null returned, then the article is not of interest
+     * - if articleState from stored result is incomplete (e.g. state.unknown), then
+     *   update the state
+     * The popup can then use the result to decide e.g. to stop the automatic bidding
+     */
+    const result = await browser.runtime.sendMessage({
+      action: 'getArticleSyncInfo',
+      articleId: ebayArticleInfo.articleId
+    });
+    if (result != null && result.hasOwnProperty(ebayArticleInfo.articleId)) {
+      const data = result[ebayArticleInfo.articleId];
+     /* console.log("XXX compare data.auctionEndState(%s,%s) === auctionEndStates.unknown(%s,%s) = %s",
+        data.auctionEndState, typeof data.auctionEndState,
+        auctionEndStates.unknown, typeof auctionEndStates.unknown,
+        data.auctionEndState === auctionEndStates.unknown);*/
+      if (!data.hasOwnProperty('auctionEndState') || (state !== auctionEndStates.unknown && data.auctionEndState === auctionEndStates.unknown)) {
+        // initially set or update auctionEndState
+        await browser.runtime.sendMessage({
+          action: 'ebayArticleSetAuctionEndState',
+          articleId: ebayArticleInfo.articleId,
+          detail: { auctionEndState: state }
+        });
+      }
+    }
+
     // if bidInfo exists in sessionStorage, it means a bid process was started before reload
     let bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
+    // this function will also delete the bidInfo...
     if (bidInfo != null) {
-      console.log("Biet-O-Matic: handleReload() Found bidInfo in sessionStorage: %s", JSON.stringify(bidInfo));
-      // todo should we do anything with the info?
-      // go back to previous page
-      // check if bid was successful
+      console.debug("Biet-O-Matic: handleReload() Found bidInfo in sessionStorage: %s", JSON.stringify(bidInfo));
+      // go back to previous page (?)
+
       // remove bidinfo if the auction for sure ended
       if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
         console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s", ebayArticleInfo.articleAuctionStateText);
         window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
+        // set this, so the script will not trigger parsing further down
         ebayArticleInfo.auctionEnded = true;
       }
     }
