@@ -146,11 +146,28 @@ let popup = function () {
       console.debug('Biet-O-Matic: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
       // window closing, no need to update anybody
       if (removeInfo.isWindowClosing === false) {
-        // remove tab from table
-        let row = pt.table.row(`#${tabId}`);
+        // remove tab from activeArticles table
+        const row = pt.table.row(`#${tabId}`);
+        const data = row.data();
         if (row.length === 1) {
           row.remove().draw();
         }
+        // if article is of interest (has storage entry), add closedTime to storage entry
+        storeArticleInfo(data.articleId, {closedTime: Date.now()}, null, true)
+          .then(() => {
+            // update closedArticles table (after closedTime has been set)
+            browser.storage.sync.get(data.articleId)
+              .then(result => {
+                if (result.hasOwnProperty(data.articleId)) {
+                  let info = result[data.articleId];
+                  info.articleId = data.articleId;
+                  addClosedArticleToTable(info);
+                }
+              }).catch(onError);
+          })
+          .catch(e => {
+          console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
+        });
       }
     });
     // tab reloaded
@@ -268,7 +285,17 @@ let popup = function () {
       if (!storInfo.hasOwnProperty('endTime') || storInfo.endTime !== info.articleEndTime) {
         storInfo.endTime = info.articleEndTime;
         console.log("Biet-O-Matic: Updating article %s end time to %s", articleId, storInfo.endTime);
-        storeArticleInfo(articleId, storInfo);
+        await storeArticleInfo(articleId, storInfo);
+      }
+      // closedTime: if present - remove it (as tab is now open again)
+      if (storInfo.hasOwnProperty('closedTime')) {
+        // remove from closedArticlesTable
+        const row = pt.tableClosedArticles.row(`#${articleId}`);
+        if (row.length === 1) {
+          console.debug("Biet-O-Matic: Article %s has been reopened, removing from closedTable.", articleId);
+          row.remove().draw();
+        }
+        await storeArticleInfo(articleId, {closedTime: null});
       }
     }
     info.articleMaxBid = maxBid;
@@ -287,7 +314,7 @@ let popup = function () {
     }
     if (rowByTabId.length === 0 || typeof rowByTabId === 'undefined') {
       // article not in table - simply add it
-      addActiveArticleTab(info);
+      addActiveArticleToTable(info);
     } else {
       // article in table - update it
       updateActiveArticleTab(info, rowByTabId);
@@ -303,14 +330,26 @@ let popup = function () {
   /*
    * Add a new article to the active articles table
    */
-  function addActiveArticleTab(info) {
-    console.debug('Biet-O-Matic: addActiveArticleTab(%s), info=%O)', info.articleId, info);
+  function addActiveArticleToTable(info) {
+    console.debug('Biet-O-Matic: addActiveArticleToTable(%s), info=%O)', info.articleId, info);
     if (!info.hasOwnProperty('articleId')) {
-      console.debug("addArticle skipped for tab %O, no info");
+      console.debug("Biet-O-Matic: addActiveArticleToTable skipped, no info: %s", JSON.stringify(info));
       return;
-
     }
-    let row = pt.table.row.add(info);
+    const row = pt.table.row.add(info);
+    row.draw();
+  }
+
+  /*
+   * Add a closed article to the closedArticles table
+   */
+  function addClosedArticleToTable(info) {
+    console.debug('Biet-O-Matic: addClosedArticleToTable(%s), info=%O)', info.articleId, info);
+    if (!info.hasOwnProperty('articleId')) {
+      console.debug("Biet-O-Matic: addClosedArticleToTable skipped, no info: %s", JSON.stringify(info));
+      return;
+    }
+    const row = pt.tableClosedArticles.row.add(info);
     row.draw();
   }
 
@@ -416,11 +455,11 @@ let popup = function () {
 
   /*
    * store articleInfo to sync storage
-   *   will keep update values which are provided in the info object
+   *   will use values which are provided in the info object to update existing ones
    * - key: articleId
-   * - value: endTime, minBid, maxBid, autoBid
+   * - value: endTime, minBid, maxBid, autoBid, closedTime
    */
-  async function storeArticleInfo(articleId, info, tabId = null) {
+  async function storeArticleInfo(articleId, info, tabId = null, onlyIfExists = false) {
     if (articleId === null || typeof articleId === 'undefined') {
       console.warn("Biet-O-Matic: storeArticleInfo() - unknown articleId! info=%O tab=%O", info, tabId);
       return;
@@ -430,6 +469,9 @@ let popup = function () {
     let result = await browser.storage.sync.get(articleId);
     if (Object.keys(result).length === 1) {
       settings = result[articleId];
+    } else {
+      // should we only store the info if an storage entry already exists?
+      if (onlyIfExists === true) return false;
     }
     // merge new info into existing settings
     let newSettings = Object.assign({}, settings, info);
@@ -738,10 +780,14 @@ let popup = function () {
    */
   function renderArticleMaxBid(data, type, row) {
     if (type !== 'display' && type !== 'filter') return data;
-    //console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
+    console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
     let autoBid = false;
+    let closedArticle = false;
     if (row.hasOwnProperty('articleAutoBid')) {
       autoBid = row.articleAutoBid;
+    } else if (row.hasOwnProperty('autoBid')) {
+      autoBid = row.autoBid;
+      closedArticle = true;
     }
     let maxBid = 0;
     if (data != null) {
@@ -768,21 +814,27 @@ let popup = function () {
     spanAutoBid.textContent = 'Aktiv';
     labelAutoBid.appendChild(spanAutoBid);
 
-    // maxBid was entered, check if the autoBid field can be enabled
-    chkAutoBid.disabled =  !activateAutoBidButton(row.articleMaxBid, row.articleMinimumBid, row.articleBidPrice);
-    // if the maxBid is < minimum bidding price or current Price, add highlight color
-    if (chkAutoBid.disabled) {
-      inpMaxBid.classList.add('bomHighlightBorder');
-    } else {
-      inpMaxBid.classList.remove('bomHighlightBorder');
-    }
-
-    // disable maxBid/autoBid if article ended
-    if (row.articleEndTime - Date.now() <= 0) {
-      //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
+    if (closedArticle == true) {
       inpMaxBid.disabled = true;
       chkAutoBid.disabled = true;
+    } else {
+      // maxBid was entered, check if the autoBid field can be enabled
+      chkAutoBid.disabled =  !activateAutoBidButton(row.articleMaxBid, row.articleMinimumBid, row.articleBidPrice);
+      // if the maxBid is < minimum bidding price or current Price, add highlight color
+      if (chkAutoBid.disabled) {
+        inpMaxBid.classList.add('bomHighlightBorder');
+      } else {
+        inpMaxBid.classList.remove('bomHighlightBorder');
+      }
+
+      // disable maxBid/autoBid if article ended
+      if (row.articleEndTime - Date.now() <= 0) {
+        //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
+        inpMaxBid.disabled = true;
+        chkAutoBid.disabled = true;
+      }
     }
+
     divArticleMaxBid.appendChild(inpMaxBid);
     divArticleMaxBid.appendChild(labelAutoBid);
     return divArticleMaxBid.outerHTML;
@@ -830,6 +882,283 @@ let popup = function () {
     return div.innerHTML;
   }
 
+  // translation data for Datatable
+  function getDatatableTranslation(language = 'de_DE') {
+    console.log("getDatatableTranslation called: %s", language);
+    //"url": "https://cdn.datatables.net/plug-ins/1.10.20/i18n/German.json"
+    const languages = {};
+    languages.de_DE =
+      {
+        "sEmptyTable": "Keine Daten in der Tabelle vorhanden",
+        "sInfo": "_START_ bis _END_ von _TOTAL_ Einträgen",
+        "sInfoEmpty": "Keine Daten vorhanden",
+        "sInfoFiltered": "(gefiltert von _MAX_ Einträgen)",
+        "sInfoPostFix": "",
+        "sInfoThousands": ".",
+        "sLengthMenu": "_MENU_ Einträge anzeigen",
+        "sLoadingRecords": "Wird geladen ..",
+        "sProcessing": "Bitte warten ..",
+        "sSearch": "Suchen",
+        "sZeroRecords": "Keine Einträge vorhanden",
+        "oPaginate": {
+          "sFirst": "Erste",
+          "sPrevious": "Zurück",
+          "sNext": "Nächste",
+          "sLast": "Letzte"
+        },
+        "oAria": {
+          "sSortAscending": ": aktivieren, um Spalte aufsteigend zu sortieren",
+          "sSortDescending": ": aktivieren, um Spalte absteigend zu sortieren"
+        },
+        "select": {
+          "rows": {
+            "_": "%d Zeilen ausgewählt",
+            "0": "",
+            "1": "1 Zeile ausgewählt"
+          }
+        },
+        "buttons": {
+          "print": "Drucken",
+          "colvis": "Spalten",
+          "copy": "Kopieren",
+          "copyTitle": "In Zwischenablage kopieren",
+          "copyKeys": "Taste <i>ctrl</i> oder <i>\u2318</i> + <i>C</i> um Tabelle<br>in Zwischenspeicher zu kopieren.<br><br>Um abzubrechen die Nachricht anklicken oder Escape drücken.",
+          "copySuccess": {
+            "_": "%d Zeilen kopiert",
+            "1": "1 Zeile kopiert"
+          },
+          "pageLength": {
+            "-1": "Zeige alle Zeilen",
+            "_": "Zeige %d Zeilen"
+          },
+          "decimal": ","
+        }
+      };
+    return languages.de_DE;
+  }
+
+  // setup active articles table
+  function setupTableActiveArticles() {
+    pt.table = $('#articles').DataTable({
+      columns: [
+        {
+          className: 'details-control',
+          orderable: false,
+          data: null,
+          width: '15px',
+          defaultContent: '',
+          "render": function (data, type, row) {
+            if (getArticleLog(row.articleId) != null)
+              return '<i class="ui-icon ui-icon-plus" aria-hidden="true"></i>';
+            else
+              return '';
+          },
+        },
+        {
+          name: 'articleId',
+          data: 'articleId',
+          visible: true,
+          width: '100px',
+          render: function (data, type, row) {
+            if (type !== 'display' && type !== 'filter') return data;
+            let div = document.createElement("div");
+            div.id = data;
+            let a = document.createElement('a');
+            a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
+            a.id = 'tabid:' + row.tabId;
+            a.text = data;
+            div.appendChild(a);
+            return div.outerHTML;
+          }
+        },
+        {
+          name: 'articleDescription',
+          data: 'articleDescription',
+          render: $.fn.dataTable.render.ellipsis(100, true, false),
+          defaultContent: 'Unbekannt'
+        },
+        {
+          name: 'articleEndTime',
+          data: 'articleEndTime',
+          render: function (data, type, row) {
+            if (typeof data !== 'undefined') {
+              if (type !== 'display' && type !== 'filter') return data;
+              let timeLeft = moment(data);  // jshint ignore:line
+              moment.relativeTimeThreshold('ss', 0);
+              timeLeft.locale('de');
+              return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+            } else {
+              return "unbegrenzt";
+            }
+          },
+          defaultContent: '?'
+        },
+        {
+          name: 'articleBidPrice',
+          data: 'articleBidPrice',
+          defaultContent: 0,
+          render: renderArticleBidPrice
+        },
+        {
+          name: 'articleShippingCost',
+          data: 'articleShippingCost',
+          defaultContent: '0.00'
+        },
+        {
+          name: 'articleAuctionState',
+          data: 'articleAuctionState',
+          defaultContent: ''
+        },
+        {
+          name: 'articleAutoBid',
+          data: 'articleAutoBid',
+          visible: false,
+          defaultContent: "false"
+        },
+        {
+          name: 'articleMaxBid',
+          data: 'articleMaxBid',
+          render: renderArticleMaxBid,
+          defaultContent: 0
+        }
+      ],
+      order: [[3, "asc"]],
+      columnDefs: [
+        {searchable: false, "orderable": false, targets: [6, 7, 8]},
+        {type: "num", targets: [1, 8]},
+        {className: "dt-body-center dt-body-nowrap", targets: [0, 1, 8]},
+        {width: "100px", targets: [4, 5, 7, 8]},
+        {width: "220px", targets: [3]},
+        {width: "300px", targets: [2, 6]}
+      ],
+      searchDelay: 400,
+      rowId: 'tabId',
+      pageLength: 25,
+      language: getDatatableTranslation('de_DE')
+    });
+
+    // initialize active tabs
+    pt.whoIAm.currentWindow.tabs.forEach((tab) => {
+      getArticleInfoForTab(tab)
+        .then(articleInfo => {
+          if (articleInfo.hasOwnProperty('detail')) {
+            addOrUpdateArticle(tab, articleInfo.detail)
+              .catch(e => {
+                console.debug("Biet-O-Matic: addOrUpdateArticle() failed - %s", e.toString());
+              });
+          }
+        })
+        .catch(e => {
+          console.warn("Biet-O-Matic: Failed to get Article Info from Tab %d: %s", tab.id, e.message);
+        });
+    });
+  }
+
+  /*
+   * setup table for recently closed articles
+   */
+  function setupTableClosedArticles() {
+    pt.tableClosedArticles = $('#closedArticles').DataTable({
+      columns: [
+        {
+          name: 'articleId',
+          data: 'articleId',
+          visible: true,
+          width: '100px',
+          render: function (data, type, row) {
+            if (type !== 'display' && type !== 'filter') return data;
+            let div = document.createElement("div");
+            div.id = data;
+            let a = document.createElement('a');
+            a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
+            a.id = 'articleid:' + row.articleId;
+            a.text = data;
+            div.appendChild(a);
+            return div.outerHTML;
+          }
+        },
+        {
+          name: 'articleEndTime',
+          data: 'endTime',
+          defaultContent: '?',
+          width: '220px',
+          render: function (data, type, row) {
+            if (typeof data !== 'undefined') {
+              if (type !== 'display' && type !== 'filter') return data;
+              let timeLeft = moment(data);  // jshint ignore:line
+              moment.relativeTimeThreshold('ss', 0);
+              timeLeft.locale('de');
+              return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+            } else {
+              return 'unbekannt';
+            }
+          }
+        },
+        {
+          name: 'articleClosedTime',
+          data: 'closedTime',
+          defaultContent: '?',
+          width: '220px',
+          render: function (data, type, row) {
+            if (typeof data !== 'undefined') {
+              if (type !== 'display' && type !== 'filter') return data;
+              let timeLeft = moment(data);  // jshint ignore:line
+              moment.relativeTimeThreshold('ss', 0);
+              timeLeft.locale('de');
+              return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+            } else {
+              return 'unbekannt';
+            }
+          }
+        },
+        {
+          name: 'articleAuctionState',
+          data: 'auctionState',
+          defaultContent: ''
+        },
+        {
+          name: 'articleAutoBid',
+          data: 'autoBid',
+          visible: false,
+          defaultContent: "false"
+        },
+        {
+          name: 'articleMaxBid',
+          data: 'maxBid',
+          defaultContent: 0,
+          width: '120px',
+          render: renderArticleMaxBid
+        }
+      ],
+      order: [[3, "asc"]],
+      columnDefs: [
+        {searchable: false, "orderable": false, targets: [4]},
+        {type: "num", targets: [0]},
+        {className: "dt-body-center dt-body-nowrap", targets: [0,1,2,5]}
+      ],
+      searchDelay: 400,
+      rowId: 'articleId',
+      pageLength: 25,
+      language: getDatatableTranslation('de_DE')
+    });
+
+    // get closed tabs from sync storage and add them to the table
+    // Note: we do not filter here at all, old entries which shouldnt be display should be removed from DB
+    browser.storage.sync.get(null)
+      .then(result => {
+        Object.keys(result).forEach(key => {
+          let data = result[key];
+          if (data.hasOwnProperty('closedTime') && data.closedTime != null) {
+            console.log("Biet-O-Matic: setupTableClosedArticles() Add row to closed tabs: %s", JSON.stringify(data));
+            data.articleId = key;
+            addClosedArticleToTable(data);
+          }
+        });
+      })
+      .catch(onError);
+  }
+
+
   /*
    * MAIN
    */
@@ -841,170 +1170,13 @@ let popup = function () {
         // restore settings from session storage (autoBidEnabled, bidAllEnabled)
         restoreSettings();
         updateFavicon($('#inpAutoBid').is(':checked'));
+        setupTableActiveArticles();
 
-        pt.table = $('#articles').DataTable({
-          columns: [
-            {
-              className: 'details-control',
-              orderable: false,
-              data: null,
-              width: '15px',
-              defaultContent: '',
-              "render": function (data, type, row) {
-                if (getArticleLog(row.articleId) != null)
-                  return '<i class="ui-icon ui-icon-plus" aria-hidden="true"></i>';
-                else
-                  return '';
-              },
-            },
-            {
-              name: 'articleId',
-              data: 'articleId',
-              visible: true,
-              width: '100px',
-              render: function (data, type, row) {
-                if (type !== 'display' && type !== 'filter') return data;
-                let div = document.createElement("div");
-                div.id = data;
-                let a = document.createElement('a');
-                a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
-                a.id = 'tabid:' + row.tabId;
-                a.text = data;
-                div.appendChild(a);
-                return div.outerHTML;
-              }
-            },
-            {
-              name: 'articleDescription',
-              data: 'articleDescription',
-              render: $.fn.dataTable.render.ellipsis(100, true, false),
-              defaultContent: 'Unbekannt'
-            },
-            {
-              name: 'articleEndTime',
-              data: 'articleEndTime',
-              render: function (data, type, row) {
-                if (typeof data !== 'undefined') {
-                  if (type !== 'display' && type !== 'filter') return data;
-                  let timeLeft = moment(data);  // jshint ignore:line
-                  moment.relativeTimeThreshold('ss', 0);
-                  timeLeft.locale('de');
-                  return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
-                } else {
-                  return "unbegrenzt";
-                }
-              },
-              defaultContent: '?'
-            },
-            {
-              name: 'articleBidPrice',
-              data: 'articleBidPrice',
-              defaultContent: 0,
-              render: renderArticleBidPrice
-            },
-            {
-              name: 'articleShippingCost',
-              data: 'articleShippingCost',
-              defaultContent: '0.00'
-            },
-            {
-              name: 'articleAuctionState',
-              data: 'articleAuctionState',
-              defaultContent: ''
-            },
-            {
-              name: 'articleAutoBid',
-              data: 'articleAutoBid',
-              visible: false,
-              defaultContent: "false"
-            },
-            {
-              name: 'articleMaxBid',
-              data: 'articleMaxBid',
-              render: renderArticleMaxBid,
-              defaultContent: 0
-            }
-          ],
-          order: [[3, "asc"]],
-          columnDefs: [
-            {searchable: false, "orderable": false, targets: [6, 7, 8]},
-            {type: "num", targets: [1, 8]},
-            {className: "dt-body-center dt-body-nowrap", targets: [0, 1, 8]},
-            {width: "100px", targets: [4, 5, 7, 8]},
-            {width: "220px", targets: [3]},
-            {width: "300px", targets: [2, 6]}
-          ],
-          searchDelay: 400,
-          rowId: 'tabId',
-          pageLength: 25,
-          language:
-          //"url": "https://cdn.datatables.net/plug-ins/1.10.20/i18n/German.json"
-            {
-              "sEmptyTable": "Keine Daten in der Tabelle vorhanden",
-              "sInfo": "_START_ bis _END_ von _TOTAL_ Einträgen",
-              "sInfoEmpty": "Keine Daten vorhanden",
-              "sInfoFiltered": "(gefiltert von _MAX_ Einträgen)",
-              "sInfoPostFix": "",
-              "sInfoThousands": ".",
-              "sLengthMenu": "_MENU_ Einträge anzeigen",
-              "sLoadingRecords": "Wird geladen ..",
-              "sProcessing": "Bitte warten ..",
-              "sSearch": "Suchen",
-              "sZeroRecords": "Keine Einträge vorhanden",
-              "oPaginate": {
-                "sFirst": "Erste",
-                "sPrevious": "Zurück",
-                "sNext": "Nächste",
-                "sLast": "Letzte"
-              },
-              "oAria": {
-                "sSortAscending": ": aktivieren, um Spalte aufsteigend zu sortieren",
-                "sSortDescending": ": aktivieren, um Spalte absteigend zu sortieren"
-              },
-              "select": {
-                "rows": {
-                  "_": "%d Zeilen ausgewählt",
-                  "0": "",
-                  "1": "1 Zeile ausgewählt"
-                }
-              },
-              "buttons": {
-                "print": "Drucken",
-                "colvis": "Spalten",
-                "copy": "Kopieren",
-                "copyTitle": "In Zwischenablage kopieren",
-                "copyKeys": "Taste <i>ctrl</i> oder <i>\u2318</i> + <i>C</i> um Tabelle<br>in Zwischenspeicher zu kopieren.<br><br>Um abzubrechen die Nachricht anklicken oder Escape drücken.",
-                "copySuccess": {
-                  "_": "%d Zeilen kopiert",
-                  "1": "1 Zeile kopiert"
-                },
-                "pageLength": {
-                  "-1": "Zeige alle Zeilen",
-                  "_": "Zeige %d Zeilen"
-                }
-              }
-            }
-        });
-        // initialize tabs
-        pt.whoIAm.currentWindow.tabs.forEach((tab) => {
-          getArticleInfoForTab(tab)
-            .then(articleInfo => {
-              if (articleInfo.hasOwnProperty('detail')) {
-                addOrUpdateArticle(tab, articleInfo.detail)
-                  .catch(e => {
-                    console.debug("Biet-O-Matic: addOrUpdateArticle() failed - %s", e.toString());
-                  });
-              }
-            })
-            .catch(e => {
-              console.warn("Biet-O-Matic: Failed to get Article Info from Tab %d: %s", tab.id, e.message);
-            });
-        });
+        setupTableClosedArticles();
 
         configureUi();
-        checkBrowserStorage();
+        checkBrowserStorage().catch(onError);
         console.debug("DOMContentLoaded handler for window with id = %d completed (%O).", pt.whoIAm.currentWindow.id, pt.whoIAm.currentWindow);
-        pt.whoIAm.currentWindow.helloFromBom = "Date: " + moment().format();
       }).catch((err) => {
         console.error("Biet-O-Matic:; DOMContentLoaded post initialisation failed; %s", err);
       });
