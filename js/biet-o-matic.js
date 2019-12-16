@@ -175,7 +175,10 @@ let popup = function () {
         }
         // if article is of interest (has storage entry), add closedTime to storage entry
         if (data != null && typeof data !== 'undefined' ) {
-          storeArticleInfo(data.articleId, {closedTime: Date.now()}, null, true)
+          storeArticleInfo(data.articleId, {
+            closedTime: Date.now(),
+            description: data.hasOwnProperty('articleDescription') ? data.articleDescription : "Unbekannt"
+          }, null, true)
             .then(() => {
               // update closedArticles table (after closedTime has been set)
               browser.storage.sync.get(data.articleId)
@@ -591,7 +594,7 @@ let popup = function () {
 
     // if articleId cell is clicked, active the tab of that article
     table.on('click', 'tbody tr a', e => {
-      console.log("tbody tr a clicked: %O", e);
+      //console.log("tbody tr a clicked: %O", e);
       e.preventDefault();
       // first column, jumpo to open article tab
       let tabId = e.target.id.match(/^tabid:([0-9]+)$/);
@@ -1164,11 +1167,17 @@ let popup = function () {
             div.id = data;
             let a = document.createElement('a');
             a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
-            a.id = 'articleid:' + row.articleId;
+            a.target = '_blank';
             a.text = data;
             div.appendChild(a);
             return div.outerHTML;
           }
+        },
+        {
+          name: 'articleDescription',
+          data: 'description',
+          render: $.fn.dataTable.render.ellipsis(100, true, false),
+          defaultContent: 'Unbekannt'
         },
         {
           name: 'articleEndTime',
@@ -1258,11 +1267,11 @@ let popup = function () {
           }
         }
       ],
-      order: [[2, "desc"]],
+      order: [[3, "desc"]],
       columnDefs: [
-        {searchable: false, "orderable": false, targets: [3, 4, 5, 6]},
+        {searchable: false, "orderable": false, targets: [4, 5, 6, 7]},
         {type: "num", targets: [0, 5]},
-        {className: "dt-body-center dt-body-nowrap", targets: [0,1,2,5, 6]}
+        {className: "dt-body-center dt-body-nowrap", targets: [0,2,3,6, 7]}
       ],
       searchDelay: 400,
       rowId: 'articleId',
