@@ -762,6 +762,19 @@
       let wakeUpInMs = (modifiedEndTime - Date.now()) - 1500;
       await wait(wakeUpInMs);
 
+      // check again if autobid is enabled (except if we should bid for all articles anyway)
+      if (!settings.hasOwnProperty('bidAllEnabled') || settings.bidAllEnabled === false) {
+        settings = await browser.runtime.sendMessage({action: 'getWindowSettings'});
+        if (settings.hasOwnProperty('autoBidEnabled') && settings.autoBidEnabled === false) {
+          console.info("Biet-O-Matic: doBid() abort, Window autoBid is now off.");
+          throw {
+            component: "Bietvorgang",
+            level: "Abbruch",
+            message: "Automatisches bieten wurde kurz vor der Gebot Bestätigung deaktiviert."
+          };
+        }
+      }
+
       // Note: After closing the modal, the page will reload and the content script reinitialize!
       if (simulate) {
         // close modal

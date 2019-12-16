@@ -174,21 +174,23 @@ let popup = function () {
           row.remove().draw();
         }
         // if article is of interest (has storage entry), add closedTime to storage entry
-        storeArticleInfo(data.articleId, {closedTime: Date.now()}, null, true)
-          .then(() => {
-            // update closedArticles table (after closedTime has been set)
-            browser.storage.sync.get(data.articleId)
-              .then(result => {
-                if (result.hasOwnProperty(data.articleId)) {
-                  let info = result[data.articleId];
-                  info.articleId = data.articleId;
-                  addClosedArticleToTable(info);
-                }
-              }).catch(onError);
-          })
-          .catch(e => {
-          console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
-        });
+        if (data != null && typeof data !== 'undefined' ) {
+          storeArticleInfo(data.articleId, {closedTime: Date.now()}, null, true)
+            .then(() => {
+              // update closedArticles table (after closedTime has been set)
+              browser.storage.sync.get(data.articleId)
+                .then(result => {
+                  if (result.hasOwnProperty(data.articleId)) {
+                    let info = result[data.articleId];
+                    info.articleId = data.articleId;
+                    addClosedArticleToTable(info);
+                  }
+                }).catch(onError);
+            })
+            .catch(e => {
+              console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
+            });
+        }
       }
     });
     // tab reloaded
@@ -464,7 +466,12 @@ let popup = function () {
       }
     }
   }
-  // update setting in session storage
+  /*
+   * update setting in session storage:
+   * autoBidEnabled - Automatic Bidding enabled
+   * bidAllEnabled  - Bid should be placed for all articles, even one was already won.
+   * simulate       - Perfom simulated bidding (do all , but not confirm the bid)
+   */
   function updateSetting(key, value) {
     let result = JSON.parse(window.sessionStorage.getItem('settings'));
     if (result == null) {
@@ -740,7 +747,7 @@ let popup = function () {
   /*
    * return adjusted endtime for an article
    * - if bidAll option is set, then return original time
-   * - if 1..n articles with endTime+-1 are found, then sort by articleId and return idx0+0s, idx1+1s, idx2+2s ...
+   * - if 1..n articles with endTime+-1 are found, then sort by articleId and return idx0+0s, idx1+2s, idx2+4s ...
    */
   function getAdjustedBidTime(articleId, articleEndTime) {
     // bidAll, then we dont need to special handle articles ending at the same time
@@ -783,7 +790,7 @@ let popup = function () {
     let idx = findKey(filtered, articleId);
     console.debug("Biet-O-Matic: getAdjustedBidTime() Adjusted Article %s bidTime by %ss, %d articles end at the same time (%O).",
       articleId, keys.indexOf(idx), keys.length, filtered);
-    return (articleEndTime - (keys.indexOf(idx) * 1000));
+    return (articleEndTime - ((keys.indexOf(idx)*2) * 1000));
   }
 
   /*
