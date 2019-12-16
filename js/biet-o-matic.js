@@ -217,7 +217,7 @@ let popup = function () {
       }
     });
 
-    // inpAutoBid checkbox
+    // window inpAutoBid checkbox
     const inpAutoBid = $('#inpAutoBid');
     inpAutoBid.on('click', e => {
       e.stopPropagation();
@@ -229,14 +229,17 @@ let popup = function () {
         updateFavicon(inpAutoBid.is(':checked'), null, true);
         updateSetting('simulate', true);
         $("#lblAutoBid").text('Automatikmodus (Test)');
+        $("#internal").removeClass('hidden');
       } else {
         updateFavicon(inpAutoBid.is(':checked'), null, false);
         updateSetting('simulate', false);
         $("#lblAutoBid").text('Automatikmodus');
+        $("#internal").addClass('hidden');
       }
     });
+    // window bidAll checkbox
     const inpBidAll = $('#inpBidAll');
-    inpBidAll.on('click', (e) => {
+    inpBidAll.on('click', e => {
       console.debug('Biet-O-Matic: Bid all articles mode toggled: %s', inpBidAll.is(':checked'));
       updateSetting('bidAllEnabled', inpBidAll.is(':checked'));
     });
@@ -537,7 +540,7 @@ let popup = function () {
    * - autoBid checkbox: when checked, the bid and autoBid status is updated in the storage
    */
   function configureUi() {
-    const table = $('.dataTable');
+    const table = $('#articles.dataTable');
     // maxBid input field
     table.on('change', 'tr input', e => {
       //console.debug('Biet-O-Matic: configureUi() INPUT Event this=%O', e);
@@ -588,6 +591,7 @@ let popup = function () {
 
     // if articleId cell is clicked, active the tab of that article
     table.on('click', 'tbody tr a', e => {
+      console.log("tbody tr a clicked: %O", e);
       e.preventDefault();
       // first column, jumpo to open article tab
       let tabId = e.target.id.match(/^tabid:([0-9]+)$/);
@@ -602,6 +606,15 @@ let popup = function () {
           window.open(href, '_blank');
         }
       }
+    });
+
+    // article delete button'
+    const closedTable = $('#closedArticles.dataTable');
+    closedTable.on('click', 'tbody tr button', e => {
+      const tr = $(e.target).closest('tr');
+      // remove from sync storage
+      browser.storage.sync.remove(tr[0].id).catch(onError);
+      tr.remove();
     });
   }
 
@@ -1223,13 +1236,33 @@ let popup = function () {
           defaultContent: 0,
           width: '120px',
           render: renderArticleMaxBid
+        },
+        {
+          name: 'action',
+          defaultContent: '',
+          width: '15px',
+          render: function (data, type, row) {
+            let button = document.createElement('button');
+            button.id = row.articleId;
+            button.name = 'removeArticleFromClosedTabs';
+            button.classList.add('ui-button', 'ui-corner-all', 'ui-widget', 'ui-button-icon-only');
+            button.title = 'Entfernen';
+            button.textContent = 'B';
+            let span = document.createElement('span');
+            span.classList.add('ui-button-icon', 'ui-icon', 'ui-icon-trash');
+            let span2= document.createElement('span');
+            span2.classList.add('ui-button-icon-space');
+            button.appendChild(span);
+            button.appendChild(span2);
+            return button.outerHTML;
+          }
         }
       ],
       order: [[2, "desc"]],
       columnDefs: [
-        {searchable: false, "orderable": false, targets: [3, 4, 5]},
+        {searchable: false, "orderable": false, targets: [3, 4, 5, 6]},
         {type: "num", targets: [0, 5]},
-        {className: "dt-body-center dt-body-nowrap", targets: [0,1,2,5]}
+        {className: "dt-body-center dt-body-nowrap", targets: [0,1,2,5, 6]}
       ],
       searchDelay: 400,
       rowId: 'articleId',

@@ -6,34 +6,38 @@
 }
 
 /*region ebay css */
-#s_w_pipe{
-  display:none;
-  padding-left:6px;
-  padding-right:6px
+#s_w_pipe {
+  display: none;
+  padding-left: 6px;
+  padding-right: 6px;
 }
-.statusLeftContent{
-  float:left
+
+.statusLeftContent {
+  float: left;
 }
-.statusContent{
+
+.statusContent {
   /*text-align:right;*/
-  display:block
-}
-div#msgPanel .msg span.statusContent a{
-  font-weight:normal
+  display: block;
 }
 
-.addSpace{
-  display:none;
+div#msgPanel .msg span.statusContent a {
+  font-weight: normal;
 }
 
-.pnl{
-  clear:both;
-  color:#333;
-  font-size:13px;
-  font-weight:bold;
-  text-align:left;
-  font-family: Arial, serif
+.addSpace {
+  display: none;
 }
+
+.pnl {
+  clear: both;
+  color: #333;
+  font-size: 13px;
+  font-weight: bold;
+  text-align: left;
+  font-family: Arial, serif;
+}
+
 /*
 .pnl .msg{
   border-right:2px solid #9d9d9d;
@@ -42,16 +46,24 @@ div#msgPanel .msg span.statusContent a{
   margin-bottom:20px
 }
 */
-.pnl .green{
-  background-color:#bbe7a1
+.pnl .green {
+  background-color: #bbe7a1;
 }
-.pnl .grey{
-  background-color:#9d9d9d
+
+.pnl .grey {
+  background-color: #9d9d9d;
 }
-.pnl .yellow{
-  background-color:#fbe39e
+
+.pnl .yellow {
+  background-color: #fbe39e;
 }
-.pnl .red{
-  background-color:#ffc0ba
+
+.pnl .red {
+  background-color: #ffc0ba;
 }
+
 /*endregion*/
+
+.hidden {
+  display: none;
+}
