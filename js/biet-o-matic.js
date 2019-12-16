@@ -134,9 +134,8 @@ let popup = function () {
                 if ($('#inpBidAll').is(':checked') === false) {
                   console.debug("Biet-O-Matic: ebayArticleSetAuctionEndState() disabling autoBid - Article %s was successful.",
                     request.articleId);
-                  //$('#inpAutoBid').prop('checked', false);
-                  //updateSetting('autoBidEnabled', false);
                   $('#inpAutoBid').prop('checked', false);
+                  updateSetting('autoBidEnabled', false);
                 }
               }
               storeArticleInfo(request.articleId, request.detail).catch(e => {
@@ -466,6 +465,12 @@ let popup = function () {
       console.debug("Biet-O-Matic: restoreSettings() updating from session storage: settings=%s", JSON.stringify(result));
       if (result.hasOwnProperty('autoBidEnabled')) {
         $('#inpAutoBid').prop('checked', result.autoBidEnabled);
+      }
+      if (result.hasOwnProperty('simulate') && result.simulate) {
+        $("#lblAutoBid").text('Automatikmodus (Test)');
+        updateFavicon($('#inpAutoBid').is(':checked'), null, true);
+      } else {
+        updateFavicon($('#inpAutoBid').is(':checked'));
       }
       if (result.hasOwnProperty('bidAllEnabled')) {
         $('#inpBidAll').prop('checked', result.bidAllEnabled);
@@ -1306,7 +1311,6 @@ let popup = function () {
         registerEvents();
         // restore settings from session storage (autoBidEnabled, bidAllEnabled)
         restoreSettings();
-        updateFavicon($('#inpAutoBid').is(':checked'));
         setupTableActiveArticles();
 
         setupTableClosedArticles();

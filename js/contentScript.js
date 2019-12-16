@@ -109,12 +109,13 @@
         data.auctionEndState, typeof data.auctionEndState,
         auctionEndStates.unknown, typeof auctionEndStates.unknown,
         data.auctionEndState === auctionEndStates.unknown);*/
-      if (!data.hasOwnProperty('auctionEndState') || (state !== auctionEndStates.unknown && data.auctionEndState === auctionEndStates.unknown)) {
+      if (!data.hasOwnProperty('auctionEndState') ||
+        (state !== auctionEndStates.unknown && data.auctionEndState === auctionEndStates.unknown)) {
         // initially set or update auctionEndState
         await browser.runtime.sendMessage({
           action: 'ebayArticleSetAuctionEndState',
           articleId: ebayArticleInfo.articleId,
-          detail: { auctionEndState: state }
+          detail: {auctionEndState: state}
         });
       }
     }
