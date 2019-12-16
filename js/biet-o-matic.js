@@ -562,12 +562,17 @@ let popup = function () {
       if (e.target.id.startsWith('inpMaxBid_')) {
         // maxBid was entered
         data.articleMaxBid = Number.parseFloat(e.target.value);
+        // check if maxBid > buyPrice (sofortkauf), then adjust it to the buyprice - 1 cent
+        //console.log("XXX adjusted maxBid %O to %s", data, data.articleBuyPrice - 0.01)
+        if (data.hasOwnProperty('articleBuyPrice') && data.articleMaxBid  > data.articleBuyPrice) {
+          data.articleMaxBid = data.articleBuyPrice - 0.01;
+        }
       } else if (e.target.id.startsWith('chkAutoBid_')) {
         // autoBid checkbox was clicked
         data.articleAutoBid = e.target.checked;
       }
-      // update local with maxBid/autoBid changes
-      updateRowMaxBid(row);
+      // redraw the row
+      row.invalidate('data').draw();
       // store info when maxBid updated
       let info = {
         endTime: data.articleEndTime,
