@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "datatables": "^1.10.18",
+    "datatables-buttons": "^1.0.3",
+    "datatables-export-document": "^1.0.0",
+    "datatables-responsive": "^1.0.7",
+    "jquery": "^3.4.1",
+    "jquery-ui": "^1.12.1"
+  },
+  "version": "0.0.0"
+}
