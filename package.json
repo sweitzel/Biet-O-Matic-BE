@@ -5,7 +5,8 @@
     "datatables-export-document": "^1.0.0",
     "datatables-responsive": "^1.0.7",
     "jquery": "^3.4.1",
-    "jquery-ui": "^1.12.1"
+    "jquery-ui": "^1.12.1",
+    "webextension-polyfill": "^0.5.0"
   },
-  "version": "0.0.0"
+  "version": "0.0.1"
 }

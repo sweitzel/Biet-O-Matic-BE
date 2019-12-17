@@ -55,7 +55,7 @@ let popup = function () {
             // redraw date (COLUMN 3)
             let dateCell = pt.table.cell(`#${sender.tab.id}`, 'articleEndTime:name');
             // redraw date
-            dateCell.invalidate('data').draw();
+            dateCell.invalidate('data');
           }
           break;
         case 'updateArticleStatus':
@@ -67,7 +67,7 @@ let popup = function () {
             // redraw status (COLUMN 6)
             let statusCell = pt.table.cell(`#${sender.tab.id}`, 'articleAuctionState:name');
             data.articleAuctionState = request.detail.message;
-            statusCell.invalidate('data').draw();
+            statusCell.invalidate('data');
           }
           break;
         case 'ebayArticleMaxBidUpdated':
@@ -76,7 +76,7 @@ let popup = function () {
             let row = pt.table.row(`#${sender.tab.id}`);
             updateRowMaxBid(row, request.detail);
             storeArticleInfo(request.articleId, request.detail).catch(e => {
-              console.log("Biet-O-Matic: Unable to store article info: %O", e);
+              console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
             });
           }
           break;
@@ -545,7 +545,7 @@ let popup = function () {
   /*
    * Configure UI Elements events:
    * - maxBid Input: If auction running and value higher than the current bid, enable the autoBid checkbox for this row
-   * - autoBid checkbox: when checked, the bid and autoBid status is updated in the storage 
+   * - autoBid checkbox: when checked, the bid and autoBid status is updated in the storage
    */
   function configureUi() {
     const table = $('#articles.dataTable');
@@ -1154,7 +1154,7 @@ let popup = function () {
           }
         })
         .catch(e => {
-          console.warn("Biet-O-Matic: Failed to get Article Info from Tab %d: %s", tab.id, e.message);
+          console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tab.id}: ${e.message}`);
           browser.tabs.reload(tab.id);
         });
     });

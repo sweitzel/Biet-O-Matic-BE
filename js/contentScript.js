@@ -88,7 +88,6 @@
       if (simulate) {
         // https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/Global_Objects/Math/math.random
         state = Math.floor(Math.random() * (3));
-        console.debug("Biet-O-Matic: Simulation is on, returning random state: %d", state);
       }
     }
 
@@ -130,6 +129,16 @@
       // remove bidinfo if the auction for sure ended
       if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
         console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s", ebayArticleInfo.articleAuctionStateText);
+        // add the ended state to the log
+        if (simulate) {
+          let statet = Object.keys(auctionEndStates).find(key => auctionEndStates[key] === state);
+          console.debug("Biet-O-Matic: Simulation is on, returning random state: %s", statet);
+          sendArticleLog({
+            component: "Bietvorgang",
+            level: "Status",
+            message: `Bietvorgang mit Simuliertem Ergebnis beendet: ${statet}`,
+          });
+        }
         window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
         // set this, so the script will not trigger parsing further down
         ebayArticleInfo.auctionEnded = true;
