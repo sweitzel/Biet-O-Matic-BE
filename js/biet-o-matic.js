@@ -270,9 +270,18 @@ let popup = function () {
       return Promise.resolve({});
     }
     // inject content script in case its not loaded
-    await browser.tabs.executeScript(tab.id, {file: 'thirdparty/browser-polyfill.min.js'});
-    await browser.tabs.insertCSS(tab.id, {file: "css/contentScript.css"});
-    await browser.tabs.executeScript(tab.id, {file: 'js/contentScript.js'});
+    await browser.tabs.executeScript(tab.id, {file: 'thirdparty/browser-polyfill.min.js'})
+      .catch(e => {
+        throw new Error(`getArticleInfoForTab(${tab.id}) executeScript failed: ${e.message}`);
+      });
+    await browser.tabs.insertCSS(tab.id, {file: "css/contentScript.css"})
+      .catch(e => {
+        throw new Error(`getArticleInfoForTab(${tab.id}) insertCSS failed: ${e.message}`);
+      });
+    await browser.tabs.executeScript(tab.id, {file: 'js/contentScript.js'})
+      .catch(e => {
+        throw new Error(`getArticleInfoForTab(${tab.id}) executeScript failed: ${e.message}`);
+      });
     return Promise.resolve(browser.tabs.sendMessage(tab.id, {action: 'GetArticleInfo'}));
   }
 
