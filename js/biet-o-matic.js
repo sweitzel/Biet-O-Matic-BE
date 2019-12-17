@@ -545,7 +545,7 @@ let popup = function () {
   /*
    * Configure UI Elements events:
    * - maxBid Input: If auction running and value higher than the current bid, enable the autoBid checkbox for this row
-   * - autoBid checkbox: when checked, the bid and autoBid status is updated in the storage
+   * - autoBid checkbox: when checked, the bid and autoBid status is updated in the storage 
    */
   function configureUi() {
     const table = $('#articles.dataTable');
