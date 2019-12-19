@@ -5,9 +5,39 @@
  * - Receives events from Ebay Article Tab Content Script
  * - Manages a simple database (e.g. containing the max-bids)
  *
- * By Sebastian Weitzel, sebastian.weitzel@gmail.com
+ * By Sebastian Weitzel, sweitzel@users.noreply.github.com
  *
  * Apache License Version 2.0, January 2004, http://www.apache.org/licenses/
+ */
+
+// mozilla webextension polyfill for chrome
+import browser from "webextension-polyfill";
+import $ from 'jquery';
+
+import 'jquery-ui-dist/jquery-ui.css';
+
+// datatables.net + responsive, jquery-ui design
+import 'datatables.net-jqui/css/dataTables.jqueryui.css';
+import 'datatables.net-buttons-jqui/css/buttons.jqueryui.css';
+import 'datatables.net-responsive-jqui/css/responsive.jqueryui.css';
+import 'datatables.net-jqui';
+import 'datatables.net-buttons-jqui';
+import 'datatables.net-responsive-jqui';
+
+// moment.js
+import moment from 'moment';
+import 'moment/locale/de';
+
+// date-fns as alternative to moment
+//import { formatRelative, subDays } from 'date-fns';
+//import { en, de } from 'date-fns/locale';
+
+import "../css/popup.css";
+
+/*
+   <link rel="stylesheet" type="text/css" href="thirdparty/jquery-ui.min.css"/>
+  <link rel="stylesheet" type="text/css" href="thirdparty/dataTables.jqueryui.min.css"/>
+  C:\Users\Sebastian\IdeaProjects\Bietomat\node_modules\datatables.net-jqui\css\dataTables.jqueryui.css
  */
 
 let popup = function () {
@@ -270,15 +300,7 @@ let popup = function () {
       return Promise.resolve({});
     }
     // inject content script in case its not loaded
-    await browser.tabs.executeScript(tab.id, {file: 'thirdparty/browser-polyfill.min.js'})
-      .catch(e => {
-        throw new Error(`getArticleInfoForTab(${tab.id}) executeScript failed: ${e.message}`);
-      });
-    await browser.tabs.insertCSS(tab.id, {file: "css/contentScript.css"})
-      .catch(e => {
-        throw new Error(`getArticleInfoForTab(${tab.id}) insertCSS failed: ${e.message}`);
-      });
-    await browser.tabs.executeScript(tab.id, {file: 'js/contentScript.js'})
+    await browser.tabs.executeScript(tab.id, {file: 'contentScript.bundle.js'})
       .catch(e => {
         throw new Error(`getArticleInfoForTab(${tab.id}) executeScript failed: ${e.message}`);
       });
@@ -1088,7 +1110,7 @@ let popup = function () {
         {
           name: 'articleDescription',
           data: 'articleDescription',
-          render: $.fn.dataTable.render.ellipsis(100, true, false),
+          //render: $.fn.dataTable.render.ellipsis(100, true, false),
           defaultContent: 'Unbekannt'
         },
         {
@@ -1195,7 +1217,7 @@ let popup = function () {
         {
           name: 'articleDescription',
           data: 'description',
-          render: $.fn.dataTable.render.ellipsis(100, true, false),
+          //render: $.fn.dataTable.render.ellipsis(100, true, false),
           defaultContent: 'Unbekannt'
         },
         {

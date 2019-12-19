@@ -5,10 +5,13 @@
  * - Place automatic bids
  * - Note: Whenever the page reloads, the contentScript will reinitialize
  *
- * By Sebastian Weitzel, sebastian.weitzel@gmail.com
+ * By Sebastian Weitzel, sweitzel@users.noreply.github.com
  *
  * Apache License Version 2.0, January 2004, http://www.apache.org/licenses/
  */
+
+import browser from "webextension-polyfill";
+import "../css/contentScript.css";
 
 (function () {
   'use strict';

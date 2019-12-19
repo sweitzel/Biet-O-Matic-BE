@@ -2,22 +2,30 @@
  * background.js - Mainly for setup of event listeners
  * ===================================================
  *
- * By Sebastian Weitzel, sebastian.weitzel@gmail.com
+ * By Sebastian Weitzel, sweitzel@users.noreply.github.com
  *
  * Apache License Version 2.0, January 2004, http://www.apache.org/licenses/
  */
+
+import browser from "webextension-polyfill";
+//let browser = require("webextension-polyfill");
 
 let BomTab = (function () {
   'use strict';
   let debug = false;
   // LISTENERS
-
   //add listeners for message requests from other extension pages (biet-o-matic.html)
   browser.runtime.onMessage.addListener((request, sender) => {
     if (debug) {
       console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
     }
   });
+
+  /*
+   * Activate or Open BomTab when extension action is clicked
+   *   this calls the openBomTab with tabs.tab as parameter
+   */
+  browser.browserAction.onClicked.addListener(openBomTab);
 }()); // end BomTab
 
 async function openBomTab(tab, clickData) {
@@ -25,7 +33,7 @@ async function openBomTab(tab, clickData) {
   // query tab for specified or current window with extension URL
   let tabs = await browser.tabs.query({
     windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
-    url: browser.extension.getURL('biet-o-matic.html')
+    url: browser.extension.getURL('popup.html')
   });
   for (let i = 0; i < tabs.length; i++) {
     if (i > 0) {
@@ -53,16 +61,10 @@ async function openBomTab(tab, clickData) {
   // if no BOM tab is open, create one
   if (tabs.length === 0) {
     await browser.tabs.create({
-      url: browser.extension.getURL('biet-o-matic.html'),
+      url: browser.extension.getURL('popup.html'),
       windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
       pinned: true,
       index: 0
     });
   }
 }
-
-/*
-* Activate or Open BomTab when extension action is clicked
-*   this calls the openBomTab with tabs.tab as parameter
-*/
-browser.browserAction.onClicked.addListener(openBomTab);

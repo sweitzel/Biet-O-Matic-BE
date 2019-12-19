@@ -5,8 +5,29 @@
     "datatables.net-jqui": "^1.10.20",
     "datatables.net-responsive-jqui": "^2.2.3",
     "jquery": "^3.4.1",
-    "jquery-ui": "^1.12.1",
+    "jquery-ui-dist": "^1.12.1",
+    "moment": "^2.24.0",
     "webextension-polyfill": "^0.5.0"
   },
-  "version": "0.0.1"
+  "devDependencies": {
+    "clean-webpack-plugin": "3.0.0",
+    "copy-webpack-plugin": "5.1.1",
+    "css-loader": "3.4.0",
+    "file-loader": "5.0.2",
+    "fs-extra": "8.1.0",
+    "html-loader": "0.5.5",
+    "html-webpack-plugin": "3.2.0",
+    "style-loader": "1.0.2",
+    "webpack": "4.41.3",
+    "webpack-cli": "3.3.10",
+    "webpack-dev-server": "3.9.0",
+    "write-file-webpack-plugin": "4.5.1"
+  },
+  "scripts": {
+    "build": "node utils/build.js",
+    "start": "node utils/webserver.js"
+  },
+  "version": "0.0.1",
+  "name": "Biet-O-Matic-BE",
+  "description": "A browser extension for eBay"
 }
