@@ -24,13 +24,9 @@ import 'datatables.net-jqui';
 import 'datatables.net-buttons-jqui';
 import 'datatables.net-responsive-jqui';
 
-// moment.js
-import moment from 'moment';
-import 'moment/locale/de';
-
 // date-fns as alternative to moment
-//import { formatRelative, subDays } from 'date-fns';
-//import { en, de } from 'date-fns/locale';
+import { format, formatDistanceToNow } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 import "../css/popup.css";
 
@@ -1014,7 +1010,7 @@ let popup = function () {
       let tr = document.createElement('tr');
       let tdDate = document.createElement('td');
       if (e.hasOwnProperty('timestamp'))
-        tdDate.textContent = moment(e.timestamp).format();
+        tdDate.textContent = format(e.timestamp, 'PPpp', {locale: de});
       else
         tdDate.textContent = '?';
       tr.append(tdDate);
@@ -1143,10 +1139,8 @@ let popup = function () {
           render: function (data, type, row) {
             if (typeof data !== 'undefined') {
               if (type !== 'display' && type !== 'filter') return data;
-              let timeLeft = moment(data);  // jshint ignore:line
-              moment.relativeTimeThreshold('ss', 0);
-              timeLeft.locale('de');
-              return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+              let timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
+              return `${fixDate({articleEndTime: data})} (${timeLeft})`;
             } else {
               return "unbegrenzt";
             }
@@ -1253,10 +1247,8 @@ let popup = function () {
           render: function (data, type, row) {
             if (typeof data !== 'undefined') {
               if (type !== 'display' && type !== 'filter') return data;
-              let timeLeft = moment(data);  // jshint ignore:line
-              moment.relativeTimeThreshold('ss', 0);
-              timeLeft.locale('de');
-              return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+              let timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
+              return `${fixDate({articleEndTime: data})} (${timeLeft})`;
             } else {
               return 'unbekannt';
             }
@@ -1270,10 +1262,8 @@ let popup = function () {
           render: function (data, type, row) {
             if (typeof data !== 'undefined') {
               if (type !== 'display' && type !== 'filter') return data;
-              let timeLeft = moment(data);  // jshint ignore:line
-              moment.relativeTimeThreshold('ss', 0);
-              timeLeft.locale('de');
-              return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+              let timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
+              return `${fixDate({articleEndTime: data})} (${timeLeft})`;
             } else {
               return 'unbekannt';
             }

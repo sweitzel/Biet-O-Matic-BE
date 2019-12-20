@@ -4,9 +4,9 @@
     "datatables.net-buttons-jqui": "^1.6.1",
     "datatables.net-jqui": "^1.10.20",
     "datatables.net-responsive-jqui": "^2.2.3",
+    "date-fns": "^2.8.1",
     "jquery": "^3.4.1",
     "jquery-ui-dist": "^1.12.1",
-    "moment": "^2.24.0",
     "webextension-polyfill": "^0.5.0"
   },
   "devDependencies": {
