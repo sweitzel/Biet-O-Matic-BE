@@ -119,6 +119,22 @@ import "../css/contentScript.css";
           articleId: ebayArticleInfo.articleId,
           detail: {auctionEndState: state}
         });
+        // add the ended state to the log
+        if (simulate) {
+          let statet = Object.keys(auctionEndStates).find(key => auctionEndStates[key] === state);
+          console.debug("Biet-O-Matic: Simulation is on, returning random state: %s", statet);
+          sendArticleLog({
+            component: "Bietvorgang",
+            level: "Status",
+            message: `Bietvorgang mit simuliertem Ergebnis beendet: ${statet} (${state})`,
+          });
+        } else {
+          sendArticleLog({
+            component: "Bietvorgang",
+            level: "Status",
+            message: `Bietvorgang Status wurde aktualisiert: ${statet} (${state})`,
+          });
+        }
       }
     }
 
@@ -132,16 +148,6 @@ import "../css/contentScript.css";
       // remove bidinfo if the auction for sure ended
       if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
         console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s", ebayArticleInfo.articleAuctionStateText);
-        // add the ended state to the log
-        if (simulate) {
-          let statet = Object.keys(auctionEndStates).find(key => auctionEndStates[key] === state);
-          console.debug("Biet-O-Matic: Simulation is on, returning random state: %s", statet);
-          sendArticleLog({
-            component: "Bietvorgang",
-            level: "Status",
-            message: `Bietvorgang mit Simuliertem Ergebnis beendet: ${statet}`,
-          });
-        }
         window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
         // set this, so the script will not trigger parsing further down
         ebayArticleInfo.auctionEnded = true;

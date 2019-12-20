@@ -641,15 +641,20 @@ let popup = function () {
     pt.table.on('click', 'td.details-control', e => {
       e.preventDefault();
       let tr = $(e.target).closest('tr');
-      let row = pt.table.row(tr);
-      if ( row.child.isShown() ) {
-        // This row is already open - close it
-        row.child.hide();
-        tr.toggleClass('ui-icon-plus ui-icon-minus');
-      } else {
-        // Open this row
-        row.child(renderArticleLog(row.data())).show();
-        tr.toggleClass('ui-icon-plus ui-icon-minus');
+      if (e.target.nodeName === 'I') {
+        let i = e.target;
+        let row = pt.table.row(tr);
+        if ( row.child.isShown() ) {
+          // This row is already open - close it
+          i.classList.remove('ui-icon-minus');
+          i.classList.add('ui-icon-plus');
+          row.child.hide();
+        } else {
+          // Open this row
+          i.classList.remove('ui-icon-plus');
+          i.classList.add('ui-icon-minus');
+          row.child(renderArticleLog(row.data())).show();
+        }
       }
     });
 
@@ -957,6 +962,7 @@ let popup = function () {
     const labelAutoBid = document.createElement('label');
     const chkAutoBid = document.createElement('input');
     chkAutoBid.id = 'chkAutoBid_' + row.articleId;
+    chkAutoBid.classList.add('ui-button');
     chkAutoBid.type = 'checkbox';
     chkAutoBid.defaultChecked = autoBid;
     chkAutoBid.style.width = '15px';
@@ -1101,7 +1107,7 @@ let popup = function () {
           className: 'details-control',
           orderable: false,
           data: null,
-          width: '15px',
+          width: '5px',
           defaultContent: '',
           "render": function (data, type, row) {
             if (getArticleLog(row.articleId) != null)

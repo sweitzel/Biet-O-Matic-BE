@@ -67,3 +67,10 @@ div#msgPanel .msg span.statusContent a {
 .hidden {
   display: none;
 }
+
+td.details-control > i {
+  cursor: none;
+}
+td.details-control > i:hover {
+  cursor: pointer;
+}

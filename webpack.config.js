@@ -5,8 +5,8 @@ var webpack = require("webpack"),
   CleanWebpackPlugin = require("clean-webpack-plugin").CleanWebpackPlugin,
   CopyWebpackPlugin = require("copy-webpack-plugin"),
   HtmlWebpackPlugin = require("html-webpack-plugin"),
-  WriteFilePlugin = require("write-file-webpack-plugin");
-
+  WriteFilePlugin = require("write-file-webpack-plugin"),
+  ZipPlugin = require('zip-webpack-plugin');
 // load the secrets
 var alias = {};
 
@@ -19,7 +19,7 @@ if (fileSystem.existsSync(secretsPath)) {
 }
 
 var options = {
-  mode: process.env.NODE_ENV || "development",
+  mode: process.env.NODE_ENV || "production",
   entry: {
     contentScript: path.join(__dirname, "src", "js", "contentScript.js"),
     popup: path.join(__dirname, "src", "js", "popup.js"),
@@ -91,6 +91,10 @@ var options = {
         flatten: true
       }
     ]),
+    new ZipPlugin({
+      path: path.join(__dirname),
+      filename: 'bom-be.zip',
+    })
   ]
 };
 
