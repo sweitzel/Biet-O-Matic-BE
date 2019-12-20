@@ -1,3 +1,4 @@
+![](logos/bom_icon.png)
 # Bid-O-Matic Browser Extension
 
 Bid-O-Matic (BOM) Browser Extension (BE) is intended to improve the shopping experience for the eBay platform.
@@ -45,9 +46,20 @@ The following main features have been implemented:
 ## I18N / Languages
 The BE currently only supports German language.
 
-## Getting Started
+## Development
 Contributors or testers can download the Extension from Github and install manually to their Browser. 
 Please refer to the Browser instruction how to do that. End users should only install the BE via the Browsers Extension store.
+
+### Development & Build Environment
+* [JetBrains IntelliJ](https://www.jetbrains.com/idea/download) Community or Ultimate, or WebStorm
+    * Ultimate or WebStorm is recommended, to get full JS support (e.g. syntax checking, dependency management)
+* [NodeJS LTS](https://nodejs.org/de/download/)
+* [yarn](https://yarnpkg.com/lang/en/docs/install)
+
+### Building
+* The build is performed using `yarn build`
+* It will generate a `build` folder, which can be loaded as unpacked extension to quickly test changes
+* the bom-be.zip can be uploaded to Chrome Web Store once the testing has been concluded
 
 ## Supported Browsers
 * [Google Chrome - Web Store](https://chrome.google.com/webstore/detail/biet-o-matic-be/feihhkfahbiejgfimhbdnihcdcapibji) 
