@@ -5,9 +5,35 @@
  * - Receives events from Ebay Article Tab Content Script
  * - Manages a simple database (e.g. containing the max-bids)
  *
- * By Sebastian Weitzel, sebastian.weitzel@gmail.com
+ * By Sebastian Weitzel, sweitzel@users.noreply.github.com
  *
  * Apache License Version 2.0, January 2004, http://www.apache.org/licenses/
+ */
+
+// mozilla webextension polyfill for chrome
+import browser from "webextension-polyfill";
+import $ from 'jquery';
+
+import 'jquery-ui-dist/jquery-ui.css';
+
+// datatables.net + responsive, jquery-ui design
+import 'datatables.net-jqui/css/dataTables.jqueryui.css';
+import 'datatables.net-buttons-jqui/css/buttons.jqueryui.css';
+import 'datatables.net-responsive-jqui/css/responsive.jqueryui.css';
+import 'datatables.net-jqui';
+import 'datatables.net-buttons-jqui';
+import 'datatables.net-responsive-jqui';
+
+// date-fns as alternative to moment
+import { format, formatDistanceToNow } from 'date-fns';
+import { de } from 'date-fns/locale';
+
+import "../css/popup.css";
+
+/*
+   <link rel="stylesheet" type="text/css" href="thirdparty/jquery-ui.min.css"/>
+  <link rel="stylesheet" type="text/css" href="thirdparty/dataTables.jqueryui.min.css"/>
+  C:\Users\Sebastian\IdeaProjects\Bietomat\node_modules\datatables.net-jqui\css\dataTables.jqueryui.css
  */
 
 let popup = function () {
@@ -161,6 +187,35 @@ let popup = function () {
       }
     });
 
+    // tab openend, inject contentScript
+    browser.tabs.onCreated.addListener(function (tab) {
+      console.debug('Biet-O-Matic: tab(%d).onCreated listener fired: tab=%O', tab.id, tab);
+    });
+
+    // tab reloaded or URL changed
+    browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
+      console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
+      // status == complete, then inject content script, request info and update table
+      if (changeInfo.status === 'complete') {
+        if (!tabInfo.hasOwnProperty('url')) {
+          throw new Error("Tab Info is missing URL!");
+        }
+        getArticleInfoForTab(tabInfo)
+          .then(articleInfo => {
+            if (articleInfo.hasOwnProperty('detail')) {
+              addOrUpdateArticle(tabInfo, articleInfo.detail)
+                .catch(e => {
+                  console.debug("Biet-O-Matic: addOrUpdateArticle() failed - %s", e.toString());
+                });
+            }
+          })
+          .catch(e => {
+            console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
+            browser.tabs.reload(tabInfo.id);
+          });
+      }
+    });
+
     // tab closed
     browser.tabs.onRemoved.addListener(function (tabId, removeInfo) {
       console.debug('Biet-O-Matic: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
@@ -195,11 +250,6 @@ let popup = function () {
         }
       }
     });
-    // tab reloaded
-    /*browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
-      console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
-    });
-     */
 
     // toggle autoBid for window when button in browser menu clicked
     // the other button handler is setup below
@@ -270,15 +320,7 @@ let popup = function () {
       return Promise.resolve({});
     }
     // inject content script in case its not loaded
-    await browser.tabs.executeScript(tab.id, {file: 'thirdparty/browser-polyfill.min.js'})
-      .catch(e => {
-        throw new Error(`getArticleInfoForTab(${tab.id}) executeScript failed: ${e.message}`);
-      });
-    await browser.tabs.insertCSS(tab.id, {file: "css/contentScript.css"})
-      .catch(e => {
-        throw new Error(`getArticleInfoForTab(${tab.id}) insertCSS failed: ${e.message}`);
-      });
-    await browser.tabs.executeScript(tab.id, {file: 'js/contentScript.js'})
+    await browser.tabs.executeScript(tab.id, {file: 'contentScript.bundle.js'})
       .catch(e => {
         throw new Error(`getArticleInfoForTab(${tab.id}) executeScript failed: ${e.message}`);
       });
@@ -968,7 +1010,7 @@ let popup = function () {
       let tr = document.createElement('tr');
       let tdDate = document.createElement('td');
       if (e.hasOwnProperty('timestamp'))
-        tdDate.textContent = moment(e.timestamp).format();
+        tdDate.textContent = format(e.timestamp, 'PPpp', {locale: de});
       else
         tdDate.textContent = '?';
       tr.append(tdDate);
@@ -1088,7 +1130,7 @@ let popup = function () {
         {
           name: 'articleDescription',
           data: 'articleDescription',
-          render: $.fn.dataTable.render.ellipsis(100, true, false),
+          //render: $.fn.dataTable.render.ellipsis(100, true, false),
           defaultContent: 'Unbekannt'
         },
         {
@@ -1097,10 +1139,8 @@ let popup = function () {
           render: function (data, type, row) {
             if (typeof data !== 'undefined') {
               if (type !== 'display' && type !== 'filter') return data;
-              let timeLeft = moment(data);  // jshint ignore:line
-              moment.relativeTimeThreshold('ss', 0);
-              timeLeft.locale('de');
-              return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+              let timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
+              return `${fixDate({articleEndTime: data})} (${timeLeft})`;
             } else {
               return "unbegrenzt";
             }
@@ -1187,6 +1227,7 @@ let popup = function () {
             let a = document.createElement('a');
             a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
             a.target = '_blank';
+            a.rel = 'noopener';
             a.text = data;
             div.appendChild(a);
             return div.outerHTML;
@@ -1195,7 +1236,7 @@ let popup = function () {
         {
           name: 'articleDescription',
           data: 'description',
-          render: $.fn.dataTable.render.ellipsis(100, true, false),
+          //render: $.fn.dataTable.render.ellipsis(100, true, false),
           defaultContent: 'Unbekannt'
         },
         {
@@ -1206,10 +1247,8 @@ let popup = function () {
           render: function (data, type, row) {
             if (typeof data !== 'undefined') {
               if (type !== 'display' && type !== 'filter') return data;
-              let timeLeft = moment(data);  // jshint ignore:line
-              moment.relativeTimeThreshold('ss', 0);
-              timeLeft.locale('de');
-              return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+              let timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
+              return `${fixDate({articleEndTime: data})} (${timeLeft})`;
             } else {
               return 'unbekannt';
             }
@@ -1223,10 +1262,8 @@ let popup = function () {
           render: function (data, type, row) {
             if (typeof data !== 'undefined') {
               if (type !== 'display' && type !== 'filter') return data;
-              let timeLeft = moment(data);  // jshint ignore:line
-              moment.relativeTimeThreshold('ss', 0);
-              timeLeft.locale('de');
-              return `${fixDate({articleEndTime: data})} (${timeLeft.fromNow()})`;
+              let timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
+              return `${fixDate({articleEndTime: data})} (${timeLeft})`;
             } else {
               return 'unbekannt';
             }
