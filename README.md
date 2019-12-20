@@ -50,4 +50,4 @@ Contributors or testers can download the Extension from Github and install manua
 Please refer to the Browser instruction how to do that. End users should only install the BE via the Browsers Extension store.
 
 ## Supported Browsers
-* Google Chrome (tested version >=78) todo: add link to Chrome Web Store
+* [Google Chrome - Web Store](https://chrome.google.com/webstore/detail/biet-o-matic-be/feihhkfahbiejgfimhbdnihcdcapibji) 
