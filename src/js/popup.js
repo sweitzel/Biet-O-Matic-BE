@@ -1102,6 +1102,9 @@ let popup = function () {
   // setup active articles table
   function setupTableActiveArticles() {
     pt.table = $('#articles').DataTable({
+      responsive: {
+        details: false
+      },
       columns: [
         {
           className: 'details-control',
@@ -1220,6 +1223,9 @@ let popup = function () {
    */
   function setupTableClosedArticles() {
     pt.tableClosedArticles = $('#closedArticles').DataTable({
+      responsive: {
+        details: false
+      },
       columns: [
         {
           name: 'articleId',
