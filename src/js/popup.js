@@ -191,6 +191,35 @@ let popup = function () {
       }
     });
 
+    // tab openend, inject contentScript
+    browser.tabs.onCreated.addListener(function (tab) {
+      console.debug('Biet-O-Matic: tab(%d).onCreated listener fired: tab=%O', tab.id, tab);
+    });
+
+    // tab reloaded or URL changed
+    browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
+      console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
+      // status == complete, then inject content script, request info and update table
+      if (changeInfo.status === 'complete') {
+        if (!tabInfo.hasOwnProperty('url')) {
+          throw new Error("Tab Info is missing URL!");
+        }
+        getArticleInfoForTab(tabInfo)
+          .then(articleInfo => {
+            if (articleInfo.hasOwnProperty('detail')) {
+              addOrUpdateArticle(tabInfo, articleInfo.detail)
+                .catch(e => {
+                  console.debug("Biet-O-Matic: addOrUpdateArticle() failed - %s", e.toString());
+                });
+            }
+          })
+          .catch(e => {
+            console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
+            browser.tabs.reload(tabInfo.id);
+          });
+      }
+    });
+
     // tab closed
     browser.tabs.onRemoved.addListener(function (tabId, removeInfo) {
       console.debug('Biet-O-Matic: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
@@ -225,11 +254,6 @@ let popup = function () {
         }
       }
     });
-    // tab reloaded
-    /*browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
-      console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
-    });
-     */
 
     // toggle autoBid for window when button in browser menu clicked
     // the other button handler is setup below
@@ -1209,6 +1233,7 @@ let popup = function () {
             let a = document.createElement('a');
             a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
             a.target = '_blank';
+            a.rel = 'noopener';
             a.text = data;
             div.appendChild(a);
             return div.outerHTML;

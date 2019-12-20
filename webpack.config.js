@@ -79,7 +79,10 @@ var options = {
     // Ignore all locale files of moment.js
     new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
     new CopyWebpackPlugin([
-      { from: '_locales', to: '_locales' }
+      {
+        from:  path.join(__dirname, "src", "_locales"),
+        to: path.join(__dirname, "build", "_locales")
+      }
     ]),
   ]
 };
