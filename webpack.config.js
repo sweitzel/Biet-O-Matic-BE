@@ -84,6 +84,13 @@ var options = {
         to: path.join(__dirname, "build", "_locales")
       }
     ]),
+    new CopyWebpackPlugin([
+      {
+        from:  path.join(__dirname, "src", "*.png"),
+        to: path.join(__dirname, "build"),
+        flatten: true
+      }
+    ]),
   ]
 };
 

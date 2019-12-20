@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1",
+  "version": "0.1.0",
   "name": "__MSG_appName__",
   "short_name": "BOM",
   "description": "__MSG_appDesc__",
@@ -18,6 +18,10 @@
     "tabs",
     "storage"
   ],
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
   "minimum_chrome_version": "71",
   "manifest_version": 2
 }
