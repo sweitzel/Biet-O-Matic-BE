@@ -96,63 +96,78 @@ import "../css/contentScript.css";
 
     /*
      * Retrieve stored article info from popup
-     * - if null returned, then the article is not of interest
+     * - if null returned, then the article is not of interest (no bid)
      * - if articleState from stored result is incomplete (e.g. state.unknown), then
      *   update the state
      * The popup can then use the result to decide e.g. to stop the automatic bidding
      */
-    const result = await browser.runtime.sendMessage({
+    const articleStoredInfo = await browser.runtime.sendMessage({
       action: 'getArticleSyncInfo',
       articleId: ebayArticleInfo.articleId
     });
-    if (result != null && result.hasOwnProperty(ebayArticleInfo.articleId)) {
-      const data = result[ebayArticleInfo.articleId];
-     /* console.log("XXX compare data.auctionEndState(%s,%s) === auctionEndStates.unknown(%s,%s) = %s",
-        data.auctionEndState, typeof data.auctionEndState,
-        auctionEndStates.unknown, typeof auctionEndStates.unknown,
-        data.auctionEndState === auctionEndStates.unknown);*/
-      if (!data.hasOwnProperty('auctionEndState') ||
+    if (articleStoredInfo != null && articleStoredInfo.hasOwnProperty(ebayArticleInfo.articleId)) {
+      const data = articleStoredInfo[ebayArticleInfo.articleId];
+      if (data.hasOwnProperty('auctionEndState') &&
         (state !== auctionEndStates.unknown && data.auctionEndState === auctionEndStates.unknown)) {
-        // initially set or update auctionEndState
-        await browser.runtime.sendMessage({
-          action: 'ebayArticleSetAuctionEndState',
-          articleId: ebayArticleInfo.articleId,
-          detail: {auctionEndState: state}
+        // send updated end state
+        sendAuctionEndState(state, simulate).catch(e => {
+          console.warn("Sending Auction End State failed: %s", e.message);
         });
-        // add the ended state to the log
-        if (simulate) {
-          let statet = Object.keys(auctionEndStates).find(key => auctionEndStates[key] === state);
-          console.debug("Biet-O-Matic: Simulation is on, returning random state: %s", statet);
-          sendArticleLog({
-            component: "Bietvorgang",
-            level: "Status",
-            message: `Bietvorgang mit simuliertem Ergebnis beendet: ${statet} (${state})`,
-          });
-        } else {
-          sendArticleLog({
-            component: "Bietvorgang",
-            level: "Status",
-            message: `Bietvorgang Status wurde aktualisiert: ${statet} (${state})`,
-          });
-        }
       }
     }
 
-    // if bidInfo exists in sessionStorage, it means a bid process was started before reload
+    /*
+     * If bidInfo exists in sessionStorage, it means a bid process was started before reload
+     * we will inform the popup about the state indicated now on the page
+     */
     let bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
-    // this function will also delete the bidInfo...
     if (bidInfo != null) {
       console.debug("Biet-O-Matic: handleReload() Found bidInfo in sessionStorage: %s", JSON.stringify(bidInfo));
       // go back to previous page (?)
-
       // remove bidinfo if the auction for sure ended
       if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
         console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s", ebayArticleInfo.articleAuctionStateText);
         window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
         // set this, so the script will not trigger parsing further down
         ebayArticleInfo.auctionEnded = true;
+        sendAuctionEndState(state, simulate).catch(e => {
+          console.warn("Sending initial auction end state failed: %s", e.message);
+        });
       }
     }
+  }
+
+  /*
+   * Inform popup about auction end state. It might not be the final state though.
+   * This function will likely be called multiple times
+   */
+  async function sendAuctionEndState(state, simulate = false) {
+    if(!ebayArticleInfo.hasOwnProperty('articleId'))
+      throw new Error(`sendAuctionEndState(${ebayArticleInfo.articleId}): Cannot send, auctionId unknown.`);
+    if (state == null)
+      throw new Error(`sendAuctionEndState(${ebayArticleInfo.articleId}): Cannot send, invalid state.`);
+    await browser.runtime.sendMessage({
+      action: 'ebayArticleSetAuctionEndState',
+      articleId: ebayArticleInfo.articleId,
+      detail: {auctionEndState: state}
+    });
+    // add the ended state to the log
+    let statet = Object.keys(auctionEndStates).find(key => auctionEndStates[key] === state);
+    if (simulate) {
+      console.debug("Biet-O-Matic: Simulation is on, returning random state: %s", statet);
+      sendArticleLog({
+        component: "Bietvorgang",
+        level: "Status",
+        message: `Bietvorgang mit simuliertem Ergebnis beendet: ${statet} (${state})`,
+      });
+    } else {
+      sendArticleLog({
+        component: "Bietvorgang",
+        level: "Status",
+        message: `Bietvorgang Status wurde aktualisiert: ${statet} (${state})`,
+      });
+    }
+    return true;
   }
 
   /*
@@ -620,10 +635,11 @@ import "../css/contentScript.css";
       // if end time reached, abort directly
       if ((ebayArticleInfo.hasOwnProperty('auctionEnded') && ebayArticleInfo.auctionEnded) ||
           ebayArticleInfo.endTime <= Date.now()) {
+        let t = Date.now() - ebayArticleInfo.endTime;
         throw {
           component: "Bietvorgang",
           level: "Abbruch",
-          message: "Auktion bereits vor " +(Date.now() - ebayArticleInfo.endTime)+ "ms beendet oder Gebot bereits abgegeben."
+          message: `Auktion bereits beendet.`
         };
       }
       const maxBidInput = document.getElementById('MaxBidId');
@@ -777,6 +793,7 @@ import "../css/contentScript.css";
           (ebayArticleInfo.articleEndTime - modifiedEndTime) / 1000);
       }
 
+      // todo: customizable bidding confirm time
       storePerfInfo("Phase3: Warten auf Bietzeitpunkt");
       let wakeUpInMs = (modifiedEndTime - Date.now()) - 1500;
       await wait(wakeUpInMs);

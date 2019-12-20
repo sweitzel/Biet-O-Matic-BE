@@ -194,7 +194,7 @@ let popup = function () {
 
     // tab reloaded or URL changed
     browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
-      console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
+      //console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
       // status == complete, then inject content script, request info and update table
       if (changeInfo.status === 'complete') {
         if (!tabInfo.hasOwnProperty('url')) {
