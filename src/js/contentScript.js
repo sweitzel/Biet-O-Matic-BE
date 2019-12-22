@@ -452,8 +452,12 @@ import "../css/contentScript.css";
               maxBidInputValue, ebayArticleInfo.articleBuyPrice);
             // set to 1 cent less, to prevent unfriendly redirection
             maxBidInputValue = (Number.parseFloat(ebayArticleInfo.articleBuyPrice.toString()) - 0.01);
-            maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE');
+            maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE',
+              {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
             ebayArticleInfo.articleMaxBid = maxBidInputValue;
+          } else {
+            maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE',
+              {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
           }
           activateAutoBidButton(maxBidInputValue, minBidValue);
           // inform popup
@@ -597,14 +601,20 @@ import "../css/contentScript.css";
    * set new MaxBidInput value and autoBid checked status
    */
   function updateMaxBidInfo(info) {
+    // id=MaxBidId defined by eBay
     let maxBidInput = document.getElementById('MaxBidId');
+    // id=BomAutoBid defined by us
     let autoBidInput = document.getElementById('BomAutoBid');
     if (maxBidInput != null) {
       if (info.maxBid != null) {
         try {
-          maxBidInput.value = info.maxBid.toLocaleString('de-DE');
+          if (typeof info.maxBid === 'string')
+            info.maxBid = Number.parseFloat(info.maxBid);
+          maxBidInput.value = info.maxBid.toLocaleString('de-DE',
+            {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
         } catch (e) {
-          console.log("updateMaxBidInfo failed to parse %O", maxBidInput.value);
+          console.warn("Biet-O-Matic: updateMaxBidInfo() Failed to parse, info.maxBid=%s (%s)",
+            info.maxBid, typeof info.maxBid);
           maxBidInput.value = info.maxBid.toString();
         }
       } else {

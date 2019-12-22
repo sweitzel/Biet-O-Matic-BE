@@ -340,11 +340,7 @@ let popup = function () {
       console.debug("Biet-O-Matic: Found info for Article %s in storage: %s", articleId, JSON.stringify(result));
       // maxBid
       if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null) {
-        if (typeof storInfo.maxBid === 'string') {
-          maxBid = Number.parseFloat(storInfo.maxBid).toFixed(2);
-        } else {
-          maxBid = storInfo.maxBid.toFixed(2);
-        }
+        maxBid = storInfo.maxBid;
       }
       // autoBid
       if (storInfo.hasOwnProperty('autoBid')) {
@@ -554,6 +550,14 @@ let popup = function () {
       // should we only store the info if an storage entry already exists?
       if (onlyIfExists === true) return false;
     }
+    // store maxBid as number
+    if (info.hasOwnProperty('maxBid')) {
+      if (typeof info.maxBid === 'string') {
+        console.debug("Biet-O-Matic: storeArticleInfo() Convert maxBid string=%s to float=%s",
+          info.maxbid, Number.parseFloat(info.maxBid.replace(/,/, '.')));
+        info.maxBid = Number.parseFloat(info.maxBid.replace(/,/, '.'));
+      }
+    }
     // merge new info into existing settings
     let newSettings = Object.assign({}, settings, info);
     // store the settings back to the storage
@@ -605,10 +609,10 @@ let popup = function () {
       let data = row.data();
       if (e.target.id.startsWith('inpMaxBid_')) {
         // maxBid was entered
-        data.articleMaxBid = Number.parseFloat(e.target.value);
+        // normally with input type=number this should not be necessary - but there was a problem reported...
+        data.articleMaxBid = Number.parseFloat(e.target.value.replace(/,/, '.'));
         // check if maxBid > buyPrice (sofortkauf), then adjust it to the buyprice - 1 cent
-        //console.log("XXX adjusted maxBid %O to %s", data, data.articleBuyPrice - 0.01)
-        if (data.hasOwnProperty('articleBuyPrice') && data.articleMaxBid  > data.articleBuyPrice) {
+        if (data.hasOwnProperty('articleBuyPrice') && data.articleMaxBid > data.articleBuyPrice) {
           data.articleMaxBid = data.articleBuyPrice - 0.01;
         }
       } else if (e.target.id.startsWith('chkAutoBid_')) {
@@ -626,7 +630,7 @@ let popup = function () {
       // update storage info
       storeArticleInfo(data.articleId, info, data.tabId)
         .catch(e => {
-          console.warn("Biet-O-Matic: Failed to store article info: %O", e);
+          console.warn("Biet-O-Matic: Failed to store article info: %s", e.message);
         });
     });
 
@@ -1007,6 +1011,7 @@ let popup = function () {
       chkAutoBid.disabled = true;
     } else {
       // maxBid was entered, check if the autoBid field can be enabled
+      console.log("XXX row=%O", row);
       chkAutoBid.disabled = !activateAutoBidButton(row.articleMaxBid, row.articleMinimumBid, row.articleBidPrice);
       // set tooltip for button to minBidValue
       // if the maxBid is < minimum bidding price or current Price, add highlight color
