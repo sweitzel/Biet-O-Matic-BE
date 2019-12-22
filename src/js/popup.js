@@ -123,7 +123,7 @@ let popup = function () {
               // only if its not performance info (too verboose)
               let statusCell = pt.table.cell(`#${sender.tab.id}`, 'articleAuctionState:name');
               data.articleAuctionState = request.detail.message.message;
-              statusCell.invalidate('data').draw();
+              statusCell.invalidate('data').draw(false);
             }
             storeArticleLog(request.articleId, request.detail);
           }
@@ -358,7 +358,7 @@ let popup = function () {
         const row = pt.tableClosedArticles.row(`#${articleId}`);
         if (row.length === 1) {
           console.debug("Biet-O-Matic: Article %s has been reopened, removing from closedTable.", articleId);
-          row.remove().draw();
+          row.remove().draw(false);
         }
         await storeArticleInfo(articleId, {closedTime: null});
       }
@@ -402,7 +402,7 @@ let popup = function () {
       return;
     }
     const row = pt.table.row.add(info);
-    row.draw();
+    row.draw(false);
   }
 
   /*
@@ -415,7 +415,7 @@ let popup = function () {
       return;
     }
     const row = pt.tableClosedArticles.row.add(info);
-    row.draw();
+    row.draw(false);
   }
 
   /*
@@ -427,7 +427,7 @@ let popup = function () {
       console.debug("addArticle skipped for tab %O, no info");
       return;
     }
-    row.data(info).invalidate().draw();
+    row.data(info).invalidate().draw(false);
     // todo animate / highlight changed cell or at least the row
   }
 
@@ -620,7 +620,7 @@ let popup = function () {
         data.articleAutoBid = e.target.checked;
       }
       // redraw the row
-      row.invalidate('data').draw();
+      row.invalidate('data').draw(false);
       // store info when maxBid updated
       let info = {
         endTime: data.articleEndTime,
@@ -712,7 +712,7 @@ let popup = function () {
     }
     // invalidate data, redraw
     // todo selective redraw for parts of the row ?
-    row.invalidate('data').draw();
+    row.invalidate('data').draw(false);
   }
 
   //region Favicon Handling
@@ -898,7 +898,7 @@ let popup = function () {
     const row = pt.table.row(`#${tabId}`);
     const data = row.data();
     if (row.length === 1) {
-      row.remove().draw();
+      row.remove().draw(false);
     }
     // if article is of interest (has storage entry), add closedTime and description to storage entry
     if (data != null && typeof data !== 'undefined') {
