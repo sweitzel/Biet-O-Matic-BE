@@ -893,12 +893,22 @@ import "../css/contentScript.css";
     TODO: use HTML for good/bad indication
    */
   function sendArticleLog(messageObject) {
-    messageObject.timestamp = Date.now();
+    let message = {};
+    message.timestamp = Date.now();
+    message.message = JSON.stringify(messageObject);
+    message.component = "Unbekannt";
+    message.level = "Interner Fehler";
+    if (messageObject.hasOwnProperty('message'))
+      message.message = messageObject.message;
+    if (messageObject.hasOwnProperty('component'))
+      message.component = messageObject.component;
+    if (messageObject.hasOwnProperty('level'))
+      message.level = messageObject.level;
     browser.runtime.sendMessage({
       action: 'addArticleLog',
       articleId: ebayArticleInfo.articleId,
       detail: {
-        message: messageObject
+        message: message
       },
     }).catch((e) => {
       console.warn("Biet-O-Matic: sendArticleLog(), Cannot sendMessage");
