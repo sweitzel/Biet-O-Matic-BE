@@ -981,16 +981,14 @@ let popup = function () {
       closedArticle = true;
     }
     let maxBid = 0;
-    if (data != null) {
-      maxBid = data;
-    }
+    if (data != null) maxBid = data;
     const divArticleMaxBid = document.createElement('div');
     const inpMaxBid = document.createElement('input');
     inpMaxBid.id = 'inpMaxBid_' + row.articleId;
     inpMaxBid.type = 'number';
     inpMaxBid.min = '0';
     inpMaxBid.step = '0.01';
-    inpMaxBid.defaultValue = maxBid.toString();
+    inpMaxBid.defaultValue = maxBid.toString(10);
     inpMaxBid.style.width = "60px";
     const labelAutoBid = document.createElement('label');
     const chkAutoBid = document.createElement('input');
@@ -1011,7 +1009,6 @@ let popup = function () {
       chkAutoBid.disabled = true;
     } else {
       // maxBid was entered, check if the autoBid field can be enabled
-      console.log("XXX row=%O", row);
       chkAutoBid.disabled = !activateAutoBidButton(row.articleMaxBid, row.articleMinimumBid, row.articleBidPrice);
       // set tooltip for button to minBidValue
       // if the maxBid is < minimum bidding price or current Price, add highlight color

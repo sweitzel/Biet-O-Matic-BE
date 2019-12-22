@@ -625,6 +625,8 @@ import "../css/contentScript.css";
           autoBidInput.checked = info.autoBid;
         }
       }
+      // update in ebayArticleInfo, it might have been updated by popup
+      ebayArticleInfo.articleMaxBid = info.maxBid;
       activateAutoBidButton(info.maxBid);
     }
   }
