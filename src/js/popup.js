@@ -206,6 +206,11 @@ let popup = function () {
           throw new Error("Tab Info is missing URL!");
         }
 
+        // handle ebay login
+        //if (tabInfo.url.match(/signin\.ebay\./)) {
+          // if the article is bidding then it means ebay is not logged in
+        //}
+
         // get article info from tab
         getArticleInfoForTab(tabInfo)
           .then(articleInfo => {
@@ -505,6 +510,7 @@ let popup = function () {
       if (result.hasOwnProperty('simulate') && result.simulate) {
         $("#lblAutoBid").text('Automatikmodus (Test)');
         updateFavicon($('#inpAutoBid').is(':checked'), null, true);
+        $("#internal").removeClass('hidden');
       } else {
         updateFavicon($('#inpAutoBid').is(':checked'));
       }
