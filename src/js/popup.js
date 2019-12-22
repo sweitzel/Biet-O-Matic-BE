@@ -513,6 +513,14 @@ let popup = function () {
       if (result.hasOwnProperty('bidAllEnabled')) {
         $('#inpBidAll').prop('checked', result.bidAllEnabled);
       }
+      // pagination setting for activeArticlesTable
+      if (result.hasOwnProperty('activeArticlesTableLength')) {
+        pt.table.page.len(result.activeArticlesTableLength).draw();
+      }
+      // pagination setting for closedArticlesTable
+      if (result.hasOwnProperty('closedArticlesTableLength')) {
+        pt.tableClosedArticles.page.len(result.closedArticlesTableLength).draw();
+      }
     }
   }
   /*
@@ -596,7 +604,7 @@ let popup = function () {
   function configureUi() {
     const table = $('#articles.dataTable');
     // bom version
-    $('#bomVersion').text('Biet-O-Matic BE ' + BOM_VERSION);
+    if (typeof BOM_VERSION !== 'undefined') $('#bomVersion').text('Biet-O-Matic BE ' + BOM_VERSION);
     // maxBid input field
     table.on('change', 'tr input', e => {
       //console.debug('Biet-O-Matic: configureUi() INPUT Event this=%O', e);
@@ -1235,6 +1243,11 @@ let popup = function () {
       language: getDatatableTranslation('de_DE')
     });
 
+    // datatable length change
+    pt.table.on('length.dt', function (e, settings, len) {
+      updateSetting('activeArticlesTableLength', len);
+    });
+
     // initialize active tabs
     pt.whoIAm.currentWindow.tabs.forEach((tab) => {
       getArticleInfoForTab(tab)
@@ -1406,6 +1419,11 @@ let popup = function () {
       language: getDatatableTranslation('de_DE')
     });
 
+    // datatable length change
+    pt.tableClosedArticles.on('length.dt', function (e, settings, len) {
+      updateSetting('closedArticlesTableLength', len);
+    });
+
     // get closed tabs from sync storage and add them to the table
     // Note: we do not filter here at all, old entries which shouldnt be displayed should be removed from DB
     browser.storage.sync.get(null)
@@ -1431,11 +1449,12 @@ let popup = function () {
       detectWhoIAm().then(whoIAm => {
         pt.whoIAm = whoIAm;
         registerEvents();
+
+        setupTableActiveArticles();
+        setupTableClosedArticles();
+
         // restore settings from session storage (autoBidEnabled, bidAllEnabled)
         restoreSettings();
-        setupTableActiveArticles();
-
-        setupTableClosedArticles();
 
         configureUi();
         checkBrowserStorage().catch(onError);
