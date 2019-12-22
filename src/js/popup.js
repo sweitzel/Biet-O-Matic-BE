@@ -585,6 +585,8 @@ let popup = function () {
    */
   function configureUi() {
     const table = $('#articles.dataTable');
+    // bom version
+    $('#bomVersion').text('Biet-O-Matic BE ' + BOM_VERSION);
     // maxBid input field
     table.on('change', 'tr input', e => {
       //console.debug('Biet-O-Matic: configureUi() INPUT Event this=%O', e);
