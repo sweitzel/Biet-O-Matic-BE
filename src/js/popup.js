@@ -211,7 +211,8 @@ let popup = function () {
           })
           .catch(e => {
             console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
-            browser.tabs.reload(tabInfo.id);
+            // currently disable reload, probably not needed here
+            //reloadTab(tabInfo.id);
           });
       }
     });
@@ -1213,9 +1214,33 @@ let popup = function () {
         })
         .catch(e => {
           console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tab.id}: ${e.message}`);
-          browser.tabs.reload(tab.id);
+          /*
+           * The script injection failed, this can have multiple reasons:
+           * - the contentScript threw an error because the page is not a article
+           * - the contentScript threw an error because the article is a duplicate tab
+           * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
+           * Therefore we perform a tab reload once, which should recover the latter case
+           */
+          reloadTab(tab.id);
         });
     });
+  }
+
+  /* reload a tab
+   * check if a reload has been recently performed and only reload if > 60 seconds ago
+   */
+  function reloadTab(tabId = null) {
+    if (tabId == null) return;
+    if (pt.hasOwnProperty('reloadInfo') && pt.reloadInfo.hasOwnProperty(tabId)) {
+      if ((Date.now() - pt.reloadInfo[tabId]) < (60 * 1000)) {
+        console.debug("Biet-O-Matic: Tab %d skipped reloading (was reloaded less then a minute ago", tabId);
+        return;
+      }
+    } else {
+      pt.reloadInfo = {};
+    }
+    pt.reloadInfo[tabId] = Date.now();
+    browser.tabs.reload(tabId);
   }
 
   /*
