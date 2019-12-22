@@ -192,14 +192,21 @@ let popup = function () {
       console.debug('Biet-O-Matic: tab(%d).onCreated listener fired: tab=%O', tab.id, tab);
     });
 
-    // tab reloaded or URL changed
+    /*
+     * tab reloaded or URL changed
+     * The following cases should be handled:
+     * - An existing tab is used to show a different article -> get updated info and update table
+     * - An existing article tab navigated away -> remove from table, handle same away as closed tab
+     */
     browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
-      console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
       // status == complete, then inject content script, request info and update table
       if (changeInfo.status === 'complete') {
+        console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
         if (!tabInfo.hasOwnProperty('url')) {
           throw new Error("Tab Info is missing URL!");
         }
+
+        // get article info from tab
         getArticleInfoForTab(tabInfo)
           .then(articleInfo => {
             if (articleInfo.hasOwnProperty('detail')) {
@@ -207,6 +214,9 @@ let popup = function () {
                 .catch(e => {
                   console.debug("Biet-O-Matic: addOrUpdateArticle() failed - %s", e.toString());
                 });
+            } else {
+              // if the tab is in the table, we can remove it now (navigated away)
+              handleTabClosed(tabId);
             }
           })
           .catch(e => {
@@ -222,33 +232,7 @@ let popup = function () {
       console.debug('Biet-O-Matic: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
       // window closing, no need to update anybody
       if (removeInfo.isWindowClosing === false) {
-        // remove tab from activeArticles table
-        const row = pt.table.row(`#${tabId}`);
-        const data = row.data();
-        if (row.length === 1) {
-          row.remove().draw();
-        }
-        // if article is of interest (has storage entry), add closedTime to storage entry
-        if (data != null && typeof data !== 'undefined' ) {
-          storeArticleInfo(data.articleId, {
-            closedTime: Date.now(),
-            description: data.hasOwnProperty('articleDescription') ? data.articleDescription : "Unbekannt"
-          }, null, true)
-            .then(() => {
-              // update closedArticles table (after closedTime has been set)
-              browser.storage.sync.get(data.articleId)
-                .then(result => {
-                  if (result.hasOwnProperty(data.articleId)) {
-                    let info = result[data.articleId];
-                    info.articleId = data.articleId;
-                    addClosedArticleToTable(info);
-                  }
-                }).catch(onError);
-            })
-            .catch(e => {
-              console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
-            });
-        }
+        handleTabClosed(tabId);
       }
     });
 
@@ -888,6 +872,42 @@ let popup = function () {
     } else if (info.articleEndTime - Date.now() < 60) {
       // ends in 1 minute
       $(rowNode).css('text-shadow', '2px -2px 3px #FF0000');
+    }
+  }
+
+  /*
+   * Handle a closed tab:
+   * - remove from active articles table
+   * - save info to article storage
+   * - add to closedArticles table
+   */
+  function handleTabClosed(tabId) {
+    // remove tab from activeArticles table
+    const row = pt.table.row(`#${tabId}`);
+    const data = row.data();
+    if (row.length === 1) {
+      row.remove().draw();
+    }
+    // if article is of interest (has storage entry), add closedTime and description to storage entry
+    if (data != null && typeof data !== 'undefined') {
+      storeArticleInfo(data.articleId, {
+        closedTime: Date.now(),
+        description: data.hasOwnProperty('articleDescription') ? data.articleDescription : "Unbekannt"
+      }, null, true)
+        .then(() => {
+          // update closedArticles table (after closedTime has been set)
+          browser.storage.sync.get(data.articleId)
+            .then(result => {
+              if (result.hasOwnProperty(data.articleId)) {
+                let info = result[data.articleId];
+                info.articleId = data.articleId;
+                addClosedArticleToTable(info);
+              }
+            }).catch(onError);
+        })
+        .catch(e => {
+          console.log("Biet-O-Matic: handleTabClosed() Unable to store article info: %s", e.message);
+        });
     }
   }
 

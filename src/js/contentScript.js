@@ -507,7 +507,7 @@ import "../css/contentScript.css";
               console.debug("Biet-O-Matic: Mutation received: %d seconds left", timeLeftInSeconds);
               doBid(false)
                 .catch(e => {
-                  console.info("Biet-O-Matic: doBid() was aborted: %s", JSON.stringify(e));
+                  console.info("Biet-O-Matic: doBid() was aborted: %s", e.message);
                   sendArticleLog(e);
                 });
             }
@@ -655,7 +655,7 @@ import "../css/contentScript.css";
       }
       // retrieve settings from popup
       let settings = await browser.runtime.sendMessage({action: 'getWindowSettings'});
-      if (typeof settings === 'undefined' || !settings.hasOwnProperty('autoBidEnabled')) {
+      if (settings == null || typeof settings === 'undefined' || !settings.hasOwnProperty('autoBidEnabled')) {
         throw {
           component: "Bietvorgang",
           level: "Interner Fehler",
