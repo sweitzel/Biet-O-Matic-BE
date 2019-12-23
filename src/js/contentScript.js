@@ -775,15 +775,15 @@ import "../css/contentScript.css";
       }
 
       // get confirm button
-      const confirmButton = document.getElementById('confirm_button');
-      if (confirmButton == null) {
-        console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
-        throw {
-          component: "Bietvorgang",
-          level: "Fehler beim bieten",
-          message: "Element confirm_button nicht gefunden!"
-        };
-      }
+      const confirmButton = await waitFor('#confirm_button', 500)
+        .catch((e) => {
+          console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
+          throw {
+            component: "Bietvorgang",
+            level: "Fehler beim bieten",
+            message: "Element #confirm_body konnte innerhalb von 500ms nicht gefunden werden!"
+          };
+        });
 
       /*
        Phase 3: Confirm the bid
