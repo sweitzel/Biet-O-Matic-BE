@@ -195,8 +195,10 @@ let popup = function () {
     /*
      * tab reloaded or URL changed
      * The following cases should be handled:
-     * - An existing tab is used to show a different article -> get updated info and update table
-     * - An existing article tab navigated away -> remove from table, handle same away as closed tab
+     * - An existing tab is used to show a different article
+     *   -> get updated info and update table
+     * - An existing article tab navigated away -> remove from table
+     * - In all cases, handle same as a closed tab
      */
     browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
       // status == complete, then inject content script, request info and update table
@@ -211,7 +213,10 @@ let popup = function () {
           // if the article is bidding then it means ebay is not logged in
         //}
 
-        // get article info from tab
+        // if the article tab is in the table, we can remove it now (navigated away)
+        handleTabClosed(tabId);
+
+        // get fresh article info from tab and add it again to the table
         getArticleInfoForTab(tabInfo)
           .then(articleInfo => {
             if (articleInfo.hasOwnProperty('detail')) {
@@ -219,9 +224,6 @@ let popup = function () {
                 .catch(e => {
                   console.debug("Biet-O-Matic: addOrUpdateArticle() failed - %s", e.toString());
                 });
-            } else {
-              // if the tab is in the table, we can remove it now (navigated away)
-              handleTabClosed(tabId);
             }
           })
           .catch(e => {
