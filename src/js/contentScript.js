@@ -654,10 +654,24 @@ import "../css/contentScript.css";
           message: `Auktion bereits beendet.`
         };
       }
-      const maxBidInput = document.getElementById('MaxBidId');
-      const autoBidInput = document.getElementById('BomAutoBid');
+      const autoBidInput = await waitFor('#BomAutoBid', 1000)
+        .catch((e) => {
+          console.log("Biet-O-Matic: Bidding failed: AutoBid Button missing!");
+          throw {
+            component: "Bietvorgang",
+            level: "Fehler beim bieten",
+            message: "Element #BomAutoBid konnte innerhalb von 1s nicht gefunden werden!"
+          };
+        });
+      if (autoBidInput == null) {
+       throw {
+          component: "Bietvorgang",
+          level: "Fehler beim bieten",
+          message: "AutoBid Knopf nicht gefunden"
+        };
+      }
       // ensure article autoBid is checked
-      if (autoBidInput == null || autoBidInput.checked === false) {
+      if (autoBidInput.checked === false) {
         console.debug("Biet-O-Matic: doBid() abort, Article autoBid is off");
         throw {
           component: "Bietvorgang",
@@ -714,7 +728,7 @@ import "../css/contentScript.css";
       }
 
       storePerfInfo("Phase1: Gebotsvorbereitung");
-      console.log("Biet-O-Matic: Performing bid for article %s: maxBid=%s", ebayArticleInfo.articleId, maxBidInput.value);
+      console.log("Biet-O-Matic: Performing bid for article %s", ebayArticleInfo.articleId);
       sendArticleLog({
         component: "Bietvorgang",
         level: "Info",
@@ -775,7 +789,7 @@ import "../css/contentScript.css";
       }
 
       // get confirm button
-      const confirmButton = await waitFor('#confirm_button', 500)
+      const confirmButton = await waitFor('#confirm_button', 1000)
         .catch((e) => {
           console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
           throw {
