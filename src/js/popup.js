@@ -20,21 +20,1172 @@ import 'jquery-ui-dist/jquery-ui.css';
 import 'datatables.net-jqui/css/dataTables.jqueryui.css';
 import 'datatables.net-buttons-jqui/css/buttons.jqueryui.css';
 import 'datatables.net-responsive-jqui/css/responsive.jqueryui.css';
+import 'datatables.net-rowgroup-jqui/css/rowgroup.jqueryui.css';
 import 'datatables.net-jqui';
 import 'datatables.net-buttons-jqui';
 import 'datatables.net-responsive-jqui';
+import 'datatables.net-rowgroup-jqui';
 
 // date-fns as alternative to moment
 import { format, formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
 
+// FontAwesome
+import '@fortawesome/fontawesome-free/css/all.css';
+import '@fortawesome/fontawesome-free/js/fontawesome';
+import '@fortawesome/fontawesome-free/js/regular';
+
 import "../css/popup.css";
 
+
 /*
-   <link rel="stylesheet" type="text/css" href="thirdparty/jquery-ui.min.css"/>
-  <link rel="stylesheet" type="text/css" href="thirdparty/dataTables.jqueryui.min.css"/>
-  C:\Users\Sebastian\IdeaProjects\Bietomat\node_modules\datatables.net-jqui\css\dataTables.jqueryui.css
+ * All functions related to an eBay Article
+ * - hold info for DataTable
+ * -
  */
+class Article {
+  constructor(info, tab = null) {
+    if (info == null || !info.hasOwnProperty('articleId'))
+      throw new Error("Failed to initialize new Article, articleId missing in info!");
+    this.articleId = info.articleId;
+    const elements = [
+      'articleAuctionState', 'articleAuctionStateText', 'articleBidCount', 'articleBidPrice', 'articleCurrency',
+      'articleBuyPrice', 'articleDescription', 'articleEndTime',
+      'articleMinimumBid', 'articlePaymentMethods', 'articleShippingCost',
+      'articleState'
+    ];
+    elements.forEach(e => {
+      if (info.hasOwnProperty(e))
+        this[e] = info[e];
+    });
+    // add open tab info
+    if (tab != null) {
+      this.tabId = tab.id;
+    }
+    // row in DataTable will be set externally
+    this.row = null;
+    this.articleDetailsShown = false;
+  }
+
+  /*
+   * some async initialization steps
+   * - get information from storage
+   */
+  async init() {
+    await this.addInfoFromStorage();
+  }
+
+  // Request article info from specific tab
+  static async getInfoFromTab(tab) {
+    console.debug("Biet-O-Matic: getInfoFromTab(%d) started", tab.id);
+    /*
+     * Check if the tab is for an supported eBay article before we attempt to parse info from it
+     * e.g. https://www.ebay.de/itm/*
+     */
+    let regex = /^https:\/\/www.ebay.(de|com)\/itm/i;
+    if (!regex.test(tab.url)) {
+      return Promise.resolve({});
+    }
+    // inject content script in case its not loaded
+    await browser.tabs.executeScript(tab.id, {file: 'contentScript.bundle.js'})
+      .catch(e => {
+        throw new Error(`getInfoFromTab(${tab.id}) executeScript failed: ${e.message}`);
+      });
+    console.debug("Biet-O-Matic: getInfoFromTab(%d) return", tab.id);
+    return Promise.resolve(browser.tabs.sendMessage(tab.id, {action: 'GetArticleInfo'}));
+  }
+
+  /*
+   * Selected information which will be transmitted to tabs
+   */
+  static getInfoForTab(article) {
+    if (article == null || typeof article === 'undefined')
+      return {};
+    return {
+      articleId: article.articleId,
+      articleDescription: article.articleDescription,
+      tabId: article.tabId
+    };
+  }
+
+  // return the stored info for the article or null
+  async getInfoFromStorage() {
+    let result = await browser.storage.sync.get(this.articleId);
+    if (Object.keys(result).length === 1) {
+      return result[this.articleId];
+    } else {
+      return null;
+    }
+  }
+
+  // complement with DB info
+  async addInfoFromStorage() {
+    let maxBid = null;
+    let autoBid = false;
+    let result = await browser.storage.sync.get(this.articleId);
+    if (Object.keys(result).length === 1) {
+      let storInfo = result[this.articleId];
+      console.debug("Biet-O-Matic: Found info for Article %s in storage: %s", this.articleId, JSON.stringify(result));
+      // maxBid
+      if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null) {
+        maxBid = storInfo.maxBid;
+      }
+      // autoBid
+      if (storInfo.hasOwnProperty('autoBid')) {
+        autoBid = storInfo.autoBid;
+      }
+    }
+    this.articleMaxBid = maxBid;
+    this.articleAutoBid = autoBid;
+  }
+
+  /*
+   * store articleInfo to sync storage
+   *   will use values which are provided in the info object to update existing ones
+   * - key: articleId
+   * - value: endTime, minBid, maxBid, autoBid, closedTime
+   */
+  async updateInfoInStorage(info, tabId = null, onlyIfExists = false) {
+    let storedInfo = {};
+    // restore from existing config
+    let result = await browser.storage.sync.get(this.articleId);
+    if (Object.keys(result).length === 1) {
+      storedInfo = result[this.articleId];
+    } else {
+      // should we only store the info if an storage entry already exists?
+      if (onlyIfExists === true) return false;
+    }
+    // store maxBid as number
+    if (info.hasOwnProperty('maxBid')) {
+      if (typeof info.maxBid === 'string') {
+        console.debug("Biet-O-Matic: updateInfoInStorage() Convert maxBid string=%s to float=%s",
+          info.maxbid, Number.parseFloat(info.maxBid.replace(/,/, '.')));
+        info.maxBid = Number.parseFloat(info.maxBid.replace(/,/, '.'));
+      }
+    }
+    // merge new info into existing settings
+    let newSettings = Object.assign({}, storedInfo, info);
+    // https://stackoverflow.com/a/37396358
+    let diffSettings = Object.keys(info).reduce((diff, key) => {
+      if (storedInfo[key] === info[key]) return diff;
+      return {
+        ...diff,
+        [key]: `alt=${storedInfo[key]}; neu=${info[key]}`
+      };
+    }, {});
+    if (JSON.stringify(storedInfo) !== JSON.stringify(info)) {
+      this.addLog({
+        component: "Artikel",
+        level: "Einstellungen",
+        message: `Aktualisiert: '${JSON.stringify(diffSettings)}'`,
+      });
+      // store the settings back to the storage
+      await browser.storage.sync.set({[this.articleId]: newSettings});
+      if (tabId != null) {
+        // send update to article tab
+        await browser.tabs.sendMessage(tabId, {
+          action: 'UpdateArticleMaxBid',
+          detail: info
+        });
+      }
+    }
+  }
+
+  /*
+   * merge updated info and add the change to the article log
+   */
+  updateInfo(info, tabId) {
+    let modified = 0;
+    // new tabId
+    if (tabId != null && tabId !== this.tabId) {
+      this.addLog({
+        component: "Artikel",
+        level: "Aktualisierung",
+        message: `Tab: alt='${this.tabId}'; neu='${tabId}'`,
+      });
+      this.tabId = tabId;
+      modified++;
+    }
+    // articleDescription
+    if (info.hasOwnProperty('articleDescription') && info.articleDescription !== this.articleDescription) {
+        this.addLog({
+          component: "Artikel",
+          level: "Aktualisierung",
+          message: `Beschreibung: alt='${this.articleDescription}'; neu='${info.articleDescription}'`,
+        });
+        this.articleDescription = info.articleDescription;
+        modified++;
+        // todo: optionally deactivate autoBid for this article
+    }
+    // articleBidPrice
+    if (info.hasOwnProperty('articleBidPrice') && info.articleBidPrice !== this.articleBidPrice) {
+      this.addLog({
+        component: "Artikel",
+        level: "Aktualisierung",
+        message: `Preis: alt='${this.articleBidPrice}'; neu='${info.articleBidPrice}'`,
+      });
+      this.articleBidPrice = info.articleBidPrice;
+      modified++;
+    }
+    // articleBidCount
+    if (info.hasOwnProperty('articleBidCount') && info.articleBidCount !== this.articleBidCount) {
+      this.addLog({
+        component: "Artikel",
+        level: "Aktualisierung",
+        message: `Anzahl Gebote: alt='${this.articleBidCount}'; neu='${info.articleBidCount}'`,
+      });
+      this.articleBidCount = info.articleBidCount;
+      modified++;
+    }
+    // articleShippingCost
+    if (info.hasOwnProperty('articleShippingCost') && info.articleShippingCost !== this.articleShippingCost) {
+      this.addLog({
+        component: "Artikel",
+        level: "Aktualisierung",
+        message: `Lieferkosten: alt='${this.articleShippingCost}'; neu='${info.articleShippingCost}'`,
+      });
+      this.articleShippingCost = info.articleShippingCost;
+      modified++;
+    }
+    // articleMinimumBid
+    if (info.hasOwnProperty('articleMinimumBid') && info.articleMinimumBid !== this.articleMinimumBid) {
+      this.addLog({
+        component: "Artikel",
+        level: "Aktualisierung",
+        message: `Minimal Gebot: alt='${this.articleMinimumBid}'; neu='${info.articleMinimumBid}'`,
+      });
+      this.articleMinimumBid = info.articleMinimumBid;
+      modified++;
+    }
+    // articleEndTime
+    if (info.hasOwnProperty('articleEndTime') && info.articleEndTime !== this.articleEndTime) {
+      this.addLog({
+        component: "Artikel",
+        level: "Aktualisierung",
+        message: `Auktionsende: alt='${this.articleEndTime}'; neu='${info.articleEndTime}'`,
+      });
+      this.articleEndTime = info.articleEndTime;
+      modified++;
+    }
+    return modified;
+  }
+
+  // add log message for article
+  addLog(messageObject) {
+    let message = {};
+    message.timestamp = Date.now();
+    message.message = JSON.stringify(messageObject);
+    message.component = "Unbekannt";
+    message.level = "Interner Fehler";
+    if (messageObject.hasOwnProperty('timestamp'))
+      message.timestamp = messageObject.timestamp;
+    if (messageObject.hasOwnProperty('message'))
+      message.message = messageObject.message;
+    if (messageObject.hasOwnProperty('component'))
+      message.component = messageObject.component;
+    if (messageObject.hasOwnProperty('level'))
+      message.level = messageObject.level;
+
+    // get info for article from storage
+    let log = JSON.parse(window.localStorage.getItem(`log:${this.articleId}`));
+    console.debug("Biet-O-Matic: addLog(%s) info=%s", this.articleId, JSON.stringify(message));
+    if (log == null) log = [];
+    log.push(message);
+    window.localStorage.setItem(`log:${this.articleId}`, JSON.stringify(log));
+    // inform local popup about the change
+    if (this.row != null) {
+      // update child info, but drawing will be separate
+      this.row.child(ArticlesTable.renderArticleLog(this));
+      // 0 = articleDetailsControl
+      this.row.cell(0).invalidate('data').draw(false);
+    }
+  }
+
+  // return the log for the article from the storage, or null if none
+  getLog() {
+    return JSON.parse(window.localStorage.getItem(`log:${this.articleId}`));
+  }
+
+  getPrettyEndTime() {
+    let date = 'n/a';
+    let timeLeft = 'n/a';
+    if (this.hasOwnProperty('articleEndTime') && typeof this.articleEndTime !== 'undefined') {
+      timeLeft = formatDistanceToNow(this.articleEndTime, {includeSeconds: true, locale: de, addSuffix: true});
+      date = new Intl.DateTimeFormat('default', {'dateStyle': 'medium', 'timeStyle': 'medium'})
+        .format(new Date(this.articleEndTime));
+    }
+    return `${date} (${timeLeft})`;
+  }
+
+  /*
+   * Determines and Returns the id for the Article link:
+   * tabId:<id> when Article Tab is open
+   * articleId:<id> when Article Tab is not open
+   */
+  getArticleLinkId() {
+    if (this.tabId == null)
+      return "";
+    else
+      return 'tabid-' + this.tabId;
+  }
+
+  // get formatted bid price: EUR 123,12
+  getPrettyBidPrice() {
+    //console.log("data=%O, type=%O, row=%O", data, type, row);
+    let currency;
+    if (this.hasOwnProperty('articleCurrency')) {
+      currency = this.articleCurrency;
+    } else {
+      console.warn("Biet-O-Matic: Article %s - using default currency EUR -> %s", this.articleId, JSON.stringify(this));
+      currency = 'EUR';
+    }
+    try {
+      return new Intl.NumberFormat('de-DE', {style: 'currency', currency: currency})
+        .format(this.articleBidPrice);
+    } catch (e) {
+      return this.articleBidPrice;
+    }
+  }
+
+  // same logic as activateAutoBid from contentScript
+  activateAutoBid() {
+    console.debug("Biet-O-Matic: activateAutoBid(), maxBidValue=%s (%s), minBidValue=%s (%s)",
+      this.articleMaxBid, typeof this.articleMaxBid,  this.articleMinimumBid, typeof this.articleMinimumBid);
+    //let isMaxBidEntered = (Number.isNaN(maxBidValue) === false);
+    const isMinBidLargerOrEqualBidPrice = (this.articleMinimumBid >= this.articleBidPrice);
+    const isMaxBidLargerOrEqualMinBid = (this.articleMaxBid >= this.articleMinimumBid);
+    const isMaxBidLargerThanBidPrice = (this.articleMaxBid > this.articleBidPrice);
+    if (isMinBidLargerOrEqualBidPrice) {
+      //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
+      //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
+      return isMaxBidLargerOrEqualMinBid;
+    } else if (isMaxBidLargerThanBidPrice === true) {
+      //console.debug("Enable bid button: isMaxBidLargerThanBidPrice=%s", isMaxBidLargerThanBidPrice);
+      return true;
+    } else {
+      return false;
+    }
+  }
+}
+
+/*
+ * All functions related to the articles Table
+ * - create table
+ * - listener events
+ * - add article
+ * - remove article
+ */
+class ArticlesTable {
+  // selector = '#articles'
+  constructor(pt, selector) {
+    this.selector = selector;
+    this.currentWindowId = pt.whoIAm.currentWindow.id;
+    if ($(selector).length === 0 )
+      throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
+    this.DataTable = ArticlesTable.init(selector);
+    this.registerEvents();
+  }
+
+  // setup articles table
+  static init(selector) {
+    return $(selector).DataTable({
+      columns: [
+        {
+          name: 'articleDetailsControl',
+          className: 'details-control',
+          data: 'articleDetailsShown',
+          width: '5px',
+          render: ArticlesTable.renderArticleDetailsControl,
+        },
+        {
+          name: 'articleId',
+          data: 'articleId',
+          width: '100px',
+          render: function (data, type, row) {
+            if (type !== 'display' && type !== 'filter') return data;
+            let div = document.createElement("div");
+            div.id = data;
+            let a = document.createElement('a');
+            a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
+            a.id = row.getArticleLinkId();
+            a.text = data;
+            a.target = '_blank';
+            div.appendChild(a);
+            return div.outerHTML;
+          }
+        },
+        {
+          name: 'articleDescription',
+          data: 'articleDescription',
+          defaultContent: 'Unbekannt'
+        },
+        {
+          name: 'articleEndTime',
+          data: 'articleEndTime',
+          render: function (data, type, row) {
+            if (typeof data !== 'undefined') {
+              if (type !== 'display' && type !== 'filter') return data;
+              return row.getPrettyEndTime();
+            } else {
+              // e.g. sofortkauf
+              return "unbegrenzt";
+            }
+          },
+          defaultContent: '?'
+        },
+        {
+          name: 'articleBidPrice',
+          data: 'articleBidPrice',
+          defaultContent: 0,
+          render: ArticlesTable.renderArticleBidPrice
+        },
+        {
+          name: 'articleShippingCost',
+          data: 'articleShippingCost',
+          defaultContent: '0.00'
+        },
+        {
+          name: 'articleAuctionState',
+          data: 'articleAuctionState',
+          defaultContent: ''
+        },
+        {
+          name: 'articleGroup',
+          data: 'articleGroup',
+          orderable: false,
+          defaultContent: 0
+        },
+        {
+          name: 'articleMaxBid',
+          data: 'articleMaxBid',
+          render: ArticlesTable.renderArticleMaxBid,
+          defaultContent: 0
+        },
+        {
+          name: 'articleButtons',
+          data: 'articleButtons',
+          defaultContent: '',
+          render: ArticlesTable.renderArticleButtons,
+        }
+      ],
+      order: [[3, "asc"]],
+      columnDefs: [
+        {searchable: false, "orderable": false, targets: [6, 7, 8, 9]},
+        {type: "num", targets: [1, 7]},
+        {className: "dt-body-center dt-body-nowrap", targets: [0, 1, 7, 8, 9]},
+        {width: "100px", targets: [4, 5, 7, 8 ]},
+        {width: "220px", targets: [3]},
+        {width: "300px", targets: [2, 6]}
+      ],
+      searchDelay: 400,
+      rowId: 'articleId',
+      pageLength: 25,
+      responsive: {details: false},
+      rowGroup: {dataSrc: 7},
+      language: ArticlesTable.getDatatableTranslation('de_DE')
+    });
+  }
+
+  // add open article tabs to the table
+  addFromTabs() {
+    // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
+    browser.tabs.query({
+      currentWindow: true,
+      url: ['*://*.ebay.de/itm/*', '*://*.ebay.com/itm/*']
+    })
+      .then(tabs => {
+        tabs.forEach(tab => {
+          let p = Article.getInfoFromTab(tab);
+          p.then(articleInfo => {
+            if (articleInfo.hasOwnProperty('detail')) {
+              let article = new Article(articleInfo.detail, tab);
+              article.init().then(() => {
+                article.row = this.addArticle(article);
+              });
+            }
+          })
+            .catch(e => {
+              console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${tab.id}: ${e.message}`);
+            /*
+             * The script injection failed, this can have multiple reasons:
+             * - the contentScript threw an error because the page is not a article
+             * - the contentScript threw an error because the article is a duplicate tab
+             * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
+             * Therefore we perform a tab reload once, which should recover the latter case
+             */
+            ArticlesTable.reloadTab(tab.id);
+          });
+        });
+      })
+      .catch(e => {
+        console.warn("Biet-O-Matic: Failed to add articles from tabs: %s", e.message);
+      });
+  }
+
+  // add an article to the table
+  addArticle(article) {
+    console.log("addArticle() called");
+    if (article instanceof Article)
+      return this.DataTable.row.add(article).draw(false);
+    else
+      console.warn("Biet-O-Matic: Adding article failed; incorrect type: %O", article);
+    return null;
+  }
+
+  // update article with fresh information
+  updateArticle(articleInfo, row = null, tabId = null) {
+    if (row == null)
+      row = this.getRow(`#${articleInfo.articleId}`);
+    if (row == null || row.length !== 1) return;
+    const article = row.data();
+    console.log("Biet-O-Matic: updateArticle(%s)", articleInfo.articleId);
+    // sanity check if the info + row match
+    if (article.articleId !== articleInfo.articleId) {
+      throw new Error("updateArticle() ArticleInfo and Row do not match!");
+    }
+    if (article.updateInfo(articleInfo, tabId) > 0)
+      row.invalidate('data').draw(false);
+  }
+
+  // update articleStatus column with given message
+  updateArticleStatus(articleId, message) {
+    const row = this.getRow(`#${articleId}`);
+    if (row == null || row.length != 1) {
+      console.log("updateArticleStatus() Cannot determine row from articleId %s", articleId);
+      return;
+    }
+    let statusCell = this.DataTable.cell(`#${articleId}`, 'articleAuctionState:name');
+    row.data().articleAuctionState = message;
+    statusCell.invalidate('data').draw(false);
+  }
+
+  /*
+ * Updates the maxBid input and autoBid checkbox for a given row
+ * Note: the update can either be triggered from the article page, or via user editing on the datatable
+ * Also performs row redraw to show the updated data.
+ */
+  updateRowMaxBid(articleInfo = {}, row = null) {
+    if (row == null && articleInfo.hasOwnProperty('articleId'))
+      row = this.getRow(`#${articleInfo.articleId}`);
+    if (row == null || row.length !== 1) return;
+    const data = row.data();
+    console.debug('Biet-O-Matic: updateRowMaxBid(%s) info=%s', data.articleId, JSON.stringify(articleInfo));
+    // minBid
+    if (articleInfo.hasOwnProperty('minBid')) {
+      data.articleMinimumBid = articleInfo.minBid;
+    }
+    // maxBid
+    if (articleInfo.hasOwnProperty('maxBid')) {
+      if (articleInfo.maxBid == null || Number.isNaN(articleInfo.maxBid)) {
+        data.articleMaxBid = 0;
+      } else {
+        data.articleMaxBid = articleInfo.maxBid;
+      }
+    }
+    // autoBid
+    if (articleInfo.hasOwnProperty('autoBid')) {
+      if (articleInfo.autoBid != null) {
+        data.articleAutoBid = articleInfo.autoBid;
+      }
+    }
+    // invalidate data, redraw
+    // todo selective redraw for parts of the row ?
+    row.invalidate('data').draw(false);
+  }
+
+  /*
+    Add or Update Article in Table
+    - if articleId not in table, add it
+    - if in table, update the entry
+    - also check if same tab has been reused
+  */
+  addOrUpdateArticle(articleInfo, tab) {
+    if (!articleInfo.hasOwnProperty('articleId')) {
+      return;
+    }
+    let articleId = articleInfo.articleId;
+    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%s', articleId, tab, JSON.stringify(articleInfo));
+
+    // check if tab articleId changed
+    const oldArticleId = this.getArticleIdByTabId(tab.id);
+    if (oldArticleId != null && oldArticleId != articleInfo.articleId) {
+      // remove article from the table, or unset at least the tabId
+      this.removeArticleIfBoring(tab.id);
+    }
+
+    // article already in table?
+    const rowByArticleId = this.DataTable.row(`#${articleId}`);
+    // check if article is already open in another tab
+    if (rowByArticleId.length !== 0 && typeof rowByArticleId !== 'undefined') {
+      if (rowByArticleId.data().tabId != null && rowByArticleId.data().tabId !== tab.id) {
+        throw new Error(`Article ${articleId} is already open in another tab (${rowByArticleId.data().tabId})!`);
+      }
+    }
+    if (rowByArticleId.length === 0) {
+      // article not in table - simply add it
+      let article = new Article(articleInfo, tab);
+      article.init().then(() => {
+        article.row = this.addArticle(article);
+      });
+    } else {
+      // article in table - update it
+      this.updateArticle(articleInfo, rowByArticleId, tab.id);
+    }
+  }
+
+  /*
+   * remove an closed article from the table if its uninteresting. Will be called if a tab is closed/changed
+   * An article is regarded uninteresting if no maxBid defined yet
+   */
+  removeArticleIfBoring(tabId) {
+    // find articleId by tabId
+    const articleId = this.getArticleIdByTabId(tabId);
+    if (articleId == null) return;
+    const row = this.DataTable.row(`#${articleId}`);
+    const article = row.data();
+    if (article == null) return;
+    article.tabId = null;
+    // retrieve article info from storage (maxBid)
+    article.getInfoFromStorage()
+      .then(storageInfo => {
+        if (storageInfo != null && storageInfo.hasOwnProperty('maxBid') && storageInfo.maxBid != null) {
+          // redraw, tabid has been updated
+          console.debug("Biet-O-Matic: removeArticleIfBoring(%d), keeping article %s.", tabId, articleId);
+          row.invalidate('data').draw(false);
+        } else {
+          console.debug("Biet-O-Matic: removeArticleIfBoring(%d), removed article %s.", tabId, articleId);
+          // remove from table
+          row.remove().draw(false);
+        }
+      });
+  }
+
+  /*
+   * datatable: render column articleMaxBid
+   * - input:number for maxBid
+   * - label for autoBid and in it:
+   * - input:checkbox for autoBid
+   */
+  static renderArticleMaxBid(data, type, row) {
+    if (type !== 'display' && type !== 'filter') return data;
+    console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
+    let autoBid = false;
+    let closedArticle = false;
+    if (row.hasOwnProperty('articleAutoBid')) {
+      autoBid = row.articleAutoBid;
+    } else if (row.hasOwnProperty('autoBid')) {
+      autoBid = row.autoBid;
+      closedArticle = true;
+    }
+    let maxBid = 0;
+    if (data != null) maxBid = data;
+    const divArticleMaxBid = document.createElement('div');
+    const inpMaxBid = document.createElement('input');
+    inpMaxBid.id = 'inpMaxBid_' + row.articleId;
+    inpMaxBid.type = 'number';
+    inpMaxBid.min = '0';
+    inpMaxBid.step = '0.01';
+    inpMaxBid.defaultValue = maxBid.toString(10);
+    inpMaxBid.style.width = "60px";
+    const labelAutoBid = document.createElement('label');
+    const chkAutoBid = document.createElement('input');
+    chkAutoBid.id = 'chkAutoBid_' + row.articleId;
+    chkAutoBid.classList.add('ui-button');
+    chkAutoBid.type = 'checkbox';
+    chkAutoBid.defaultChecked = autoBid;
+    chkAutoBid.style.width = '15px';
+    chkAutoBid.style.height = '15px';
+    chkAutoBid.style.verticalAlign = 'middle';
+    labelAutoBid.appendChild(chkAutoBid);
+    const spanAutoBid = document.createElement('span');
+    spanAutoBid.textContent = 'Aktiv';
+    labelAutoBid.appendChild(spanAutoBid);
+
+    if (closedArticle === true) {
+      inpMaxBid.disabled = true;
+      chkAutoBid.disabled = true;
+    } else {
+      // maxBid was entered, check if the autoBid field can be enabled
+      chkAutoBid.disabled = !row.activateAutoBid();
+      // set tooltip for button to minBidValue
+      // if the maxBid is < minimum bidding price or current Price, add highlight color
+      if ((row.articleEndTime - Date.now() > 0) && chkAutoBid.disabled) {
+        inpMaxBid.classList.add('bomHighlightBorder');
+        inpMaxBid.title = `Geben sie minimal ${row.articleMinimumBid} ein`;
+      } else {
+        inpMaxBid.classList.remove('bomHighlightBorder');
+        inpMaxBid.title = "Minimale Erhöhung erreicht";
+      }
+
+      // disable maxBid/autoBid if article ended
+      if (row.articleEndTime - Date.now() <= 0) {
+        //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
+        inpMaxBid.disabled = true;
+        chkAutoBid.disabled = true;
+      }
+    }
+
+    divArticleMaxBid.appendChild(inpMaxBid);
+    divArticleMaxBid.appendChild(labelAutoBid);
+    return divArticleMaxBid.outerHTML;
+  }
+
+  static renderArticleLog(article) {
+    if (article == null || !article.hasOwnProperty('articleId')) return "";
+    let div = document.createElement('div');
+    let table = document.createElement('table');
+    table.style.paddingLeft = '50px';
+    // get log entries
+    let log = article.getLog();
+
+    if (log == null) return "";
+    log.forEach(e => {
+      let tr = document.createElement('tr');
+      let tdDate = document.createElement('td');
+      // first column: date
+      if (e.hasOwnProperty('timestamp'))
+        tdDate.textContent = format(e.timestamp, 'PPpp', {locale: de});
+      else
+        tdDate.textContent = '?';
+      tr.append(tdDate);
+      // second column: component
+      let tdComp = document.createElement('td');
+      if (e.hasOwnProperty('component'))
+        tdComp.textContent = e.component;
+      else
+        tdComp.textContent = '?';
+      tr.append(tdComp);
+      // third column: level
+      let tdLevel = document.createElement('td');
+      if (e.hasOwnProperty('level'))
+        tdLevel.textContent = e.level;
+      else
+        tdLevel.textContent = '?';
+      tr.append(tdLevel);
+      // fourth column: message
+      let tdMsg = document.createElement('td');
+      if (e.hasOwnProperty('message'))
+        tdMsg.textContent = e.message;
+      else
+        tdMsg.textContent = 'n/a';
+      tr.append(tdMsg);
+      table.appendChild(tr);
+    });
+    div.appendChild(table);
+    return div.innerHTML;
+  }
+
+  /*
+   * Render Article Bid Price
+   * - when articleBidPrice is emtpy, use articleBuyPrice (sofortkauf)
+   * - include number of bids
+   */
+  static renderArticleBidPrice(data, type, row) {
+    if (type !== 'display' && type !== 'filter') return data;
+
+    let price = row.getPrettyBidPrice();
+    if (row.hasOwnProperty('articleBidCount'))
+      price = `${price} (${row.articleBidCount})`;
+    return price;
+  }
+
+  /*
+   * Render Article Buttons:
+   * open/close: indicate if the article tab is open/closed
+   * delete: remove the article info from storage
+   */
+  static renderArticleButtons(data, type, row) {
+    if (type !== 'display' && type !== 'filter') return data;
+    console.log("renderArticleButtons(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
+
+    let div = document.createElement('div');
+    div.id = 'articleButtons';
+
+    let spanTabStatus = document.createElement('span');
+    spanTabStatus.id = 'tabStatus';
+    if (row.tabId == null) {
+      spanTabStatus.classList.add('far', 'fa-folder');
+      spanTabStatus.title = 'Artikel Tab öffnen';
+    } else {
+      spanTabStatus.classList.add('far', 'fa-folder-open');
+      spanTabStatus.title = 'Artikel-Tab schließen';
+    }
+    div.appendChild(spanTabStatus);
+    return div.outerHTML;
+  }
+
+  /*
+   * Render the article details toggle
+   * show '+' if logs are present and currently hidden
+   * show '-' if logs are present and currently visible
+   * empty if no logs are present
+   */
+  static renderArticleDetailsControl(data, type, row, meta) {
+    if (type !== 'display' && type !== 'filter') return '';
+    // check if there are logs, then show plus if the log view is closed, else minus
+    if (row.getLog() != null) {
+      if (row.articleDetailsShown) {
+        return '<span class="fas fa-minus" title="Artikel-Ereignisse verbergen" aria-hidden="true"></span>';
+      } else {
+        return '<span class="fas fa-plus" title="Artikel-Ereignisse anzeigen" aria-hidden="true"></span>';
+      }
+    } else
+      return '';
+  }
+
+  // translation data for Datatable
+  static getDatatableTranslation(language = 'de_DE') {
+    //"url": "https://cdn.datatables.net/plug-ins/1.10.20/i18n/German.json"
+    const languages = {};
+    languages.de_DE =
+      {
+        "sEmptyTable": "Keine Daten in der Tabelle vorhanden",
+        "sInfo": "_START_ bis _END_ von _TOTAL_ Einträgen",
+        "sInfoEmpty": "Keine Daten vorhanden",
+        "sInfoFiltered": "(gefiltert von _MAX_ Einträgen)",
+        "sInfoPostFix": "",
+        "sInfoThousands": ".",
+        "sLengthMenu": "_MENU_ Einträge anzeigen",
+        "sLoadingRecords": "Wird geladen ..",
+        "sProcessing": "Bitte warten ..",
+        "sSearch": "Suchen",
+        "sZeroRecords": "Keine Einträge vorhanden",
+        "oPaginate": {
+          "sFirst": "Erste",
+          "sPrevious": "Zurück",
+          "sNext": "Nächste",
+          "sLast": "Letzte"
+        },
+        "oAria": {
+          "sSortAscending": ": aktivieren, um Spalte aufsteigend zu sortieren",
+          "sSortDescending": ": aktivieren, um Spalte absteigend zu sortieren"
+        },
+        "select": {
+          "rows": {
+            "_": "%d Zeilen ausgewählt",
+            "0": "",
+            "1": "1 Zeile ausgewählt"
+          }
+        },
+        "buttons": {
+          "print": "Drucken",
+          "colvis": "Spalten",
+          "copy": "Kopieren",
+          "copyTitle": "In Zwischenablage kopieren",
+          "copyKeys": "Taste <i>ctrl</i> oder <i>\u2318</i> + <i>C</i> um Tabelle<br>in Zwischenspeicher zu kopieren.<br><br>Um abzubrechen die Nachricht anklicken oder Escape drücken.",
+          "copySuccess": {
+            "_": "%d Zeilen kopiert",
+            "1": "1 Zeile kopiert"
+          },
+          "pageLength": {
+            "-1": "Zeige alle Zeilen",
+            "_": "Zeige %d Zeilen"
+          },
+          "decimal": ","
+        }
+      };
+    return languages.de_DE;
+  }
+
+  /* reload a tab
+   * check if a reload has been recently performed and only reload if > 60 seconds ago
+   */
+  static reloadTab(tabId = null) {
+    if (tabId == null) return;
+    if (this.hasOwnProperty('reloadInfo') && this.reloadInfo.hasOwnProperty(tabId)) {
+      if ((Date.now() - this.reloadInfo[tabId]) < (60 * 1000)) {
+        console.debug("Biet-O-Matic: Tab %d skipped reloading (was reloaded less then a minute ago", tabId);
+        return;
+      }
+    } else {
+      this.reloadInfo = {};
+    }
+    console.debug("Biet-O-Matic: Tab %d reloaded to attempt repairing contentScript", tabId);
+    this.reloadInfo[tabId] = Date.now();
+    browser.tabs.reload(tabId);
+  }
+
+  // return a DataTable row
+  getRow(specifier) {
+    return this.DataTable.row(specifier);
+  }
+
+  // returns the ArticleId for a given tabId, or null
+  getArticleIdByTabId(tabId) {
+    // $(`#tabid-${tabId}`);
+    let articleId = null;
+    this.DataTable.rows().data().each((article, index) => {
+      //console.log("getRowIdxByTabId(%d) index=%d, tabid=%d", tabId, index, article.tabId);
+      if (article.tabId === tabId) articleId = article.articleId;
+    });
+    console.log("getArticleIdByTabId = %s", articleId);
+    return articleId;
+  }
+
+  /*
+   * Events for the Articles Table:
+   * - ebayArticleUpdated: from content script with info about article
+   * - ebayArticleMaxBidUpdated: from content script to update maxBid info
+   * - ebayArticleRefresh: from content script, simple info to refresh the row (update remaining time)
+   * - getArticleInfo: return article info from row
+   * - getArticleSyncInfo: return article info from sync storage
+   * - addArticleLog: from content script to store log info for article
+   *
+   * - updateArticleStatus: from content script to update the Auction State with given info
+   * - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
+   * - getWindowSettings: from content script to retrieve the settings for this window (e.g. autoBidEnabled)
+   * - browser.tabs.onremoved: Tab closed
+   * - click on Article Link (jump to open tab, or open new tab)
+   */
+  registerEvents() {
+    // listen to global events (received from other Browser window or background script)
+    browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      //console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
+      switch (request.action) {
+        case 'ebayArticleUpdated':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received from tab %s, articleId=%s, articleDescription=%s",
+                sender.tab.id, request.detail.articleId, request.detail.articleDescription);
+              this.updateArticle(request.detail, null, sender.tab.id);
+              // update BE favicon for this tab
+              //updateFavicon($('#inpAutoBid').prop('checked'), sender.tab);
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: ebayArticleUpdated() internal error: %s", e.message);
+            throw new Error(e.message);
+          }
+          break;
+        case 'ebayArticleMaxBidUpdated':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              console.debug("Biet-O-Matic: Browser Event ebayArticleMaxBidUpdate received from tab %s, detail=%s",
+                sender.tab.id, JSON.stringify(request.detail));
+              const row = this.getRow(`#${request.articleId}`);
+              const article = row.data();
+              this.updateRowMaxBid(request.detail, row);
+              article.updateInfoInStorage(request.detail, null);
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: ebayArticleMaxBidUpdated() internal error: %s", e.message);
+            throw new Error(e.message);
+          }
+          break;
+        case 'ebayArticleRefresh':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              console.debug("Biet-O-Matic: Browser Event ebayArticleRefresh received from tab %s", sender.tab.id);
+              const articleId = this.getArticleIdByTabId(sender.tab.id);
+              // redraw date (COLUMN 3)
+              let dateCell = this.DataTable.cell(`#${articleId}`, 'articleEndTime:name');
+              // redraw date
+              dateCell.invalidate('data').draw(false);
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: ebayArticleRefresh() internal error: %s", e.message);
+            throw new Error(e.message);
+          }
+          break;
+        case 'getArticleInfo':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              console.debug("Biet-O-Matic: Browser Event getArticleInfo received from tab %s", sender.tab.id);
+              if (request.hasOwnProperty('articleId')) {
+                // determine row by articleId
+                const row = this.getRow(`#${request.articleId}`);
+                const article = row.data();
+                return Promise.resolve({
+                  data: Article.getInfoForTab(article),
+                  tabId: sender.tab.id
+                });
+              }
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: getArticleInfo() internal error: %s", e.message);
+            throw new Error(e.message);
+          }
+          break;
+        case 'getArticleSyncInfo':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              console.debug("Biet-O-Matic: Browser Event getArticleSyncInfo received from tab %s, article=%s",
+                sender.tab.id, request.articleId);
+              if (request.hasOwnProperty('articleId')) {
+                return Promise.resolve(browser.storage.sync.get(request.articleId));
+              }
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: getArticleSyncInfo() internal error: %s", e.message);
+            throw new Error(e.message);
+          }
+          break;
+        case 'addArticleLog':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              console.debug("Biet-O-Matic: Browser Event addArticleLog received from tab %s, detail=%s",
+                sender.tab.id, JSON.stringify(request.detail));
+              const article = this.getRow(`#${request.articleId}`).data();
+              // redraw status (COLUMN 6)
+              if (request.detail.message.level !== "Performance") {
+                this.updateArticleStatus(request.articleId, request.detail.message.message);
+              }
+              if (article != null)
+                article.addLog(request.detail.message);
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: addArticleLog() internal error: %s", e.message);
+            throw new Error(e.message);
+          }
+          break;
+      }
+    });
+
+    // if articleId cell is clicked, active the tab of that article
+    this.DataTable.on('click', 'tbody tr a', e => {
+      //console.log("tbody tr a clicked: %O", e);
+      // first column, jump to open article tab
+      if (/^tabid-([0-9]+)$/.test(e.target.id)) {
+        e.preventDefault();
+        let tabId = e.target.id.match(/^tabid-([0-9]+)$/);
+        tabId = Number.parseInt(tabId[1]);
+        browser.tabs.update(tabId, {active: true})
+          .catch(e => {
+            console.log("Biet-O-Matic: Articles Table - Cannot activate Article Tab %d: %s", tabId, e.message);
+          });
+      }
+    });
+
+    // maxBid/autoBid inputs
+    this.DataTable.on('change', 'tr input', e => {
+      //console.debug('Biet-O-Matic: configureUi() INPUT Event this=%O', e);
+      // parse articleId from id of both inputs
+      let articleId = e.target.id
+        .replace('chkAutoBid_', '')
+        .replace('inpMaxBid_', '');
+      // determine row by articleId
+      const row = this.getRow(`#${articleId}`);
+      let article = row.data();
+      if (e.target.id.startsWith('inpMaxBid_')) {
+        // maxBid was entered
+        // normally with input type=number this should not be necessary - but there was a problem reported...
+        article.articleMaxBid = Number.parseFloat(e.target.value.replace(/,/, '.'));
+        // check if maxBid > buyPrice (sofortkauf), then adjust it to the buyprice - 1 cent
+        if (article.hasOwnProperty('articleBuyPrice') && article.articleMaxBid > article.articleBuyPrice) {
+          article.articleMaxBid = article.articleBuyPrice - 0.01;
+        }
+      } else if (e.target.id.startsWith('chkAutoBid_')) {
+        // autoBid checkbox was clicked
+        article.articleAutoBid = e.target.checked;
+      }
+      // redraw the row
+      row.invalidate('data').draw(false);
+      // store info when maxBid updated
+      let info = {
+        endTime: article.articleEndTime,
+        maxBid: article.articleMaxBid,
+        autoBid: article.articleAutoBid
+      };
+      // update storage info and inform tab of new values
+      article.updateInfoInStorage(info, article.tabId)
+        .catch(e => {
+          console.warn("Biet-O-Matic: Failed to store article info: %s", e.message);
+        });
+    });
+
+    // datatable length change
+    this.DataTable.on('length.dt', function (e, settings, len) {
+      // todo implement
+      //updateSetting('articlesTableLength', len);
+    });
+
+    // Add event listener for opening and closing details
+    this.DataTable.on('click', 'td.details-control', e => {
+      e.preventDefault();
+      let tr = $(e.target).closest('tr');
+      if (e.target.nodeName === 'SPAN') {
+        let span = e.target;
+        const row = this.getRow(tr);
+        if (row.child.isShown()) {
+          // This row is already open - close it
+          span.classList.remove('fa-minus');
+          span.classList.add('fa-plus');
+          // hide and remove data (save memory)
+          row.child(false);
+          row.data().articleDetailsShown = false;
+        } else {
+          // Open this row
+          span.classList.remove('fa-plus');
+          span.classList.add('fa-minus');
+          row.child(ArticlesTable.renderArticleLog(row.data())).show();
+          row.data().articleDetailsShown = true;
+        }
+      }
+    });
+
+    /*
+     * tab reloaded or URL changed
+     * The following cases should be handled:
+     * - Same page, but maybe updated info
+     * - An existing tab is used to show a different article
+     *   -> get updated info and update table
+     * - An existing article tab navigated away from ebay -> remove from table
+     * - In last 2 cases, handle same as a closed tab
+     */
+    browser.tabs.onUpdated.addListener((tabId, changeInfo, tabInfo) => {
+      try {
+        // status == complete, then inject content script, request info and update table
+        if (changeInfo.status === 'complete') {
+          console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%s',
+            tabId, JSON.stringify(changeInfo), JSON.stringify(tabInfo));
+          if (!tabInfo.hasOwnProperty('url')) {
+            throw new Error("Tab Info is missing URL - permission issue?!");
+          }
+          Article.getInfoFromTab(tabInfo)
+            .then(articleInfo => {
+              if (articleInfo.hasOwnProperty('detail')) {
+                // if same article, then update it, else remove old, add new
+                this.addOrUpdateArticle(articleInfo.detail, tabInfo);
+              } else {
+                // new URL is not for an article (or couldnt be parsed) - remove the old article
+                this.removeArticleIfBoring(tabInfo.id);
+              }
+            })
+            .catch(e => {
+              console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
+            });
+        }
+      } catch (e) {
+        console.warn("Biet-O-Matic: tabs.onUpdated() internal error: %s", e.message);
+        throw new Error(e.message);
+      }
+    });
+
+    /*
+     * Handle Tab Closed
+     * - remove from table if no maxBid defined
+     */
+    browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
+      console.debug('Biet-O-Matic: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
+      // window closing, no need to update anybody
+      if (removeInfo.isWindowClosing === false) {
+        this.removeArticleIfBoring(tabId);
+      }
+    });
+
+    // listen for changes to browser storage area (settings, article info)
+    browser.storage.onChanged.addListener((changes, area) => {
+      console.log("XXX browser %s storage changed: %s", area, JSON.stringify(changes));
+    });
+
+    /*
+     * listen for changes to window storage (logs)
+     *        Note: does not fire if generated on same tab
+     */
+    window.addEventListener('storage', (e) => {
+      console.log("XXX Window Storage changed %O", e);
+    });
+  }
+}
 
 let popup = function () {
   'use strict';
@@ -49,12 +1200,9 @@ let popup = function () {
    register events:
      - ebayArticleUpdated: from content script with info about article
      - ebayArticleRefresh: from content script, simple info to refresh the row (update remaing time)
-     - updateArticleStatus: from content script to update the Auction State with given info
      - ebayArticleMaxBidUpdated: from content script to update maxBid info
      - getWindowSettings: from content script to retrieve the settings for this window (e.g. autoBidEnabled)
      - addArticleLog: from content script to store log info for article
-     - getArticleInfo: return article info from row
-     - getArticleSyncInfo: return article info from sync storage
      - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
      - browser.tabs.onremoved: Tab closed
    */
@@ -63,91 +1211,10 @@ let popup = function () {
     browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
       //console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
       switch (request.action) {
-        case 'ebayArticleUpdated':
-          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received: tab=%s, articleId=%s, articleDescription=%s",
-              sender.tab.id, request.detail.articleId, request.detail.articleDescription);
-            addOrUpdateArticle(sender.tab, request.detail)
-              .catch(e => {
-                console.debug ("Biet-O-Matic: addOrUpdateArticle() failed - %s", JSON.stringify(e));
-              });
-            // update BE favicon for this tab
-            updateFavicon($('#inpAutoBid').prop('checked'), sender.tab);
-          }
-          break;
-        case 'ebayArticleRefresh':
-          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event ebayArticleRefresh received from tab %s", sender.tab.id);
-            // redraw date (COLUMN 3)
-            let dateCell = pt.table.cell(`#${sender.tab.id}`, 'articleEndTime:name');
-            // redraw date
-            dateCell.invalidate('data');
-          }
-          break;
-        case 'updateArticleStatus':
-          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event updateArticleStatus received from tab %s: sender=%O, detail=%s",
-              sender.tab.id, sender, JSON.stringify(request.detail));
-            let row = pt.table.row(`#${sender.tab.id}`);
-            let data = row.data();
-            // redraw status (COLUMN 6)
-            let statusCell = pt.table.cell(`#${sender.tab.id}`, 'articleAuctionState:name');
-            data.articleAuctionState = request.detail.message;
-            statusCell.invalidate('data');
-          }
-          break;
-        case 'ebayArticleMaxBidUpdated':
-          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event ebayArticleMaxBidUpdate received: sender=%O, detail=%O", sender, request.detail);
-            let row = pt.table.row(`#${sender.tab.id}`);
-            updateRowMaxBid(row, request.detail);
-            storeArticleInfo(request.articleId, request.detail).catch(e => {
-              console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
-            });
-          }
-          break;
         case 'getWindowSettings':
           if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
             console.debug("Biet-O-Matic: Browser Event getWindowSettings received: sender=%O", sender);
             return Promise.resolve(JSON.parse(window.sessionStorage.getItem('settings')));
-          }
-          break;
-        case 'addArticleLog':
-          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event addArticleLog received: tab=%d, detail=%s",
-              sender.tab.id, JSON.stringify(request.detail));
-            let row = pt.table.row(`#${sender.tab.id}`);
-            let data = row.data();
-            // redraw status (COLUMN 6)
-            if (request.detail.message.level !== "Performance") {
-              // only if its not performance info (too verboose)
-              let statusCell = pt.table.cell(`#${sender.tab.id}`, 'articleAuctionState:name');
-              data.articleAuctionState = request.detail.message.message;
-              statusCell.invalidate('data').draw(false);
-            }
-            storeArticleLog(request.articleId, request.detail);
-          }
-          break;
-        case 'getArticleInfo':
-          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event getArticleInfo received: sender=%O", sender);
-            if (request.hasOwnProperty('articleId')) {
-              // determine row by articleId
-              let row = pt.table.row(`:contains(${request.articleId})`);
-              return Promise.resolve({
-                data: row.data(),
-                tabId: sender.tab.id
-              });
-            }
-          }
-          break;
-        case 'getArticleSyncInfo':
-          if (pt.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event getArticleSyncInfo received: sender=%O, article=%s",
-              sender, request.articleId);
-            if (request.hasOwnProperty('articleId')) {
-              return Promise.resolve(browser.storage.sync.get(request.articleId));
-            }
           }
           break;
         case 'ebayArticleSetAuctionEndState':
@@ -190,57 +1257,6 @@ let popup = function () {
     // tab openend, inject contentScript
     browser.tabs.onCreated.addListener(function (tab) {
       console.debug('Biet-O-Matic: tab(%d).onCreated listener fired: tab=%O', tab.id, tab);
-    });
-
-    /*
-     * tab reloaded or URL changed
-     * The following cases should be handled:
-     * - An existing tab is used to show a different article
-     *   -> get updated info and update table
-     * - An existing article tab navigated away -> remove from table
-     * - In all cases, handle same as a closed tab
-     */
-    browser.tabs.onUpdated.addListener(function (tabId, changeInfo, tabInfo) {
-      // status == complete, then inject content script, request info and update table
-      if (changeInfo.status === 'complete') {
-        console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%O', tabId, JSON.stringify(changeInfo), tabInfo);
-        if (!tabInfo.hasOwnProperty('url')) {
-          throw new Error("Tab Info is missing URL!");
-        }
-
-        // handle ebay login
-        //if (tabInfo.url.match(/signin\.ebay\./)) {
-          // if the article is bidding then it means ebay is not logged in
-        //}
-
-        // if the article tab is in the table, we can remove it now (navigated away)
-        handleTabClosed(tabId);
-
-        // get fresh article info from tab and add it again to the table
-        getArticleInfoForTab(tabInfo)
-          .then(articleInfo => {
-            if (articleInfo.hasOwnProperty('detail')) {
-              addOrUpdateArticle(tabInfo, articleInfo.detail)
-                .catch(e => {
-                  console.debug("Biet-O-Matic: addOrUpdateArticle() failed - %s", e.toString());
-                });
-            }
-          })
-          .catch(e => {
-            console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
-            // currently disable reload, probably not needed here
-            //reloadTab(tabInfo.id);
-          });
-      }
-    });
-
-    // tab closed
-    browser.tabs.onRemoved.addListener(function (tabId, removeInfo) {
-      console.debug('Biet-O-Matic: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
-      // window closing, no need to update anybody
-      if (removeInfo.isWindowClosing === false) {
-        handleTabClosed(tabId);
-      }
     });
 
     // toggle autoBid for window when button in browser menu clicked
@@ -320,130 +1336,6 @@ let popup = function () {
   }
 
   /*
-    Add or Update Article in Table
-    - if articleId not in table, add it
-    - if if table, update the entry
-    - also complement the date with info from DB
-  */
-  async function addOrUpdateArticle(tab, info) {
-    if (!info.hasOwnProperty('articleId')) {
-      return;
-    }
-    let articleId = info.articleId;
-    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%O', articleId, tab, info);
-    info.tabId = tab.id;
-
-    // complement with DB info
-    let maxBid = null;
-    let autoBid = false;
-    let result = await browser.storage.sync.get(articleId);
-    if (Object.keys(result).length === 1) {
-      let storInfo = result[articleId];
-      console.debug("Biet-O-Matic: Found info for Article %s in storage: %s", articleId, JSON.stringify(result));
-      // maxBid
-      if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null) {
-        maxBid = storInfo.maxBid;
-      }
-      // autoBid
-      if (storInfo.hasOwnProperty('autoBid')) {
-        autoBid = storInfo.autoBid;
-      }
-      // if articleEndTime changed, update it in storage
-      if (!storInfo.hasOwnProperty('endTime') || storInfo.endTime !== info.articleEndTime) {
-        storInfo.endTime = info.articleEndTime;
-        console.log("Biet-O-Matic: Updating article %s end time to %s", articleId, storInfo.endTime);
-        await storeArticleInfo(articleId, storInfo);
-      }
-      // closedTime: if present - remove it (as tab is now open again)
-      if (storInfo.hasOwnProperty('closedTime')) {
-        // remove from closedArticlesTable
-        const row = pt.tableClosedArticles.row(`#${articleId}`);
-        if (row.length === 1) {
-          console.debug("Biet-O-Matic: Article %s has been reopened, removing from closedTable.", articleId);
-          row.remove().draw(false);
-        }
-        await storeArticleInfo(articleId, {closedTime: null});
-      }
-    }
-    info.articleMaxBid = maxBid;
-    info.articleAutoBid = autoBid;
-
-    // article already in table
-    let rowByTabId = pt.table.row(`#${tab.id}`);
-    // determine row by articleId
-    let rowByArticleId = pt.table.row(`:contains(${articleId})`);
-    //console.log("XXX tabid=%O, articleid=%O, this TabId=%d", rowByTabId.data(), rowByArticleId.data(), info.tabId);
-    // check if article is already open in another tab
-    if (rowByArticleId.length !== 0 && typeof rowByArticleId !== 'undefined') {
-      if (rowByArticleId.data().tabId !== info.tabId) {
-        throw new Error(`Article ${info.articleId} already open in another tab!`);
-      }
-    }
-    if (rowByTabId.length === 0 || typeof rowByTabId === 'undefined') {
-      // article not in table - simply add it
-      addActiveArticleToTable(info);
-    } else {
-      // article in table - update it
-      updateActiveArticleTab(info, rowByTabId);
-    }
-
-    // assign again, the row might have been just initialized
-    rowByTabId = pt.table.row(`#${tab.id}`);
-
-    // add highlight colors for expired auctions
-    highlightExpired(rowByTabId, info);
-  }
-
-  /*
-   * Add a new article to the active articles table
-   */
-  function addActiveArticleToTable(info) {
-    console.debug('Biet-O-Matic: addActiveArticleToTable(%s), info=%O)', info.articleId, info);
-    if (!info.hasOwnProperty('articleId')) {
-      console.debug("Biet-O-Matic: addActiveArticleToTable skipped, no info: %s", JSON.stringify(info));
-      return;
-    }
-    const row = pt.table.row.add(info);
-    row.draw(false);
-  }
-
-  /*
-   * Add a closed article to the closedArticles table
-   */
-  function addClosedArticleToTable(info) {
-    console.debug('Biet-O-Matic: addClosedArticleToTable(%s), info=%O)', info.articleId, info);
-    if (!info.hasOwnProperty('articleId')) {
-      console.debug("Biet-O-Matic: addClosedArticleToTable skipped, no info: %s", JSON.stringify(info));
-      return;
-    }
-    const row = pt.tableClosedArticles.row.add(info);
-    row.draw(false);
-  }
-
-  /*
-   * Update an existing article in the active articles table
-   */
-  function updateActiveArticleTab(info, row) {
-    console.debug('Biet-O-Matic: updateActiveArticleTab(%s) info=%O, row=%O', info.articleId, info, row);
-    if (!info.hasOwnProperty('articleId')) {
-      console.debug("addArticle skipped for tab %O, no info");
-      return;
-    }
-    row.data(info).invalidate().draw(false);
-    // todo animate / highlight changed cell or at least the row
-  }
-
-  // convert epoch to local time string
-  function fixDate(info) {
-    let date = 'n/a';
-    if (info.hasOwnProperty('articleEndTime') && typeof info.articleEndTime !== 'undefined') {
-      date = new Intl.DateTimeFormat('default', {'dateStyle': 'medium', 'timeStyle': 'medium'})
-        .format(new Date(info.articleEndTime));
-    }
-    return date;
-  }
-
-  /*
    * Check Storage permission granted and update the HTML with relevent internal information
    * - also add listener for storageClearAll button and clear complete storage on request.
    *
@@ -515,13 +1407,9 @@ let popup = function () {
       if (result.hasOwnProperty('bidAllEnabled')) {
         $('#inpBidAll').prop('checked', result.bidAllEnabled);
       }
-      // pagination setting for activeArticlesTable
-      if (result.hasOwnProperty('activeArticlesTableLength')) {
-        pt.table.page.len(result.activeArticlesTableLength).draw();
-      }
-      // pagination setting for closedArticlesTable
-      if (result.hasOwnProperty('closedArticlesTableLength')) {
-        pt.tableClosedArticles.page.len(result.closedArticlesTableLength).draw();
+      // pagination setting for articlesTable
+      if (result.hasOwnProperty('articlesTableLength')) {
+        pt.table.DataTable.page.len(result.articlesTableLength).draw();
       }
     }
   }
@@ -583,22 +1471,6 @@ let popup = function () {
   }
 
   /*
-   * Append log entry for Article to local storage
-   */
-  function storeArticleLog(articleId, info) {
-    // get info for article from storage
-    let log = JSON.parse(window.localStorage.getItem(`log:${articleId}`));
-    console.debug("Biet-O-Matic: storeArticleLog(%s) info=%s", articleId, JSON.stringify(info));
-    if (log == null) log = [];
-    log.push(info.message);
-    window.localStorage.setItem(`log:${articleId}`, JSON.stringify(log));
-  }
-  // get the log
-  function getArticleLog(articleId) {
-    return JSON.parse(window.localStorage.getItem(`log:${articleId}`));
-  }
-
-  /*
    * Configure UI Elements events:
    * - maxBid Input: If auction running and value higher than the current bid, enable the autoBid checkbox for this row
    * - autoBid checkbox: when checked, the bid and autoBid status is updated in the storage
@@ -607,122 +1479,7 @@ let popup = function () {
     const table = $('#articles.dataTable');
     // bom version
     if (typeof BOM_VERSION !== 'undefined') $('#bomVersion').text('Biet-O-Matic BE ' + BOM_VERSION);
-    // maxBid input field
-    table.on('change', 'tr input', e => {
-      //console.debug('Biet-O-Matic: configureUi() INPUT Event this=%O', e);
-      // parse articleId from id of both inputs
-      let articleId = e.target.id
-        .replace('chkAutoBid_', '')
-        .replace('inpMaxBid_', '');
-      // determine row by articleId
-      const row = pt.table.row(`:contains(${articleId})`);
-      let data = row.data();
-      if (e.target.id.startsWith('inpMaxBid_')) {
-        // maxBid was entered
-        // normally with input type=number this should not be necessary - but there was a problem reported...
-        data.articleMaxBid = Number.parseFloat(e.target.value.replace(/,/, '.'));
-        // check if maxBid > buyPrice (sofortkauf), then adjust it to the buyprice - 1 cent
-        if (data.hasOwnProperty('articleBuyPrice') && data.articleMaxBid > data.articleBuyPrice) {
-          data.articleMaxBid = data.articleBuyPrice - 0.01;
-        }
-      } else if (e.target.id.startsWith('chkAutoBid_')) {
-        // autoBid checkbox was clicked
-        data.articleAutoBid = e.target.checked;
-      }
-      // redraw the row
-      row.invalidate('data').draw(false);
-      // store info when maxBid updated
-      let info = {
-        endTime: data.articleEndTime,
-        maxBid: data.articleMaxBid,
-        autoBid: data.articleAutoBid
-      };
-      // update storage info
-      storeArticleInfo(data.articleId, info, data.tabId)
-        .catch(e => {
-          console.warn("Biet-O-Matic: Failed to store article info: %s", e.message);
-        });
-    });
 
-    // Add event listener for opening and closing details
-    pt.table.on('click', 'td.details-control', e => {
-      e.preventDefault();
-      let tr = $(e.target).closest('tr');
-      if (e.target.nodeName === 'I') {
-        let i = e.target;
-        let row = pt.table.row(tr);
-        if ( row.child.isShown() ) {
-          // This row is already open - close it
-          i.classList.remove('ui-icon-minus');
-          i.classList.add('ui-icon-plus');
-          row.child.hide();
-        } else {
-          // Open this row
-          i.classList.remove('ui-icon-plus');
-          i.classList.add('ui-icon-minus');
-          row.child(renderArticleLog(row.data())).show();
-        }
-      }
-    });
-
-    // if articleId cell is clicked, active the tab of that article
-    table.on('click', 'tbody tr a', e => {
-      //console.log("tbody tr a clicked: %O", e);
-      e.preventDefault();
-      // first column, jumpo to open article tab
-      let tabId = e.target.id.match(/^tabid:([0-9]+)$/);
-      if (tabId != null) {
-        tabId = Number.parseInt(tabId[1]);
-        browser.tabs.update(tabId, {active: true})
-          .catch(onError);
-      } else {
-        // check link and open in new tab
-        let href = e.target.href;
-        if (href !== "#") {
-          window.open(href, '_blank');
-        }
-      }
-    });
-
-    // article delete button'
-    const closedTable = $('#closedArticles.dataTable');
-    closedTable.on('click', 'tbody tr button', e => {
-      const tr = $(e.target).closest('tr');
-      // remove from sync storage
-      browser.storage.sync.remove(tr[0].id).catch(onError);
-      tr.remove();
-    });
-  }
-
-  /*
-   * Updates the maxBid input and autoBid checkbox for a given row
-   * Note: the update can either be triggered from the article page, or via user editing on the datatable
-   * Also performs row redraw to show the updated data.
-   */
-  function updateRowMaxBid(row, info= {}) {
-    let data = row.data();
-    console.debug('Biet-O-Matic: updateRowMaxBid(%s) info=%s', data.articleId, JSON.stringify(info));
-    // minBid
-    if (info.hasOwnProperty('minBid')) {
-      data.articleMinimumBid = info.minBid;
-    }
-    // maxBid
-    if (info.hasOwnProperty('maxBid')) {
-      if (info.maxBid == null || Number.isNaN(info.maxBid)) {
-        data.articleMaxBid = 0;
-      } else {
-        data.articleMaxBid = info.maxBid;
-      }
-    }
-    // autoBid
-    if (info.hasOwnProperty('autoBid')) {
-      if (info.autoBid != null) {
-        data.articleAutoBid = info.autoBid;
-      }
-    }
-    // invalidate data, redraw
-    // todo selective redraw for parts of the row ?
-    row.invalidate('data').draw(false);
   }
 
   //region Favicon Handling
@@ -883,567 +1640,6 @@ let popup = function () {
   }
 
   /*
-   * If an article is close to ending or ended, highlight the date
-   * if it ended, highlight the status as well
-   */
-  function highlightExpired(row, info) {
-    let rowNode = row.node();
-    if (info.articleEndTime - Date.now() < 0) {
-      // ended
-      $(rowNode).css('color', 'red');
-    } else if (info.articleEndTime - Date.now() < 60) {
-      // ends in 1 minute
-      $(rowNode).css('text-shadow', '2px -2px 3px #FF0000');
-    }
-  }
-
-  /*
-   * Handle a closed tab:
-   * - remove from active articles table
-   * - save info to article storage
-   * - add to closedArticles table
-   */
-  function handleTabClosed(tabId) {
-    // remove tab from activeArticles table
-    const row = pt.table.row(`#${tabId}`);
-    const data = row.data();
-    if (row.length === 1) {
-      row.remove().draw(false);
-    }
-    // if article is of interest (has storage entry), add closedTime and description to storage entry
-    if (data != null && typeof data !== 'undefined') {
-      storeArticleInfo(data.articleId, {
-        closedTime: Date.now(),
-        description: data.hasOwnProperty('articleDescription') ? data.articleDescription : "Unbekannt"
-      }, null, true)
-        .then(() => {
-          // update closedArticles table (after closedTime has been set)
-          browser.storage.sync.get(data.articleId)
-            .then(result => {
-              if (result.hasOwnProperty(data.articleId)) {
-                let info = result[data.articleId];
-                info.articleId = data.articleId;
-                addClosedArticleToTable(info);
-              }
-            }).catch(onError);
-        })
-        .catch(e => {
-          console.log("Biet-O-Matic: handleTabClosed() Unable to store article info: %s", e.message);
-        });
-    }
-  }
-
-  // datable: render column articleBidPrice
-  function renderArticleBidPrice(data, type, row) {
-    if (typeof data !== 'undefined') {
-      //console.log("data=%O, type=%O, row=%O", data, type, row);
-      let currency = "EUR";
-      if (row.hasOwnProperty('articleCurrency')) {
-        currency = row.articleCurrency;
-      }
-      try {
-        let result = new Intl.NumberFormat('de-DE', {style: 'currency', currency: currency})
-          .format(data);
-        return type === "display" || type === "filter" ? result : data;
-      } catch (e) {
-        return data;
-      }
-    }
-  }
-
-  /*
-   * same logic as activateAutoBidButton from contentScript
-   */
-  function activateAutoBidButton(maxBidValue, minBidValue, bidPrice) {
-    console.debug("Biet-O-Matic: activateAutoBidButton(), maxBidValue=%s (%s), minBidValue=%s (%s)",
-      maxBidValue, typeof maxBidValue,  minBidValue, typeof minBidValue);
-    //let isMaxBidEntered = (Number.isNaN(maxBidValue) === false);
-    const isMinBidLargerOrEqualBidPrice = (minBidValue >= bidPrice);
-    const isMaxBidLargerOrEqualMinBid = (maxBidValue >= minBidValue);
-    const isMaxBidLargerThanBidPrice = (maxBidValue > bidPrice);
-    if (isMinBidLargerOrEqualBidPrice) {
-      //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
-      //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
-      return isMaxBidLargerOrEqualMinBid;
-    } else if (isMaxBidLargerThanBidPrice === true) {
-      //console.debug("Enable bid button: isMaxBidLargerThanBidPrice=%s", isMaxBidLargerThanBidPrice);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  /*
-   * datatable: render column articleMaxBid
-   * - input:number for maxBid
-   * - label for autoBid and in it:
-   * - input:checkbox for autoBid
-   */
-  function renderArticleMaxBid(data, type, row) {
-    if (type !== 'display' && type !== 'filter') return data;
-    //console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
-    let autoBid = false;
-    let closedArticle = false;
-    if (row.hasOwnProperty('articleAutoBid')) {
-      autoBid = row.articleAutoBid;
-    } else if (row.hasOwnProperty('autoBid')) {
-      autoBid = row.autoBid;
-      closedArticle = true;
-    }
-    let maxBid = 0;
-    if (data != null) maxBid = data;
-    const divArticleMaxBid = document.createElement('div');
-    const inpMaxBid = document.createElement('input');
-    inpMaxBid.id = 'inpMaxBid_' + row.articleId;
-    inpMaxBid.type = 'number';
-    inpMaxBid.min = '0';
-    inpMaxBid.step = '0.01';
-    inpMaxBid.defaultValue = maxBid.toString(10);
-    inpMaxBid.style.width = "60px";
-    const labelAutoBid = document.createElement('label');
-    const chkAutoBid = document.createElement('input');
-    chkAutoBid.id = 'chkAutoBid_' + row.articleId;
-    chkAutoBid.classList.add('ui-button');
-    chkAutoBid.type = 'checkbox';
-    chkAutoBid.defaultChecked = autoBid;
-    chkAutoBid.style.width = '15px';
-    chkAutoBid.style.height = '15px';
-    chkAutoBid.style.verticalAlign = 'middle';
-    labelAutoBid.appendChild(chkAutoBid);
-    const spanAutoBid = document.createElement('span');
-    spanAutoBid.textContent = 'Aktiv';
-    labelAutoBid.appendChild(spanAutoBid);
-
-    if (closedArticle === true) {
-      inpMaxBid.disabled = true;
-      chkAutoBid.disabled = true;
-    } else {
-      // maxBid was entered, check if the autoBid field can be enabled
-      chkAutoBid.disabled = !activateAutoBidButton(row.articleMaxBid, row.articleMinimumBid, row.articleBidPrice);
-      // set tooltip for button to minBidValue
-      // if the maxBid is < minimum bidding price or current Price, add highlight color
-      if ((row.articleEndTime - Date.now() > 0) && chkAutoBid.disabled) {
-        inpMaxBid.classList.add('bomHighlightBorder');
-        inpMaxBid.title = `Geben sie minimal ${row.articleMinimumBid} ein`;
-      } else {
-        inpMaxBid.classList.remove('bomHighlightBorder');
-        inpMaxBid.title = "Minimale Erhöhung erreicht";
-      }
-
-      // disable maxBid/autoBid if article ended
-      if (row.articleEndTime - Date.now() <= 0) {
-        //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
-        inpMaxBid.disabled = true;
-        chkAutoBid.disabled = true;
-      }
-    }
-
-    divArticleMaxBid.appendChild(inpMaxBid);
-    divArticleMaxBid.appendChild(labelAutoBid);
-    return divArticleMaxBid.outerHTML;
-  }
-
-  // render the log data for the specified article
-  // returns the HTML content
-  function renderArticleLog(data) {
-    if (!data.hasOwnProperty('articleId')) return "";
-    let div = document.createElement('div');
-    let table = document.createElement('table');
-    table.style.paddingLeft = '50px';
-    // get log entries
-    let log = getArticleLog(data.articleId);
-    if (log == null) return "";
-    log.forEach(e => {
-      let tr = document.createElement('tr');
-      let tdDate = document.createElement('td');
-      // first column: date
-      if (e.hasOwnProperty('timestamp'))
-        tdDate.textContent = format(e.timestamp, 'PPpp', {locale: de});
-      else
-        tdDate.textContent = '?';
-      tr.append(tdDate);
-      // second column: component
-      let tdComp = document.createElement('td');
-      if (e.hasOwnProperty('component'))
-        tdComp.textContent = e.component;
-      else
-        tdComp.textContent = '?';
-      tr.append(tdComp);
-      // third column: level
-      let tdLevel = document.createElement('td');
-      if (e.hasOwnProperty('level'))
-        tdLevel.textContent = e.level;
-      else
-        tdLevel.textContent = '?';
-      tr.append(tdLevel);
-      // fourth column: message
-      let tdMsg = document.createElement('td');
-      if (e.hasOwnProperty('message'))
-        tdMsg.textContent = e.message;
-      else
-        tdMsg.textContent = 'n/a';
-      tr.append(tdMsg);
-      table.appendChild(tr);
-    });
-    div.appendChild(table);
-    return div.innerHTML;
-  }
-
-  // translation data for Datatable
-  function getDatatableTranslation(language = 'de_DE') {
-    console.log("getDatatableTranslation called: %s", language);
-    //"url": "https://cdn.datatables.net/plug-ins/1.10.20/i18n/German.json"
-    const languages = {};
-    languages.de_DE =
-      {
-        "sEmptyTable": "Keine Daten in der Tabelle vorhanden",
-        "sInfo": "_START_ bis _END_ von _TOTAL_ Einträgen",
-        "sInfoEmpty": "Keine Daten vorhanden",
-        "sInfoFiltered": "(gefiltert von _MAX_ Einträgen)",
-        "sInfoPostFix": "",
-        "sInfoThousands": ".",
-        "sLengthMenu": "_MENU_ Einträge anzeigen",
-        "sLoadingRecords": "Wird geladen ..",
-        "sProcessing": "Bitte warten ..",
-        "sSearch": "Suchen",
-        "sZeroRecords": "Keine Einträge vorhanden",
-        "oPaginate": {
-          "sFirst": "Erste",
-          "sPrevious": "Zurück",
-          "sNext": "Nächste",
-          "sLast": "Letzte"
-        },
-        "oAria": {
-          "sSortAscending": ": aktivieren, um Spalte aufsteigend zu sortieren",
-          "sSortDescending": ": aktivieren, um Spalte absteigend zu sortieren"
-        },
-        "select": {
-          "rows": {
-            "_": "%d Zeilen ausgewählt",
-            "0": "",
-            "1": "1 Zeile ausgewählt"
-          }
-        },
-        "buttons": {
-          "print": "Drucken",
-          "colvis": "Spalten",
-          "copy": "Kopieren",
-          "copyTitle": "In Zwischenablage kopieren",
-          "copyKeys": "Taste <i>ctrl</i> oder <i>\u2318</i> + <i>C</i> um Tabelle<br>in Zwischenspeicher zu kopieren.<br><br>Um abzubrechen die Nachricht anklicken oder Escape drücken.",
-          "copySuccess": {
-            "_": "%d Zeilen kopiert",
-            "1": "1 Zeile kopiert"
-          },
-          "pageLength": {
-            "-1": "Zeige alle Zeilen",
-            "_": "Zeige %d Zeilen"
-          },
-          "decimal": ","
-        }
-      };
-    return languages.de_DE;
-  }
-
-  // setup active articles table
-  function setupTableActiveArticles() {
-    pt.table = $('#articles').DataTable({
-      responsive: {
-        details: false
-      },
-      columns: [
-        {
-          className: 'details-control',
-          orderable: false,
-          data: null,
-          width: '5px',
-          defaultContent: '',
-          "render": function (data, type, row) {
-            if (getArticleLog(row.articleId) != null)
-              return '<i class="ui-icon ui-icon-plus" aria-hidden="true"></i>';
-            else
-              return '';
-          },
-        },
-        {
-          name: 'articleId',
-          data: 'articleId',
-          visible: true,
-          width: '100px',
-          render: function (data, type, row) {
-            if (type !== 'display' && type !== 'filter') return data;
-            let div = document.createElement("div");
-            div.id = data;
-            let a = document.createElement('a');
-            a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
-            a.id = 'tabid:' + row.tabId;
-            a.text = data;
-            div.appendChild(a);
-            return div.outerHTML;
-          }
-        },
-        {
-          name: 'articleDescription',
-          data: 'articleDescription',
-          //render: $.fn.dataTable.render.ellipsis(100, true, false),
-          defaultContent: 'Unbekannt'
-        },
-        {
-          name: 'articleEndTime',
-          data: 'articleEndTime',
-          render: function (data, type, row) {
-            if (typeof data !== 'undefined') {
-              if (type !== 'display' && type !== 'filter') return data;
-              let timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
-              return `${fixDate({articleEndTime: data})} (${timeLeft})`;
-            } else {
-              return "unbegrenzt";
-            }
-          },
-          defaultContent: '?'
-        },
-        {
-          name: 'articleBidPrice',
-          data: 'articleBidPrice',
-          defaultContent: 0,
-          render: renderArticleBidPrice
-        },
-        {
-          name: 'articleShippingCost',
-          data: 'articleShippingCost',
-          defaultContent: '0.00'
-        },
-        {
-          name: 'articleAuctionState',
-          data: 'articleAuctionState',
-          defaultContent: ''
-        },
-        {
-          name: 'articleAutoBid',
-          data: 'articleAutoBid',
-          visible: false,
-          defaultContent: "false"
-        },
-        {
-          name: 'articleMaxBid',
-          data: 'articleMaxBid',
-          render: renderArticleMaxBid,
-          defaultContent: 0
-        }
-      ],
-      order: [[3, "asc"]],
-      columnDefs: [
-        {searchable: false, "orderable": false, targets: [6, 7, 8]},
-        {type: "num", targets: [1, 8]},
-        {className: "dt-body-center dt-body-nowrap", targets: [0, 1, 8]},
-        {width: "100px", targets: [4, 5, 7, 8]},
-        {width: "220px", targets: [3]},
-        {width: "300px", targets: [2, 6]}
-      ],
-      searchDelay: 400,
-      rowId: 'tabId',
-      pageLength: 25,
-      language: getDatatableTranslation('de_DE')
-    });
-
-    // datatable length change
-    pt.table.on('length.dt', function (e, settings, len) {
-      updateSetting('activeArticlesTableLength', len);
-    });
-
-    // initialize active tabs
-    pt.whoIAm.currentWindow.tabs.forEach((tab) => {
-      getArticleInfoForTab(tab)
-        .then(articleInfo => {
-          if (articleInfo.hasOwnProperty('detail')) {
-            addOrUpdateArticle(tab, articleInfo.detail)
-              .catch(e => {
-                console.debug("Biet-O-Matic: addOrUpdateArticle() failed - %s", e.toString());
-              });
-          }
-        })
-        .catch(e => {
-          console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tab.id}: ${e.message}`);
-          /*
-           * The script injection failed, this can have multiple reasons:
-           * - the contentScript threw an error because the page is not a article
-           * - the contentScript threw an error because the article is a duplicate tab
-           * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
-           * Therefore we perform a tab reload once, which should recover the latter case
-           */
-          reloadTab(tab.id);
-        });
-    });
-  }
-
-  /* reload a tab
-   * check if a reload has been recently performed and only reload if > 60 seconds ago
-   */
-  function reloadTab(tabId = null) {
-    if (tabId == null) return;
-    if (pt.hasOwnProperty('reloadInfo') && pt.reloadInfo.hasOwnProperty(tabId)) {
-      if ((Date.now() - pt.reloadInfo[tabId]) < (60 * 1000)) {
-        console.debug("Biet-O-Matic: Tab %d skipped reloading (was reloaded less then a minute ago", tabId);
-        return;
-      }
-    } else {
-      pt.reloadInfo = {};
-    }
-    pt.reloadInfo[tabId] = Date.now();
-    browser.tabs.reload(tabId);
-  }
-
-  /*
-   * setup table for recently closed articles
-   */
-  function setupTableClosedArticles() {
-    pt.tableClosedArticles = $('#closedArticles').DataTable({
-      responsive: {
-        details: false
-      },
-      columns: [
-        {
-          name: 'articleId',
-          data: 'articleId',
-          visible: true,
-          width: '100px',
-          render: function (data, type, row) {
-            if (type !== 'display' && type !== 'filter') return data;
-            let div = document.createElement("div");
-            div.id = data;
-            let a = document.createElement('a');
-            a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.text = data;
-            div.appendChild(a);
-            return div.outerHTML;
-          }
-        },
-        {
-          name: 'articleDescription',
-          data: 'description',
-          //render: $.fn.dataTable.render.ellipsis(100, true, false),
-          defaultContent: 'Unbekannt'
-        },
-        {
-          name: 'articleEndTime',
-          data: 'endTime',
-          defaultContent: '?',
-          width: '220px',
-          render: function (data, type, row) {
-            if (typeof data !== 'undefined') {
-              if (type !== 'display' && type !== 'filter') return data;
-              let timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
-              return `${fixDate({articleEndTime: data})} (${timeLeft})`;
-            } else {
-              return 'unbekannt';
-            }
-          }
-        },
-        {
-          name: 'articleClosedTime',
-          data: 'closedTime',
-          defaultContent: '?',
-          width: '220px',
-          render: function (data, type, row) {
-            if (typeof data !== 'undefined') {
-              if (type !== 'display' && type !== 'filter') return data;
-              let timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
-              return `${fixDate({articleEndTime: data})} (${timeLeft})`;
-            } else {
-              return 'unbekannt';
-            }
-          }
-        },
-        {
-          name: 'articleAuctionState',
-          data: 'auctionEndState',
-          defaultContent: '',
-          render: function (data, type, row) {
-            const auctionEndStates = {
-              0: 'Beendet',
-              1: 'Höchstbietender',
-              2: 'Überboten',
-              null: 'Unbekannt'
-            };
-            if (typeof data !== 'undefined') {
-              if (type !== 'display' && type !== 'filter') return data;
-              //return Object.keys(auctionEndStates).find(key => auctionEndStates[key] === data);
-              return auctionEndStates[data];
-            } else {
-              return 'unbekannt';
-            }
-          }
-        },
-        {
-          name: 'articleAutoBid',
-          data: 'autoBid',
-          visible: false,
-          defaultContent: "false"
-        },
-        {
-          name: 'articleMaxBid',
-          data: 'maxBid',
-          defaultContent: 0,
-          width: '120px',
-          render: renderArticleMaxBid
-        },
-        {
-          name: 'action',
-          defaultContent: '',
-          width: '15px',
-          render: function (data, type, row) {
-            let button = document.createElement('button');
-            button.id = row.articleId;
-            button.name = 'removeArticleFromClosedTabs';
-            button.classList.add('ui-button', 'ui-corner-all', 'ui-widget', 'ui-button-icon-only');
-            button.title = 'Entfernen';
-            button.textContent = 'B';
-            let span = document.createElement('span');
-            span.classList.add('ui-button-icon', 'ui-icon', 'ui-icon-trash');
-            let span2= document.createElement('span');
-            span2.classList.add('ui-button-icon-space');
-            button.appendChild(span);
-            button.appendChild(span2);
-            return button.outerHTML;
-          }
-        }
-      ],
-      order: [[3, "desc"]],
-      columnDefs: [
-        {searchable: false, "orderable": false, targets: [4, 5, 6, 7]},
-        {type: "num", targets: [0, 5]},
-        {className: "dt-body-center dt-body-nowrap", targets: [0,2,3,6, 7]}
-      ],
-      searchDelay: 400,
-      rowId: 'articleId',
-      pageLength: 10,
-      language: getDatatableTranslation('de_DE')
-    });
-
-    // datatable length change
-    pt.tableClosedArticles.on('length.dt', function (e, settings, len) {
-      updateSetting('closedArticlesTableLength', len);
-    });
-
-    // get closed tabs from sync storage and add them to the table
-    // Note: we do not filter here at all, old entries which shouldnt be displayed should be removed from DB
-    browser.storage.sync.get(null)
-      .then(result => {
-        Object.keys(result).forEach(key => {
-          let data = result[key];
-          if (data.hasOwnProperty('closedTime') && data.closedTime != null) {
-            console.log("Biet-O-Matic: setupTableClosedArticles() Add row to closed tabs: %s", JSON.stringify(data));
-            data.articleId = key;
-            addClosedArticleToTable(data);
-          }
-        });
-      })
-      .catch(onError);
-  }
-
-
-  /*
    * MAIN
    */
 
@@ -1452,8 +1648,12 @@ let popup = function () {
         pt.whoIAm = whoIAm;
         registerEvents();
 
-        setupTableActiveArticles();
-        setupTableClosedArticles();
+        //setupTableArticles();
+        //setupTableClosedArticles();
+
+        pt.table = new ArticlesTable(pt, '#articles');
+        pt.table.addFromTabs();
+        //pt.table.addArticlesFromStorage();
 
         // restore settings from session storage (autoBidEnabled, bidAllEnabled)
         restoreSettings();
@@ -1461,7 +1661,8 @@ let popup = function () {
         configureUi();
         checkBrowserStorage().catch(onError);
 
-        console.debug("DOMContentLoaded handler for window with id = %d completed (%O).", pt.whoIAm.currentWindow.id, pt.whoIAm.currentWindow);
+        console.debug("Biet-O-Matic: DOMContentLoaded handler for window with id = %d completed (%O).",
+          pt.whoIAm.currentWindow.id, pt.whoIAm.currentWindow);
       }).catch((err) => {
         console.error("Biet-O-Matic:; DOMContentLoaded post initialisation failed; %s", err);
       });

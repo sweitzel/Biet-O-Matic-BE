@@ -61,7 +61,7 @@ import "../css/contentScript.css";
   async function handleReload() {
     parseInfoEntry(['#descItemNumber'], 'articleId');
     parseInfoEntry(['#msgPanel'], 'articleAuctionState');
-
+console.log("XXX1 handleReload()");
     // determine auction state - if any yet
     // TODO: think of a better way, to support languages or be robust against changing strings
     let state = auctionEndStates.unknown;
@@ -93,6 +93,7 @@ import "../css/contentScript.css";
         state = Math.floor(Math.random() * (3));
       }
     }
+    console.log("XXX2 handleReload() settings=%O", settings);
 
     /*
      * Retrieve stored article info from popup
@@ -115,6 +116,7 @@ import "../css/contentScript.css";
         });
       }
     }
+    console.log("XXX3 handleReload() storedInfo=%O", articleStoredInfo);
 
     /*
      * If bidInfo exists in sessionStorage, it means a bid process was started before reload
@@ -174,6 +176,7 @@ import "../css/contentScript.css";
    * Parse information from Ebay Article page
    */
   function parsePage() {
+    console.debug("Biet-O-Matic: parsePage() started");
     // DOM Element Parsing
     const parseInfoArray = new Map([
       ['articleId', ['#descItemNumber']],
@@ -197,6 +200,7 @@ import "../css/contentScript.css";
       ['articleMinimumBid', ['#MaxBidId']]
     ]);
     parseInfoArray.forEach(parseInfoEntry);
+    console.debug("Biet-O-Matic: parsePage() ended");
   }
 
   // parse a specific DOM element from the current page
@@ -329,6 +333,7 @@ import "../css/contentScript.css";
    * - option to define bid
    */
   function extendPage() {
+    console.debug("Biet-O-Matic: extendPage() started");
     let bidButton = document.getElementById('bidBtn_btn');
     if (bidButton == null || typeof bidButton === 'undefined') {
       console.log("Biet-O-Matic: Do not extend page, no bid button found.");
@@ -371,7 +376,6 @@ import "../css/contentScript.css";
         updateMaxBidInfo(storInfo);
       }
     });
-
     activateAutoBidButton();
   }
 
@@ -388,6 +392,10 @@ import "../css/contentScript.css";
     }
     if (minBidValue == null && ebayArticleInfo.hasOwnProperty('articleMinimumBid')) {
       minBidValue = ebayArticleInfo.articleMinimumBid;
+    }
+    if (typeof maxBidValue === 'string') {
+      maxBidValue = maxBidValue.replace(/,/, '.');
+      maxBidValue = Number.parseFloat(maxBidValue);
     }
     console.debug("Biet-O-Matic: activateAutoBidButton(), maxBidValue=%s (%s), minBidValue=%s (%s)",
       maxBidValue, typeof maxBidValue,  minBidValue, typeof minBidValue);
@@ -424,6 +432,7 @@ import "../css/contentScript.css";
    * - #BomAutoBid: AutoBid
    */
   function monitorChanges() {
+    console.debug("Biet-O-Matic: monitorChanges() started");
     let maxBidInput = document.getElementById('MaxBidId');
     let bomAutoBid = document.getElementById('BomAutoBid');
     // max bid input changed?
@@ -549,8 +558,7 @@ import "../css/contentScript.css";
               browser.runtime.sendMessage({
                 action: 'ebayArticleRefresh',
               }).catch((e) => {
-                console.info("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed - reloading page!: %s (%s)",
-                  e.message);
+                console.warn("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed - reloading page!: %s", e.message);
                 location.reload();
               });
             }
@@ -976,41 +984,40 @@ import "../css/contentScript.css";
   }
 
   async function initialize() {
-      // first we check if the page is a expected Article Page
-      let body = document.getElementById("Body");
-      if (body == null) {
-        console.log("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
-        throw new Error("Biet-O-Mat: skipping on this page; no Body element");
-      }
-      let itemType = body.getAttribute("itemtype");
-      if (itemType == null) {
-        console.log("Biet-O-Mat: skipping on this page; no itemtype in body element");
-        throw new Error("Biet-O-Mat: skipping on this page; no itemtype in body element");
-      }
-      if (itemType !== "https://schema.org/Product") {
-        console.log("Biet-O-Mat: skipping on this page; invalid itemtype in body element (%s)", itemType);
-        throw new Error("Biet-O-Mat: skipping on this page; invalid itemtype in body element");
-      }
-      if (ebayArticleInfo.hasOwnProperty('auctionEnded') && ebayArticleInfo.auctionEnded) {
-        throw new Error("Biet-O-Mat: skipping on this page; bidding already performed.");
-      }
+    // first we check if the page is a expected Article Page
+    let body = document.getElementById("Body");
+    if (body == null) {
+      console.log("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
+      throw new Error("Biet-O-Mat: skipping on this page; no Body element");
+    }
+    let itemType = body.getAttribute("itemtype");
+    if (itemType == null) {
+      console.log("Biet-O-Mat: skipping on this page; no itemtype in body element");
+      throw new Error("Biet-O-Mat: skipping on this page; no itemtype in body element");
+    }
+    if (itemType !== "https://schema.org/Product") {
+      console.log("Biet-O-Mat: skipping on this page; invalid itemtype in body element (%s)", itemType);
+      throw new Error("Biet-O-Mat: skipping on this page; invalid itemtype in body element");
+    }
+    if (ebayArticleInfo.hasOwnProperty('auctionEnded') && ebayArticleInfo.auctionEnded) {
+      throw new Error("Biet-O-Mat: skipping on this page; bidding already performed.");
+    }
 
-      // parse article information
-      parsePage();
-      // check if the same article is already handled by another tab
-      let result = await browser.runtime.sendMessage({
-        action: 'getArticleInfo',
-        articleId: ebayArticleInfo.articleId
-      });
-      // our tab id is available through the browsser event, if our and their tabId is different, it means
-      // the tab is open in another window
-      if (typeof result === 'undefined' || !result.hasOwnProperty('tabId')) {
-        throw new Error("Incomplete data received from sendMessage callback (browser action open?)");
+    // parse article information
+    parsePage();
+    // check if the same article is already handled by another tab
+    const result = await browser.runtime.sendMessage({
+      action: 'getArticleInfo',
+      articleId: ebayArticleInfo.articleId
+    });
+    // our tab id is available through the browser event, if our and their tabId is different, it means
+    // the tab is open in another window
+    if (typeof result !== 'undefined' || result.hasOwnProperty('tabId')) {
+      if (result.hasOwnProperty('data') && result.data.tabId != null && result.tabId !== result.data.tabId) {
+        throw new Error(`Biet-O-Matic: Stopping execution on this page, already active in another tab (${result.data.tabId}).`);
       }
-      if (result.hasOwnProperty('data') && result.tabId !== result.data.tabId) {
-        throw new Error("Biet-O-Matic: Stopping execution on this page, already active in another tab.");
-      }
-      return "Successfully initialized";
+    }
+    return "Successfully initialized";
   }
 
   function replacer(key, value) {
@@ -1026,10 +1033,10 @@ import "../css/contentScript.css";
 
   // handle reload of the tab,
   handleReload();
-
+console.log("XXX99 preInit");
   initialize()
-    .catch(console.warn)
     .then(result => {
+      console.log("init done: %O", result);
       if (result != null) {
         console.debug("Biet-O-Matic: %s - Article Info: %s", result, JSON.stringify(ebayArticleInfo, replacer));
         extendPage();
@@ -1039,9 +1046,12 @@ import "../css/contentScript.css";
           action: 'ebayArticleUpdated',
           detail: ebayArticleInfo
         }).catch(e => {
-          console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %s", JSON.stringify(e));
+          console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %s", e.message);
         });
         registerEvents();
       }
+    })
+    .catch(e => {
+      console.warn("Init failed: %s", e.message);
     });
 })();
