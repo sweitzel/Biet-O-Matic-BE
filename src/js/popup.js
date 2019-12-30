@@ -754,13 +754,19 @@ class ArticlesTable {
   static renderArticleLog(article) {
     if (article == null || !article.hasOwnProperty('articleId')) return "";
     let div = document.createElement('div');
+    // <div style="width:320px; height:80px; overflow:auto;">
+    div.style.height = '200px';
+    div.style.overflow = 'auto';
+    //div.style.width = '99%';
+
     let table = document.createElement('table');
     table.style.paddingLeft = '50px';
     // get log entries
     let log = article.getLog();
-
     if (log == null) return "";
-    log.forEach(e => {
+    if (log.length < 5) div.style.height = null;
+    // iterate log array in reverse order (newest first)
+    log.slice().reverse().forEach(e => {
       let tr = document.createElement('tr');
       let tdDate = document.createElement('td');
       // first column: date
@@ -793,7 +799,7 @@ class ArticlesTable {
       table.appendChild(tr);
     });
     div.appendChild(table);
-    return div.innerHTML;
+    return div.outerHTML;
   }
 
   /*
@@ -1116,8 +1122,7 @@ class ArticlesTable {
 
     // datatable length change
     this.DataTable.on('length.dt', function (e, settings, len) {
-      // todo implement
-      //updateSetting('articlesTableLength', len);
+      Popup.updateSetting('articlesTableLength', len);
     });
 
     // Add event listener for opening and closing details
@@ -1395,6 +1400,7 @@ class Popup {
    * simulate       - Perfom simulated bidding (do all , but not confirm the bid)
    */
   static updateSetting(key, value) {
+    console.debug("Biet-O-Matic: updateSetting() key=%s, value=%s", key, JSON.stringify(value));
     let result = JSON.parse(window.sessionStorage.getItem('settings'));
     if (result == null)
       result = {};
