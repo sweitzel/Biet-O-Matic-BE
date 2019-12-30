@@ -120,21 +120,24 @@ class Article {
 
   // complement with DB info
   async addInfoFromStorage() {
+    let group = null;
     let maxBid = null;
     let autoBid = false;
     let result = await browser.storage.sync.get(this.articleId);
     if (Object.keys(result).length === 1) {
       let storInfo = result[this.articleId];
       console.debug("Biet-O-Matic: Found info for Article %s in storage: %s", this.articleId, JSON.stringify(result));
+      // group
+      if (storInfo.hasOwnProperty('group') && storInfo.group != null)
+        group = storInfo.group;
       // maxBid
-      if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null) {
+      if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null)
         maxBid = storInfo.maxBid;
-      }
       // autoBid
-      if (storInfo.hasOwnProperty('autoBid')) {
+      if (storInfo.hasOwnProperty('autoBid'))
         autoBid = storInfo.autoBid;
-      }
     }
+    this.articleGroup = group;
     this.articleMaxBid = maxBid;
     this.articleAutoBid = autoBid;
   }
@@ -143,7 +146,7 @@ class Article {
    * store articleInfo to sync storage
    *   will use values which are provided in the info object to update existing ones
    * - key: articleId
-   * - value: endTime, minBid, maxBid, autoBid, closedTime
+   * - value: endTime, minBid, maxBid, autoBid, closedTime, group
    */
   async updateInfoInStorage(info, tabId = null, onlyIfExists = false) {
     let storedInfo = {};
@@ -391,6 +394,7 @@ class ArticlesTable {
     this.currentWindowId = popup.whoIAm.currentWindow.id;
     if ($(selector).length === 0 )
       throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
+    $.fn.DataTable.RowGroup.defaults.emptyDataGroup = "Keine Gruppe";
     this.DataTable = ArticlesTable.init(selector);
     this.registerEvents();
   }
@@ -403,13 +407,17 @@ class ArticlesTable {
           name: 'articleDetailsControl',
           className: 'details-control',
           data: 'articleDetailsShown',
-          width: '5px',
+          width: '10px',
+          searchable: false,
+          orderable: false,
           render: ArticlesTable.renderArticleDetailsControl,
         },
         {
           name: 'articleId',
           data: 'articleId',
           width: '100px',
+          searchable: true,
+          orderable: false,
           render: function (data, type, row) {
             if (type !== 'display' && type !== 'filter') return data;
             let div = document.createElement("div");
@@ -426,11 +434,15 @@ class ArticlesTable {
         {
           name: 'articleDescription',
           data: 'articleDescription',
+          searchable: true,
+          orderable: false,
           defaultContent: 'Unbekannt'
         },
         {
           name: 'articleEndTime',
           data: 'articleEndTime',
+          searchable: false,
+          orderable: false,
           render: function (data, type, row) {
             if (typeof data !== 'undefined') {
               if (type !== 'display' && type !== 'filter') return data;
@@ -446,11 +458,15 @@ class ArticlesTable {
           name: 'articleBidPrice',
           data: 'articleBidPrice',
           defaultContent: 0,
+          searchable: false,
+          orderable: false,
           render: ArticlesTable.renderArticleBidPrice
         },
         {
           name: 'articleShippingCost',
           data: 'articleShippingCost',
+          searchable: false,
+          orderable: false,
           defaultContent: 'nicht angegeben',
           render: function (data, type, row) {
             if (type !== 'display' && type !== 'filter') return data;
@@ -466,33 +482,41 @@ class ArticlesTable {
         {
           name: 'articleAuctionState',
           data: 'articleAuctionState',
+          searchable: false,
+          orderable: false,
           defaultContent: ''
         },
         {
           name: 'articleGroup',
           data: 'articleGroup',
+          width: '80px',
+          searchable: true,
           orderable: false,
-          defaultContent: 0
+          defaultContent: '',
+          render: ArticlesTable.renderArticleGroup
         },
         {
           name: 'articleMaxBid',
           data: 'articleMaxBid',
+          searchable: false,
+          orderable: false,
           render: ArticlesTable.renderArticleMaxBid,
           defaultContent: 0
         },
         {
           name: 'articleButtons',
           data: 'articleButtons',
+          width: '50px',
           defaultContent: '',
+          searchable: false,
+          orderable: false,
           render: ArticlesTable.renderArticleButtons,
         }
       ],
-      order: [[3, "asc"]],
       columnDefs: [
-        {searchable: false, "orderable": false, targets: [6, 7, 8, 9]},
-        {type: "num", targets: [1, 7]},
+        {type: "num", targets: [1, 4]},
         {className: "dt-body-center dt-body-nowrap", targets: [0, 1, 7, 8, 9]},
-        {width: "100px", targets: [4, 5, 7, 8 ]},
+        {width: "100px", targets: [4, 5, 8]},
         {width: "220px", targets: [3]},
         {width: "300px", targets: [2, 6]}
       ],
@@ -500,7 +524,9 @@ class ArticlesTable {
       rowId: 'articleId',
       pageLength: 25,
       responsive: {details: false},
-      rowGroup: {dataSrc: 7},
+      orderMulti: false,
+      orderFixed: [[7, 'asc'], [3, 'desc']],
+      rowGroup: {dataSrc: 'articleGroup'},
       language: ArticlesTable.getDatatableTranslation('de_DE')
     });
   }
@@ -751,6 +777,23 @@ class ArticlesTable {
     return divArticleMaxBid.outerHTML;
   }
 
+  static renderArticleGroup(data, type, row) {
+    if (type !== 'display' && type !== 'filter') return data;
+    console.debug("Biet-O-Matic: renderArticleGroup(%s) data=%s, type=%O, row=%O", row.articleId, data, type, row);
+    let div = document.createElement('div');
+    const inpGroup = document.createElement('input');
+    inpGroup.id = 'inpGroup_' + row.articleId;
+    inpGroup.type = 'text';
+    inpGroup.setAttribute('maxlength', '32');
+    inpGroup.multiple = false;
+    inpGroup.style.width = "60px";
+    inpGroup.placeholder = 'Gruppe';
+    if (data != null && typeof data !== 'undefined')
+      inpGroup.defaultValue = data;
+    div.appendChild(inpGroup);
+    return div.outerHTML;
+  }
+
   static renderArticleLog(article) {
     if (article == null || !article.hasOwnProperty('articleId')) return "";
     let div = document.createElement('div');
@@ -991,7 +1034,7 @@ class ArticlesTable {
               const row = this.getRow(`#${request.articleId}`);
               const article = row.data();
               this.updateRowMaxBid(request.detail, row);
-              article.updateInfoInStorage(request.detail, null);
+              article.updateInfoInStorage(request.detail, null).then();
             }
           } catch (e) {
             console.warn("Biet-O-Matic: ebayArticleMaxBidUpdated() internal error: %s", e.message);
@@ -1083,16 +1126,21 @@ class ArticlesTable {
       }
     });
 
-    // maxBid/autoBid inputs
+    // group/maxBid/autoBid inputs
     this.DataTable.on('change', 'tr input', e => {
       //console.debug('Biet-O-Matic: configureUi() INPUT Event this=%O', e);
       // parse articleId from id of both inputs
       let articleId = e.target.id
         .replace('chkAutoBid_', '')
-        .replace('inpMaxBid_', '');
+        .replace('inpMaxBid_', '')
+        .replace('inpGroup_', '');
+
       // determine row by articleId
       const row = this.getRow(`#${articleId}`);
+      if (row == null || row.length !== 1)
+        return;
       let article = row.data();
+      console.debug("Biet-O-Matic: Input changed event: Article=%s, field=%s", article.articleId, e.target.id);
       if (e.target.id.startsWith('inpMaxBid_')) {
         // maxBid was entered
         // normally with input type=number this should not be necessary - but there was a problem reported...
@@ -1104,15 +1152,26 @@ class ArticlesTable {
       } else if (e.target.id.startsWith('chkAutoBid_')) {
         // autoBid checkbox was clicked
         article.articleAutoBid = e.target.checked;
+      } else if (e.target.id.startsWith('inpGroup_')) {
+        // group has been updated
+        if (e.target.value === '')
+          article.articleGroup = undefined;
+        else
+          article.articleGroup = e.target.value;
       }
+
       // redraw the row
       row.invalidate('data').draw(false);
-      // store info when maxBid updated
-      let info = {
-        endTime: article.articleEndTime,
-        maxBid: article.articleMaxBid,
-        autoBid: article.articleAutoBid
-      };
+      // store info when inputs updated
+      let info = {};
+      if (article.hasOwnProperty('articleEndTime'))
+        info.endTime = article.endTime;
+      if (article.hasOwnProperty('articleMaxBid'))
+        info.maxBid = article.articleMaxBid;
+      if (article.hasOwnProperty('articleAutoBid'))
+        info.autoBid = article.articleAutoBid;
+      if (article.hasOwnProperty('articleGroup'))
+        info.group = article.articleGroup;
       // update storage info and inform tab of new values
       article.updateInfoInStorage(info, article.tabId)
         .catch(e => {
@@ -1292,7 +1351,7 @@ class Popup {
 
     // restore settings from session storage (autoBidEnabled, bidAllEnabled)
     this.restoreSettings();
-    Popup.checkBrowserStorage();
+    await Popup.checkBrowserStorage();
   }
 
   /*

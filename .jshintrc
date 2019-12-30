@@ -4,7 +4,7 @@
     "moment": true,
     "BOM_VERSION": true
   },
-  "esversion": 8,
+  "esversion": 9,
   "undef": true,
   "browser": true,
   "devel": true,
