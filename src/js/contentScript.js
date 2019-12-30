@@ -61,7 +61,6 @@ import "../css/contentScript.css";
   async function handleReload() {
     parseInfoEntry(['#descItemNumber'], 'articleId');
     parseInfoEntry(['#msgPanel'], 'articleAuctionState');
-console.log("XXX1 handleReload()");
     // determine auction state - if any yet
     // TODO: think of a better way, to support languages or be robust against changing strings
     let state = auctionEndStates.unknown;
@@ -93,7 +92,6 @@ console.log("XXX1 handleReload()");
         state = Math.floor(Math.random() * (3));
       }
     }
-    console.log("XXX2 handleReload() settings=%O", settings);
 
     /*
      * Retrieve stored article info from popup
@@ -116,7 +114,6 @@ console.log("XXX1 handleReload()");
         });
       }
     }
-    console.log("XXX3 handleReload() storedInfo=%O", articleStoredInfo);
 
     /*
      * If bidInfo exists in sessionStorage, it means a bid process was started before reload
@@ -195,6 +192,7 @@ console.log("XXX1 handleReload()");
       ]],
       ['articlePaymentMethods', ['#payDet1']],
       ['articleShippingCost', ['#fshippingCost']],
+      ['articleShippingMethods', ['#fShippingSvc']],
       ['articleAuctionState', ['#msgPanel']],
       ['articleBidCount', ['#qty-test']],
       ['articleMinimumBid', ['#MaxBidId']]
@@ -216,6 +214,7 @@ console.log("XXX1 handleReload()");
           let price = domEntry.getAttribute("content");
           let currency = null;
           if (price != null && typeof price !== 'undefined') {
+            // this is the normal method for articles
             value = parseFloat(price);
           } else {
             let p = parsePriceString(domEntry.textContent.trim());
@@ -227,7 +226,7 @@ console.log("XXX1 handleReload()");
           // get currency from itemprop=priceCurrency
           if (currency == null) {
             currency = document.querySelectorAll('[itemprop="priceCurrency"]');
-            if (currency.length === 1) {
+            if (currency.length >= 1) {
               ebayArticleInfo.articleCurrency = currency[0].getAttribute("content");
             }
           } else {
@@ -595,9 +594,8 @@ console.log("XXX1 handleReload()");
       let p2 = result[3];
       price = parseFloat(`${p1}.${p2}`).toFixed(2);
       currency = result[1].trim();
-      if (currency === "US $") {
+      if (currency === "US $")
         currency = "USD";
-      }
     }
     return {
       price: Number.parseFloat(price.toString()),
@@ -1033,7 +1031,6 @@ console.log("XXX1 handleReload()");
 
   // handle reload of the tab,
   handleReload();
-console.log("XXX99 preInit");
   initialize()
     .then(result => {
       console.log("init done: %O", result);
