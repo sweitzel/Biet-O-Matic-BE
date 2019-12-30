@@ -48,6 +48,9 @@ class Article {
     if (info == null || !info.hasOwnProperty('articleId'))
       throw new Error("Failed to initialize new Article, articleId missing in info!");
     this.articleId = info.articleId;
+    this.articleGroup = null;
+    this.articleMaxBid = null;
+    this.articleAutoBid = false;
     const elements = [
       'articleAuctionState', 'articleAuctionStateText', 'articleBidCount', 'articleBidPrice', 'articleCurrency',
       'articleBuyPrice', 'articleDescription', 'articleEndTime',
@@ -77,7 +80,6 @@ class Article {
 
   // Request article info from specific tab
   static async getInfoFromTab(tab) {
-    console.debug("Biet-O-Matic: getInfoFromTab(%d) started", tab.id);
     /*
      * Check if the tab is for an supported eBay article before we attempt to parse info from it
      * e.g. https://www.ebay.de/itm/*
@@ -91,7 +93,6 @@ class Article {
       .catch(e => {
         throw new Error(`getInfoFromTab(${tab.id}) executeScript failed: ${e.message}`);
       });
-    console.debug("Biet-O-Matic: getInfoFromTab(%d) return", tab.id);
     return Promise.resolve(browser.tabs.sendMessage(tab.id, {action: 'GetArticleInfo'}));
   }
 
@@ -116,6 +117,15 @@ class Article {
     } else {
       return null;
     }
+  }
+
+  // removes all article specific data in storage
+  async removeInfoFromStorage() {
+    await browser.storage.sync.remove(this.articleId);
+    this.articleGroup = null;
+    this.articleMaxBid = null;
+    this.articleAutoBid = false;
+    console.debug("Biet-O-Matic: removeInfoFromStorage(%s) Browser sync storage cleared", this.articleId);
   }
 
   // complement with DB info
@@ -313,6 +323,12 @@ class Article {
     return JSON.parse(window.localStorage.getItem(`log:${this.articleId}`));
   }
 
+  // remove all log entries for specified article
+  removeAllLogs() {
+    window.localStorage.removeItem(`log:${this.articleId}`);
+    console.debug("Biet-O-Matic: removeAllLogs(%s) Logs removed", this.articleId);
+  }
+
   getPrettyEndTime() {
     let date = 'n/a';
     let timeLeft = 'n/a';
@@ -396,7 +412,9 @@ class ArticlesTable {
       throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
     $.fn.DataTable.RowGroup.defaults.emptyDataGroup = "Keine Gruppe";
     this.DataTable = ArticlesTable.init(selector);
+    this.addSearchFields();
     this.registerEvents();
+    this.registerTableEvents();
   }
 
   // setup articles table
@@ -419,7 +437,7 @@ class ArticlesTable {
           searchable: true,
           orderable: false,
           render: function (data, type, row) {
-            if (type !== 'display' && type !== 'filter') return data;
+            if (type !== 'display') return data;
             let div = document.createElement("div");
             div.id = data;
             let a = document.createElement('a');
@@ -524,9 +542,12 @@ class ArticlesTable {
       rowId: 'articleId',
       pageLength: 25,
       responsive: {details: false},
+      ordering: true,
+      order: [],
+      orderFixed: [[7, 'asc'], [3, 'asc']],
       orderMulti: false,
-      orderFixed: [[7, 'asc'], [3, 'desc']],
       rowGroup: {dataSrc: 'articleGroup'},
+      dom: '<l<t>ip>',
       language: ArticlesTable.getDatatableTranslation('de_DE')
     });
   }
@@ -567,9 +588,54 @@ class ArticlesTable {
       });
   }
 
+  /*
+   * Add column search fields
+   * 1 ArticleId
+   * 2 ArticleDescription
+   * 7 Group
+   */
+  addSearchFields() {
+    // Setup - add a text input to each footer cell
+    const tfoot = $('#articles tfoot');
+    const tr = document.createElement('tr');
+    $('#articles thead th').each(function () {
+      const th = document.createElement('th');
+      if (this.cellIndex === 1 || this.cellIndex === 2 || this.cellIndex === 7) {
+        const title = $(this).text();
+        const input = document.createElement('input');
+        input.id = 'colsearch';
+        input.type = 'text';
+        input.placeholder = `Suche ${title}`;
+        input.style.textAlign = 'center';
+        th.appendChild(input);
+      }
+      tr.appendChild(th);
+    });
+    tfoot.append(tr);
+
+    // throttle search
+    const searchColumn = $.fn.dataTable.util.throttle(
+      (colidx, val) => {
+        if (val == null || typeof val === 'undefined')
+          return;
+        let col = this.DataTable.column(colidx);
+        col.search(val).draw(false);
+      },
+      100
+    );
+
+    // Apply the search
+    $('#articles tfoot input').on('keyup change', e => {
+      let column = this.DataTable.column(e.target.parentNode.cellIndex);
+      if (typeof column === 'undefined' || column.length !== 1)
+        return;
+      searchColumn(column.index(), e.target.value);
+    });
+  }
+
   // add an article to the table
   addArticle(article) {
-    console.log("addArticle() called");
+    //console.log("addArticle() called");
     if (article instanceof Article)
       return this.DataTable.row.add(article).draw(false);
     else
@@ -713,7 +779,7 @@ class ArticlesTable {
    */
   static renderArticleMaxBid(data, type, row) {
     if (type !== 'display' && type !== 'filter') return data;
-    console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
+    //console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
     if (!row.hasOwnProperty('articleBidPrice'))
       return 'Sofortkauf';
     let autoBid = false;
@@ -778,7 +844,7 @@ class ArticlesTable {
   }
 
   static renderArticleGroup(data, type, row) {
-    if (type !== 'display' && type !== 'filter') return data;
+    if (type !== 'display') return data;
     console.debug("Biet-O-Matic: renderArticleGroup(%s) data=%s, type=%O, row=%O", row.articleId, data, type, row);
     let div = document.createElement('div');
     const inpGroup = document.createElement('input');
@@ -866,21 +932,39 @@ class ArticlesTable {
    */
   static renderArticleButtons(data, type, row) {
     if (type !== 'display' && type !== 'filter') return data;
-    console.log("renderArticleButtons(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
+    //console.log("renderArticleButtons(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
 
     let div = document.createElement('div');
     div.id = 'articleButtons';
 
+    // tab status
     let spanTabStatus = document.createElement('span');
     spanTabStatus.id = 'tabStatus';
+    spanTabStatus.classList.add('button-zoom', 'far', 'fa-lg');
+    spanTabStatus.style.opacity = '0.6';
     if (row.tabId == null) {
-      spanTabStatus.classList.add('far', 'fa-folder');
-      spanTabStatus.title = 'Artikel Tab öffnen';
+      spanTabStatus.classList.add('fa-folder');
+      spanTabStatus.title = 'Öffnet den Artikel in Neuem Tab';
     } else {
-      spanTabStatus.classList.add('far', 'fa-folder-open');
-      spanTabStatus.title = 'Artikel-Tab schließen';
+      spanTabStatus.classList.add('fa-folder-open');
+      spanTabStatus.title = 'Schließt den Artikel Tab';
+    }
+
+    // article remove
+    let spanArticleRemove = document.createElement('span');
+    spanArticleRemove.id = 'articleRemove';
+    spanArticleRemove.title = 'Entfernt Artikel Ereignisse und Einstellungen';
+    spanArticleRemove.classList.add('button-zoom', 'warning-hover', 'far', 'fa-trash-alt', 'fa-lg');
+    spanArticleRemove.style.marginLeft = '20px';
+    spanArticleRemove.style.opacity = '0.6';
+    // if there is currently no data to remove, then disable the button
+    console.log("XXX article=%s maxBid=%s, info=%O", row.articleId, row.articleMaxBid, row);
+    if (row.getLog() == null && row.articleMaxBid == null && row.articleGroup == null) {
+      spanArticleRemove.classList.remove('button-zoom', 'warning-hover');
+      spanArticleRemove.style.opacity = '0.05';
     }
     div.appendChild(spanTabStatus);
+    div.appendChild(spanArticleRemove);
     return div.outerHTML;
   }
 
@@ -890,17 +974,74 @@ class ArticlesTable {
    * show '-' if logs are present and currently visible
    * empty if no logs are present
    */
-  static renderArticleDetailsControl(data, type, row, meta) {
+  static renderArticleDetailsControl(data, type, row) {
     if (type !== 'display' && type !== 'filter') return '';
     // check if there are logs, then show plus if the log view is closed, else minus
     if (row.getLog() != null) {
+      let span = document.createElement('span');
+      span.setAttribute('aria-hidden', 'true');
+      span.style.opacity = '0.6';
+      span.classList.add('button-zoom', 'fas');
       if (row.articleDetailsShown) {
-        return '<span class="fas fa-minus" title="Artikel-Ereignisse verbergen" aria-hidden="true"></span>';
+        span.classList.add('fa-minus');
+        span.title = 'Verbirgt Artikel Ereignisse';
       } else {
-        return '<span class="fas fa-plus" title="Artikel-Ereignisse anzeigen" aria-hidden="true"></span>';
+        span.classList.add('fa-plus');
+        span.title = 'Zeigt Artikel Ereignisse an';
       }
+      return span.outerHTML;
     } else
       return '';
+  }
+
+  /*
+   * Remove information for article
+   * - log from window.localStorage
+   * - settings from browser sync storage
+   */
+  removeArticle(rowNode) {
+    if (typeof rowNode === 'undefined' || rowNode.length !== 1)
+      return;
+    const row = this.DataTable.row(rowNode);
+    if (typeof row === 'undefined' || row.length !== 1)
+      return;
+    const article = row.data();
+    article.removeAllLogs();
+    row.child(false);
+    article.removeInfoFromStorage().then(() => {
+      row.invalidate('data').draw(false);
+    });
+  }
+
+  /*
+   * toggle article tab:
+   * - if closed open the article in a new tab, else
+   * - close the tab
+   */
+  toggleArticleTab(rowNode) {
+    if (typeof rowNode === 'undefined' || rowNode.length !== 1)
+      return;
+    const row = this.DataTable.row(rowNode);
+    if (typeof row === 'undefined' || row.length !== 1)
+      return;
+    const article = row.data();
+    if (article.tabId == null) {
+      console.debug("Biet-O-Matic: toggleArticleTab(%s) Opening", article.articleId);
+      browser.tabs.create({
+        url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + article.articleId,
+        active: false,
+        openerTabId: Popup.tabId
+      }).then(tab => {
+        article.tabId = tab.id;
+        row.invalidate('data').draw(false);
+      });
+    } else {
+      console.debug("Biet-O-Matic: toggleArticleTab(%s) Closing tab %d", article.articleId, article.tabId);
+      browser.tabs.remove(article.tabId).then(() => {
+        article.tabId = null;
+        row.invalidate('data').draw(false);
+      });
+    }
   }
 
   // translation data for Datatable
@@ -954,7 +1095,7 @@ class ArticlesTable {
           "decimal": ","
         }
       };
-    return languages.de_DE;
+    return languages[language];
   }
 
   /* reload a tab
@@ -1000,12 +1141,12 @@ class ArticlesTable {
    * - getArticleInfo: return article info from row
    * - getArticleSyncInfo: return article info from sync storage
    * - addArticleLog: from content script to store log info for article
+   * - browser.tabs.updated: reloaded/new url
+   * - browser.tabs.removed: Tab closed
+   * - storage changed
    *
    * - updateArticleStatus: from content script to update the Auction State with given info
    * - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
-   * - getWindowSettings: from content script to retrieve the settings for this window (e.g. autoBidEnabled)
-   * - browser.tabs.onremoved: Tab closed
-   * - click on Article Link (jump to open tab, or open new tab)
    */
   registerEvents() {
     // listen to global events (received from other Browser window or background script)
@@ -1111,6 +1252,79 @@ class ArticlesTable {
       }
     });
 
+    /*
+     * tab reloaded or URL changed
+     * The following cases should be handled:
+     * - Same page, but maybe updated info
+     * - An existing tab is used to show a different article
+     *   -> get updated info and update table
+     * - An existing article tab navigated away from ebay -> remove from table
+     * - In last 2 cases, handle same as a closed tab
+     */
+    browser.tabs.onUpdated.addListener((tabId, changeInfo, tabInfo) => {
+      try {
+        // status == complete, then inject content script, request info and update table
+        if (changeInfo.status === 'complete') {
+          console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%s',
+            tabId, JSON.stringify(changeInfo), JSON.stringify(tabInfo));
+          if (!tabInfo.hasOwnProperty('url')) {
+            throw new Error("Tab Info is missing URL - permission issue?!");
+          }
+          Article.getInfoFromTab(tabInfo)
+            .then(articleInfo => {
+              if (articleInfo.hasOwnProperty('detail')) {
+                // if same article, then update it, else remove old, add new
+                this.addOrUpdateArticle(articleInfo.detail, tabInfo);
+              } else {
+                // new URL is not for an article (or couldnt be parsed) - remove the old article
+                this.removeArticleIfBoring(tabInfo.id);
+              }
+            })
+            .catch(e => {
+              console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
+            });
+        }
+      } catch (e) {
+        console.warn("Biet-O-Matic: tabs.onUpdated() internal error: %s", e.message);
+        throw new Error(e.message);
+      }
+    });
+
+    /*
+     * Handle Tab Closed
+     * - remove from table if no maxBid defined
+     */
+    browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
+      console.debug('Biet-O-Matic: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
+      // window closing, no need to update anybody
+      if (removeInfo.isWindowClosing === false) {
+        this.removeArticleIfBoring(tabId);
+      }
+    });
+
+    // listen for changes to browser storage area (settings, article info)
+    browser.storage.onChanged.addListener((changes, area) => {
+      console.log("XXX browser %s storage changed: %s", area, JSON.stringify(changes));
+    });
+
+    /*
+     * listen for changes to window storage (logs)
+     *        Note: does not fire if generated on same tab
+     */
+    window.addEventListener('storage', (e) => {
+      console.log("XXX Window Storage changed %O", e);
+    });
+  }
+
+  /*
+   * Events for the Articles Table:
+   * - click on Article Link (jump to open tab, or open new tab)
+   * - input change: change on maxBid,autoBid or group input
+   * - table length change
+   * - details control click
+   * - button click
+   */
+  registerTableEvents() {
     // if articleId cell is clicked, active the tab of that article
     this.DataTable.on('click', 'tbody tr a', e => {
       //console.log("tbody tr a clicked: %O", e);
@@ -1179,9 +1393,21 @@ class ArticlesTable {
         });
     });
 
+
     // datatable length change
     this.DataTable.on('length.dt', function (e, settings, len) {
       Popup.updateSetting('articlesTableLength', len);
+    });
+
+    // if articleId cell is clicked, active the tab of that article
+    this.DataTable.on('click', '#articleButtons', e => {
+      e.preventDefault();
+      let tr = $(e.target).closest('tr');
+      if (e.target.id === 'tabStatus') {
+        this.toggleArticleTab(tr);
+      } else if (e.target.id === 'articleRemove') {
+        this.removeArticle(tr);
+      }
     });
 
     // Add event listener for opening and closing details
@@ -1207,69 +1433,6 @@ class ArticlesTable {
         }
       }
     });
-
-    /*
-     * tab reloaded or URL changed
-     * The following cases should be handled:
-     * - Same page, but maybe updated info
-     * - An existing tab is used to show a different article
-     *   -> get updated info and update table
-     * - An existing article tab navigated away from ebay -> remove from table
-     * - In last 2 cases, handle same as a closed tab
-     */
-    browser.tabs.onUpdated.addListener((tabId, changeInfo, tabInfo) => {
-      try {
-        // status == complete, then inject content script, request info and update table
-        if (changeInfo.status === 'complete') {
-          console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%s',
-            tabId, JSON.stringify(changeInfo), JSON.stringify(tabInfo));
-          if (!tabInfo.hasOwnProperty('url')) {
-            throw new Error("Tab Info is missing URL - permission issue?!");
-          }
-          Article.getInfoFromTab(tabInfo)
-            .then(articleInfo => {
-              if (articleInfo.hasOwnProperty('detail')) {
-                // if same article, then update it, else remove old, add new
-                this.addOrUpdateArticle(articleInfo.detail, tabInfo);
-              } else {
-                // new URL is not for an article (or couldnt be parsed) - remove the old article
-                this.removeArticleIfBoring(tabInfo.id);
-              }
-            })
-            .catch(e => {
-              console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
-            });
-        }
-      } catch (e) {
-        console.warn("Biet-O-Matic: tabs.onUpdated() internal error: %s", e.message);
-        throw new Error(e.message);
-      }
-    });
-
-    /*
-     * Handle Tab Closed
-     * - remove from table if no maxBid defined
-     */
-    browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
-      console.debug('Biet-O-Matic: tab(%d).onRemoved listener fired: %s', tabId, JSON.stringify(removeInfo));
-      // window closing, no need to update anybody
-      if (removeInfo.isWindowClosing === false) {
-        this.removeArticleIfBoring(tabId);
-      }
-    });
-
-    // listen for changes to browser storage area (settings, article info)
-    browser.storage.onChanged.addListener((changes, area) => {
-      console.log("XXX browser %s storage changed: %s", area, JSON.stringify(changes));
-    });
-
-    /*
-     * listen for changes to window storage (logs)
-     *        Note: does not fire if generated on same tab
-     */
-    window.addEventListener('storage', (e) => {
-      console.log("XXX Window Storage changed %O", e);
-    });
   }
 }
 
@@ -1280,6 +1443,7 @@ class Popup {
 
     this.whoIAm = null;
     this.table = null;
+    this.tabId = null;
   }
 
   /*
@@ -1341,6 +1505,14 @@ class Popup {
     return whoIAm;
   }
 
+  static async getOwnTabId() {
+    let tab = browser.tabs.getCurrent();
+    if (typeof tab === 'undefined')
+      return null;
+    else
+      return tab.id;
+  }
+
   async init() {
     this.whoIAm = await Popup.detectWhoIAm();
     this.registerEvents();
@@ -1352,6 +1524,8 @@ class Popup {
     // restore settings from session storage (autoBidEnabled, bidAllEnabled)
     this.restoreSettings();
     await Popup.checkBrowserStorage();
+
+    this.tabId = await Popup.getOwnTabId();
   }
 
   /*

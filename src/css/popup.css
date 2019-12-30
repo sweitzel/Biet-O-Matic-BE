@@ -75,6 +75,29 @@ td.details-control > i:hover {
   cursor: pointer;
 }
 
+#articles_length {
+  margin: 10px 0 10px 0;
+}
+
+tfoot input {
+  width: 100%;
+  padding: 3px;
+  box-sizing: border-box;
+}
+
+/* buttons */
+.warning-hover:hover{color:#ff5722!important}
+.button-zoom {
+  opacity: 0.9;
+  cursor: pointer;
+}
+.button-zoom:hover {
+  transition :transform 0.2s ease-in-out;
+  transform: scale3d(1.2, 1.2, 1.2);
+  opacity: 1.0 !important;
+}
+
+
 /*
  * Allow Font Awesome Icons in lieu of jQuery UI and only apply when using a FA icon
  * https://jsfiddle.net/lbriquet/397488j4/
