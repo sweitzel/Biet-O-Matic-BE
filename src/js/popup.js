@@ -343,11 +343,15 @@ class Article {
       console.warn("Biet-O-Matic: Article %s - using default currency EUR", this.articleId);
       currency = 'EUR';
     }
+    let price;
+    if (this.hasOwnProperty('articleBidPrice'))
+      price = this.articleBidPrice;
+    else if (this.hasOwnProperty('articleBuyPrice'))
+      price = this.articleBuyPrice;
     try {
-      return new Intl.NumberFormat('de-DE', {style: 'currency', currency: currency})
-        .format(this.articleBidPrice);
+      return new Intl.NumberFormat('de-DE', {style: 'currency', currency: currency}).format(price);
     } catch (e) {
-      return this.articleBidPrice;
+      return price;
     }
   }
 
@@ -684,6 +688,8 @@ class ArticlesTable {
   static renderArticleMaxBid(data, type, row) {
     if (type !== 'display' && type !== 'filter') return data;
     console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
+    if (!row.hasOwnProperty('articleBidPrice'))
+      return 'Sofortkauf';
     let autoBid = false;
     let closedArticle = false;
     if (row.hasOwnProperty('articleAutoBid')) {
@@ -797,8 +803,8 @@ class ArticlesTable {
    */
   static renderArticleBidPrice(data, type, row) {
     if (type !== 'display' && type !== 'filter') return data;
-
-    let price = row.getPrettyBidPrice();
+    let price;
+    price = row.getPrettyBidPrice();
     if (row.hasOwnProperty('articleBidCount'))
       price = `${price} (${row.articleBidCount})`;
     return price;
