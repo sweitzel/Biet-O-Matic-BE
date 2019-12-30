@@ -236,7 +236,7 @@ class Article {
       this.addLog({
         component: "Artikel",
         level: "Aktualisierung",
-        message: `Tab: alt='${this.tabId}'; neu='${tabId}'`,
+        message: Article.getDiffMessage('Tab', this.tabId, tabId),
       });
       this.tabId = tabId;
       modified++;
@@ -246,7 +246,7 @@ class Article {
         this.addLog({
           component: "Artikel",
           level: "Aktualisierung",
-          message: `Beschreibung: alt='${this.articleDescription}'; neu='${info.articleDescription}'`,
+          message: Article.getDiffMessage('Beschreibung', this.articleDescription, info.articleDescription),
         });
         this.articleDescription = info.articleDescription;
         modified++;
@@ -257,7 +257,7 @@ class Article {
       this.addLog({
         component: "Artikel",
         level: "Aktualisierung",
-        message: `Preis: alt='${this.articleBidPrice}'; neu='${info.articleBidPrice}'`,
+        message: Article.getDiffMessage('Preis', this.articleBidPrice, info.articleBidPrice),
       });
       this.articleBidPrice = info.articleBidPrice;
       modified++;
@@ -267,7 +267,7 @@ class Article {
       this.addLog({
         component: "Artikel",
         level: "Aktualisierung",
-        message: `Anzahl Gebote: alt='${this.articleBidCount}'; neu='${info.articleBidCount}'`,
+        message: Article.getDiffMessage('Anzahl Gebote', this.articleBidCount, info.articleBidCount),
       });
       this.articleBidCount = info.articleBidCount;
       modified++;
@@ -277,7 +277,7 @@ class Article {
       this.addLog({
         component: "Artikel",
         level: "Aktualisierung",
-        message: `Lieferkosten: alt='${this.articleShippingCost}'; neu='${info.articleShippingCost}'`,
+        message: Article.getDiffMessage('Lieferkosten', this.articleShippingCost, info.articleShippingCost),
       });
       this.articleShippingCost = info.articleShippingCost;
       modified++;
@@ -287,7 +287,7 @@ class Article {
       this.addLog({
         component: "Artikel",
         level: "Aktualisierung",
-        message: `Minimal Gebot: alt='${this.articleMinimumBid}'; neu='${info.articleMinimumBid}'`,
+        message: Article.getDiffMessage('Minimal Gebot', this.articleMinimumBid, info.articleMinimumBid),
       });
       this.articleMinimumBid = info.articleMinimumBid;
       modified++;
@@ -297,12 +297,19 @@ class Article {
       this.addLog({
         component: "Artikel",
         level: "Aktualisierung",
-        message: `Auktionsende: alt='${this.articleEndTime}'; neu='${info.articleEndTime}'`,
+        message: Article.getDiffMessage('Auktionsende', this.articleEndTime, info.articleEndTime),
       });
       this.articleEndTime = info.articleEndTime;
       modified++;
     }
     return modified;
+  }
+
+  static getDiffMessage(description, oldVal, newVal) {
+    if (oldVal == null || typeof oldVal === 'undefined')
+      return `${description}: ${newVal}`;
+    else
+      return `${description}: ${oldVal} -> ${newVal}`;
   }
 
   // add log message for article
@@ -565,7 +572,7 @@ class ArticlesTable {
       ordering: true,
       order: [ 3, 'asc' ],
       orderFixed: {
-        post: [ 7, 'asc' ]
+        pre: [ 7, 'asc' ]
       },
       orderMulti: true,
       rowGroup: {dataSrc: 'articleGroup'},
@@ -691,8 +698,10 @@ class ArticlesTable {
     if (article.articleId !== articleInfo.articleId) {
       throw new Error("updateArticle() ArticleInfo and Row do not match!");
     }
-    if (article.updateInfo(articleInfo, tabId) > 0)
+    if (article.updateInfo(articleInfo, tabId) > 0) {
       row.invalidate('data').draw(false);
+      article.updateInfoInStorage(null, null, true);
+    }
     this.highlightArticleIfExpired(row);
   }
 
@@ -997,7 +1006,6 @@ class ArticlesTable {
     spanArticleRemove.style.marginLeft = '20px';
     spanArticleRemove.style.opacity = '0.6';
     // if there is currently no data to remove, then disable the button
-    console.log("XXX article=%s maxBid=%s, info=%O", row.articleId, row.articleMaxBid, row);
     if (row.getLog() == null && row.articleMaxBid == null && row.articleGroup == null) {
       spanArticleRemove.classList.remove('button-zoom', 'warning-hover');
       spanArticleRemove.style.opacity = '0.05';
@@ -1433,7 +1441,7 @@ class ArticlesTable {
       // store info when inputs updated
       let info = {};
       if (article.hasOwnProperty('articleEndTime'))
-        info.endTime = article.endTime;
+        info.endTime = article.articleEndTime;
       if (article.hasOwnProperty('articleMaxBid'))
         info.maxBid = article.articleMaxBid;
       if (article.hasOwnProperty('articleAutoBid'))
