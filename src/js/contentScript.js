@@ -241,6 +241,13 @@ import "../css/contentScript.css";
           } else {
             value = parsePriceString(domEntry.textContent.trim()).price;
           }
+          // get currency from itemprop=priceCurrency
+          if (!ebayArticleInfo.hasOwnProperty('articleCurrency')) {
+            let currency = document.querySelectorAll('[itemprop="priceCurrency"]');
+            if (currency.length >= 1) {
+              ebayArticleInfo.articleCurrency = currency[0].getAttribute("content");
+            }
+          }
         } else if (key === "articleDescription") {
           // some articles have long description, separated by <wbr> - so concat the strings
           value = "";
