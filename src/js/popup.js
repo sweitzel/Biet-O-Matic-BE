@@ -32,8 +32,8 @@ import { de } from 'date-fns/locale';
 
 // FontAwesome
 import '@fortawesome/fontawesome-free/css/all.css';
-import '@fortawesome/fontawesome-free/js/fontawesome';
-import '@fortawesome/fontawesome-free/js/regular';
+//import '@fortawesome/fontawesome-free/js/fontawesome';
+//import '@fortawesome/fontawesome-free/js/regular';
 
 import "../css/popup.css";
 
@@ -51,6 +51,7 @@ class Article {
     this.articleGroup = null;
     this.articleMaxBid = null;
     this.articleAutoBid = false;
+    // normal article, from open tab
     const elements = [
       'articleAuctionState', 'articleAuctionStateText', 'articleBidCount', 'articleBidPrice', 'articleCurrency',
       'articleBuyPrice', 'articleDescription', 'articleEndTime',
@@ -65,6 +66,19 @@ class Article {
     if (tab != null) {
       this.tabId = tab.id;
     }
+    // stored article, not currently open in tab
+    if (!this.hasOwnProperty('articleGroup') && info.hasOwnProperty('group'))
+      this.articleGroup = info.group;
+    if (!this.hasOwnProperty('articleBidPrice') && info.hasOwnProperty('bidPrice'))
+      this.articleBidPrice = info.bidPrice;
+    if (!this.hasOwnProperty('articleMaxBid') && info.hasOwnProperty('maxBid'))
+      this.articleMaxBid = info.maxBid;
+    if (!this.hasOwnProperty('articleAutoBid') && info.hasOwnProperty('autoBid'))
+      this.articleAutoBid = info.autoBid;
+    if (!this.hasOwnProperty('articleDescription') && info.hasOwnProperty('description'))
+      this.articleDescription = info.description;
+    if (!this.hasOwnProperty('articleEndTime') && info.hasOwnProperty('endTime'))
+      this.articleEndTime = info.endTime;
 
     this.popup = popup;
     this.articleDetailsShown = false;
@@ -156,7 +170,8 @@ class Article {
    * store articleInfo to sync storage
    *   will use values which are provided in the info object to update existing ones
    * - key: articleId
-   * - value: endTime, minBid, maxBid, autoBid, closedTime, group
+   * - from contentScript: minBid, maxBid, autoBid
+   * - from popup: group, description, bidPrice
    */
   async updateInfoInStorage(info, tabId = null, onlyIfExists = false) {
     let storedInfo = {};
@@ -182,11 +197,11 @@ class Article {
     let diffSettings = Object.keys(info).reduce((diff, key) => {
       if (storedInfo[key] === info[key]) return diff;
       let text = info[key];
-      if (typeof storedInfo[key] !== 'undefined')
+      if (storedInfo.hasOwnProperty(key) && storedInfo[key] != null && typeof storedInfo[key] !== 'undefined')
         text = `${storedInfo[key]} -> ${info[key]}`;
       return {
         ...diff,
-        [key]: `${storedInfo[key]} -> ${info[key]}`
+        [key]: text
       };
     }, {});
     if (JSON.stringify(storedInfo) !== JSON.stringify(info)) {
@@ -195,6 +210,10 @@ class Article {
         level: "Einstellungen",
         message: `Aktualisiert: '${JSON.stringify(diffSettings)}'`,
       });
+      // Finally add article info (description, bidPrice) which will be used when the article tab is not open
+      newSettings.endTime = this.articleEndTime;
+      newSettings.description = this.articleDescription;
+      newSettings.bidPrice = this.articleBidPrice;
       // store the settings back to the storage
       await browser.storage.sync.set({[this.articleId]: newSettings});
       if (tabId != null) {
@@ -231,7 +250,7 @@ class Article {
         });
         this.articleDescription = info.articleDescription;
         modified++;
-        // todo: optionally deactivate autoBid for this article
+        // todo: optionally deactivate autoBid for this article?
     }
     // articleBidPrice
     if (info.hasOwnProperty('articleBidPrice') && info.articleBidPrice !== this.articleBidPrice) {
@@ -463,7 +482,8 @@ class ArticlesTable {
           orderable: false,
           render: function (data, type, row) {
             if (typeof data !== 'undefined') {
-              if (type !== 'display' && type !== 'filter') return data;
+              if (type !== 'display' && type !== 'filter')
+                return data;
               return row.getPrettyEndTime();
             } else {
               // e.g. sofortkauf
@@ -543,9 +563,11 @@ class ArticlesTable {
       pageLength: 25,
       responsive: {details: false},
       ordering: true,
-      order: [],
-      orderFixed: [[7, 'asc'], [3, 'asc']],
-      orderMulti: false,
+      order: [ 3, 'asc' ],
+      orderFixed: {
+        post: [ 7, 'asc' ]
+      },
+      orderMulti: true,
       rowGroup: {dataSrc: 'articleGroup'},
       dom: '<l<t>ip>',
       language: ArticlesTable.getDatatableTranslation('de_DE')
@@ -553,39 +575,50 @@ class ArticlesTable {
   }
 
   // add open article tabs to the table
-  addFromTabs() {
+  async addArticlesFromTabs() {
     // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
-    browser.tabs.query({
+    let tabs = await browser.tabs.query({
       currentWindow: true,
       url: ['*://*.ebay.de/itm/*', '*://*.ebay.com/itm/*']
-    })
-      .then(tabs => {
-        tabs.forEach(tab => {
-          let p = Article.getInfoFromTab(tab);
-          p.then(articleInfo => {
-            if (articleInfo.hasOwnProperty('detail')) {
-              let article = new Article(this.popup, articleInfo.detail, tab);
-              article.init().then(() => {
-                this.addArticle(article);
-              });
-            }
-          })
-            .catch(e => {
-              console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${tab.id}: ${e.message}`);
-            /*
-             * The script injection failed, this can have multiple reasons:
-             * - the contentScript threw an error because the page is not a article
-             * - the contentScript threw an error because the article is a duplicate tab
-             * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
-             * Therefore we perform a tab reload once, which should recover the latter case
-             */
-            ArticlesTable.reloadTab(tab.id);
-          });
-        });
-      })
-      .catch(e => {
-        console.warn("Biet-O-Matic: Failed to add articles from tabs: %s", e.message);
+    }).catch(e => {
+      console.warn("Biet-O-Matic: Failed to add articles from tabs: %s", e.message);
+    });
+    for (let tab of tabs) {
+      let articleInfo = await Article.getInfoFromTab(tab).catch(e => {
+        console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${tab.id}: ${e.message}`);
+        /*
+         * The script injection failed, this can have multiple reasons:
+         * - the contentScript threw an error because the page is not a article
+         * - the contentScript threw an error because the article is a duplicate tab
+         * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
+         * Therefore we perform a tab reload once, which should recover the latter case
+         */
+        ArticlesTable.reloadTab(tab.id);
       });
+      if (articleInfo.hasOwnProperty('detail')) {
+        let article = new Article(this.popup, articleInfo.detail, tab);
+        article.init().then(() => {
+          this.addArticle(article);
+        });
+      }
+    }
+  }
+
+  // add articles which are in storage
+  async addArticlesFromStorage() {
+    let storedInfo = await browser.storage.sync.get(null);
+    Object.keys(storedInfo).forEach(articleId => {
+      let info = storedInfo[articleId];
+      info.articleId = articleId;
+      console.debug("Biet-O-Matic: addArticlesFromStorage(%s) info=%s", articleId, JSON.stringify(info));
+      // add article if not already in table
+      if (this.getRow(`#${articleId}`).length < 1) {
+        let article = new Article(this.popup, info);
+        article.init().then(() => {
+          this.addArticle(article);
+        });
+      }
+    });
   }
 
   /*
@@ -633,14 +666,18 @@ class ArticlesTable {
     });
   }
 
-  // add an article to the table
+  // add an article to the table and return the row or null if failed
   addArticle(article) {
     //console.log("addArticle() called");
-    if (article instanceof Article)
-      return this.DataTable.row.add(article).draw(false);
-    else
+    if (article instanceof Article) {
+      let row = this.DataTable.row.add(article);
+      this.highlightArticleIfExpired(row);
+      row.draw(false);
+      return row;
+    } else {
       console.warn("Biet-O-Matic: Adding article failed; incorrect type: %O", article);
-    return null;
+      return null;
+    }
   }
 
   // update article with fresh information
@@ -656,6 +693,7 @@ class ArticlesTable {
     }
     if (article.updateInfo(articleInfo, tabId) > 0)
       row.invalidate('data').draw(false);
+    this.highlightArticleIfExpired(row);
   }
 
   // update articleStatus column with given message
@@ -803,6 +841,7 @@ class ArticlesTable {
     const labelAutoBid = document.createElement('label');
     const chkAutoBid = document.createElement('input');
     chkAutoBid.id = 'chkAutoBid_' + row.articleId;
+    chkAutoBid.title = 'Aktiviert die "Automatisch Bieten" Funktion für diesen Artikel';
     chkAutoBid.classList.add('ui-button');
     chkAutoBid.type = 'checkbox';
     chkAutoBid.defaultChecked = autoBid;
@@ -1129,8 +1168,23 @@ class ArticlesTable {
       //console.log("getRowIdxByTabId(%d) index=%d, tabid=%d", tabId, index, article.tabId);
       if (article.tabId === tabId) articleId = article.articleId;
     });
-    console.log("getArticleIdByTabId = %s", articleId);
     return articleId;
+  }
+
+  /*
+   * If an article is close to ending or ended, highlight the endDate
+   * if it ended, highlight the status as well
+   */
+  highlightArticleIfExpired(row) {
+    let article = row.data();
+    let node = this.DataTable.cell(`#${article.articleId}`, 'articleEndTime:name').node();
+    if (article.articleEndTime - Date.now() < 0) {
+      // ended
+      $(node).css('color', 'red');
+    } else if (article.articleEndTime - Date.now() < 600) {
+      // ends in 10 minute
+      $(node).css('text-shadow', '0px -0px 2px #FF0000');
+    }
   }
 
   /*
@@ -1518,9 +1572,8 @@ class Popup {
     this.registerEvents();
 
     this.table = new ArticlesTable(this, '#articles');
-    this.table.addFromTabs();
-    //this.table.addArticlesFromStorage();
-
+    await this.table.addArticlesFromTabs();
+    await this.table.addArticlesFromStorage();
     // restore settings from session storage (autoBidEnabled, bidAllEnabled)
     this.restoreSettings();
     await Popup.checkBrowserStorage();
