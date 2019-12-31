@@ -96,6 +96,68 @@ tfoot input {
   opacity: 1.0 !important;
 }
 
+.footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background-color: #f9f9f9;
+  color: #000;
+}
+.footer #left {
+  width:33%;
+  float:left;
+  text-align: left;
+  margin-left: 1em;
+  margin-block-start: 1em;
+  margin-block-end: 1em;
+}
+.footer #right {
+  width:33%;
+  float:left;
+  overflow:hidden !important;
+  text-align: right;
+  margin-block-start: 1em;
+  margin-block-end: 1em;
+}
+.footer #center {
+  float:left;
+  width:33%;
+  text-align:center;
+}
+.footer a {
+  text-decoration: none;
+}
+/* Style all font awesome icons */
+.footer .fab + .footer .far + .footer .fas {
+  padding: 20px;
+  font-size: 30px;
+  width: 50px;
+}
+/* Add a hover effect if you want */
+.footer .fab + .footer .far + .footer .fas {
+  opacity: 0.05;
+  cursor: pointer;
+}
+.footer .fab:hover + .footer .far:hover + .footer .fas:hover {
+  opacity: 0.9;
+}
+/* Heart */
+.footer .fa-heart {
+  color: #e52414;
+  display: inline-block;
+  position: absolute;
+  padding-top: 14px;
+  margin-left: 5px;
+}
+.footer p {
+  display: inline-block;
+}
+
+/* Github */
+.footer .fa-github-square {
+  color: #55ACEE;
+}
 
 /*
  * Allow Font Awesome Icons in lieu of jQuery UI and only apply when using a FA icon
