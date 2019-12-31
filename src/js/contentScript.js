@@ -11,6 +11,7 @@
  */
 
 import browser from "webextension-polyfill";
+import $ from 'jquery';
 import "../css/contentScript.css";
 
 (function () {
@@ -274,6 +275,7 @@ import "../css/contentScript.css";
             .replace(/\n/g, "")
             .replace(/\s+/g, " ");
           ebayArticleInfo.articleAuctionStateText = text;
+          value = cleanupHtmlString(value);
         } else {
           value = domEntry.textContent.trim();
           // replace newline and multiple spaces
@@ -285,6 +287,100 @@ import "../css/contentScript.css";
       }
     }
   }
+
+  //region Status HTML Cleanup
+  /*
+   * parse html string via jquery and only keep whitelisted elements
+   * - elements: div, span
+   * - tags: class, style, id
+   */
+  function cleanupHtmlString(html) {
+    // http://booden.net/ContentCleaner.aspx
+    //Extension for getting the tagName
+    $.fn.tagName = function () {
+      if (!this.get(0).tagName) return "";
+      return this.get(0).tagName.toLowerCase();
+    };
+    //Extension for removing comments
+    $.fn.removeComments = function () {
+      this.each(
+        function (i, objNode) {
+          let objChildNode = objNode.firstChild;
+          while (objChildNode) {
+            if (objChildNode.nodeType === 8) {
+              const next = objChildNode.nextSibling;
+              objNode.removeChild(objChildNode);
+              objChildNode = next;
+            } else {
+              if (objChildNode.nodeType === 1) {
+                //recursively down the tree
+                $(objChildNode).removeComments();
+              }
+              objChildNode = objChildNode.nextSibling;
+            }
+          }
+        }
+      );
+    };
+
+    const tagsAllowed = "|div|span|a|strong|br|";
+    const attributesAllowed = [];
+    attributesAllowed.div = "|id|class|style|";
+    attributesAllowed.span = "|class|style|";
+    attributesAllowed.a = "|class|href|name|";
+    //console.log("Before: %s", $(jqHtml).html());
+    try {
+      html = html.replace(/(\r\n|\n|\r)/gm, '');
+      html = html.replace(/\t+/gm, '');
+      let jqHtml = $(html);
+      $(jqHtml).removeComments();
+      clearUnsupportedTagsAndAttributes($(jqHtml), tagsAllowed, attributesAllowed);
+      //console.log("After2: %s", $(jqHtml)[0].outerHTML);
+      return $(jqHtml)[0].outerHTML;
+    } catch(e) {
+      console.warn("Biet-O-Matic: Failed to cleanup status: %s", e.message);
+      return html;
+    }
+  }
+
+  function clearUnsupportedTagsAndAttributes(
+    obj,
+    tagsAllowed,
+    attributesAllowed,
+    emptyTagsAllowed = '|div|br|hr|'
+  ) {
+    $(obj).children().each(function () {
+      //recursively down the tree
+      const el = $(this);
+      clearUnsupportedTagsAndAttributes(el, tagsAllowed, attributesAllowed, emptyTagsAllowed);
+      try {
+        const tag = el.tagName();
+        if (tagsAllowed.indexOf("|" + tag + "|") < 0) {
+          if (tag === "style" || tag === "script")
+            el.remove();
+          else
+            el.replaceWith(el.html());
+        } else {
+          if (el.html().replace(/^\s+|\s+$/g, '') === "" && emptyTagsAllowed.indexOf("|" + tag + "|") < 0)
+            el.remove();
+          else {
+            let attrs = el.get(0).attributes;
+            for (let i = 0; i < attrs.length; i++) {
+              try {
+                if (attributesAllowed[tag] == null ||
+                  attributesAllowed[tag].indexOf("|" + attrs[i].name.toLowerCase() + "|") < 0) {
+                  el.removeAttr(attrs[i].name);
+                }
+              } catch (e) {} //Fix for IE, catch unsupported attributes like contenteditable and dataFormatAs
+            }
+          }
+        }
+      } catch (e) {
+        throw new Error(e.message);
+      }
+    });
+  }
+  //endregion
 
   /*
    * Convert Ebay Time String (articleEndTime) to Date()

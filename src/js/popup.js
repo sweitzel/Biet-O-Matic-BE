@@ -90,6 +90,7 @@ class Article {
    */
   async init() {
     await this.addInfoFromStorage();
+    return this;
   }
 
   // Request article info from specific tab
@@ -175,6 +176,8 @@ class Article {
    */
   async updateInfoInStorage(info, tabId = null, onlyIfExists = false) {
     let storedInfo = {};
+    if (info == null || typeof info === 'undefined')
+      return;
     // restore from existing config
     let result = await browser.storage.sync.get(this.articleId);
     if (Object.keys(result).length === 1) {
@@ -591,8 +594,10 @@ class ArticlesTable {
       console.warn("Biet-O-Matic: Failed to add articles from tabs: %s", e.message);
     });
     for (let tab of tabs) {
-      let articleInfo = await Article.getInfoFromTab(tab).catch(e => {
-        console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${tab.id}: ${e.message}`);
+      const myTab = tab;
+      const at = ArticlesTable;
+      let articleInfo = await Article.getInfoFromTab(myTab).catch(e => {
+        console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${myTab.id}: ${e.message}`);
         /*
          * The script injection failed, this can have multiple reasons:
          * - the contentScript threw an error because the page is not a article
@@ -600,13 +605,16 @@ class ArticlesTable {
          * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
          * Therefore we perform a tab reload once, which should recover the latter case
          */
-        ArticlesTable.reloadTab(tab.id);
+        at.reloadTab(myTab.id);
       });
-      if (articleInfo.hasOwnProperty('detail')) {
-        let article = new Article(this.popup, articleInfo.detail, tab);
-        article.init().then(() => {
-          this.addArticle(article);
+      if (typeof articleInfo !== 'undefined' && articleInfo.hasOwnProperty('detail')) {
+        let article = new Article(this.popup, articleInfo.detail, myTab);
+        article.init().then(a => {
+          this.addArticle(a);
         });
+      } else {
+        console.warn("Biet-O-Matic: addArticlesFromTabs() Failed to add articleInfo for tab %d, " +
+          "received info missing or incomplete", myTab.id);
       }
     }
   }
@@ -621,8 +629,8 @@ class ArticlesTable {
       // add article if not already in table
       if (this.getRow(`#${articleId}`).length < 1) {
         let article = new Article(this.popup, info);
-        article.init().then(() => {
-          this.addArticle(article);
+        article.init().then(a => {
+          this.addArticle(a);
         });
       }
     });
@@ -782,8 +790,8 @@ class ArticlesTable {
     if (rowByArticleId.length === 0) {
       // article not in table - simply add it
       let article = new Article(this.popup, articleInfo, tab);
-      article.init().then(() => {
-        this.addArticle(article);
+      article.init().then(a => {
+        this.addArticle(a);
       });
     } else {
       // article in table - update it
