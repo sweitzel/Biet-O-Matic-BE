@@ -196,8 +196,6 @@ class Article {
    */
   async updateInfoInStorage(info, tabId = null, onlyIfExists = false) {
     let oldStoredInfo = {};
-    if (info == null || typeof info === 'undefined')
-      return;
     // get existing article information from storage - it will be merged with the new info
     let result = await browser.storage.sync.get(this.articleId);
     if (Object.keys(result).length === 1) {
@@ -209,7 +207,7 @@ class Article {
       if (onlyIfExists === true) return false;
     }
     // store maxBid as number
-    if (info.hasOwnProperty('maxBid')) {
+    if (info != null && info.hasOwnProperty('maxBid')) {
       if (typeof info.maxBid === 'string') {
         console.debug("Biet-O-Matic: updateInfoInStorage() Convert maxBid string=%s to float=%s",
           info.maxbid, Number.parseFloat(info.maxBid.replace(/,/, '.')));
@@ -230,22 +228,11 @@ class Article {
 
     // merge new info into existing settings
     let mergedStoredInfo = Object.assign({}, oldStoredInfo, newStoredInfo);
-    // Short diff: https://stackoverflow.com/a/37396358
-    let diffSettings = Object.keys(info).reduce((diff, key) => {
-      if (oldStoredInfo[key] === info[key]) return diff;
-      let text = info[key];
-      if (oldStoredInfo.hasOwnProperty(key) && oldStoredInfo[key] != null && typeof oldStoredInfo[key] !== 'undefined')
-        text = `${oldStoredInfo[key]} -> ${info[key]}`;
-      return {
-        ...diff,
-        [key]: text
-      };
-    }, {});
     if (JSON.stringify(oldStoredInfo) !== JSON.stringify(newStoredInfo)) {
       this.addLog({
         component: "Artikel",
         level: "Einstellungen",
-        message: `Aktualisiert: '${JSON.stringify(diffSettings)}'`,
+        message: Article.getDiffMessage('Aktualisiert', oldStoredInfo, newStoredInfo)
       });
       // store the info back to the storage
       await browser.storage.sync.set({[this.articleId]: mergedStoredInfo});
@@ -315,6 +302,16 @@ class Article {
       this.articleShippingCost = info.articleShippingCost;
       modified++;
     }
+    // articleShippingMethods
+    if (info.hasOwnProperty('articleShippingMethods') && info.articleShippingMethods !== this.articleShippingMethods) {
+      this.addLog({
+        component: "Artikel",
+        level: "Aktualisierung",
+        message: Article.getDiffMessage('Liefermethoden', this.articleShippingMethods, info.articleShippingMethods),
+      });
+      this.articleShippingMethods = info.articleShippingMethods;
+      modified++;
+    }
     // articleMinimumBid
     if (info.hasOwnProperty('articleMinimumBid') && info.articleMinimumBid !== this.articleMinimumBid) {
       this.addLog({
@@ -335,14 +332,43 @@ class Article {
       this.articleEndTime = info.articleEndTime;
       modified++;
     }
+    // articleAuctionState
+    if (info.hasOwnProperty('articleAuctionState') && info.articleAuctionState !== this.articleAuctionState) {
+      this.addLog({
+        component: "Artikel",
+        level: "Aktualisierung",
+        message: Article.getDiffMessage('Status', this.articleAuctionStateText, info.articleAuctionStateText),
+      });
+      this.articleAuctionState = info.articleAuctionState;
+      if (info.hasOwnProperty('articleAuctionStateText'))
+        this.articleAuctionStateText = info.articleAuctionStateText;
+      else
+        this.articleAuctionStateText = "oops";
+      modified++;
+    }
     return modified;
   }
 
   static getDiffMessage(description, oldVal, newVal) {
-    if (oldVal == null || typeof oldVal === 'undefined')
-      return `${description}: ${newVal}`;
-    else
-      return `${description}: ${oldVal} -> ${newVal}`;
+    if (typeof oldVal === 'object') {
+      // Short diff: https://stackoverflow.com/a/37396358
+      let diffSettings = Object.keys(newVal).reduce((diff, key) => {
+        if (oldVal[key] === newVal[key]) return diff;
+        let text = newVal[key];
+        if (oldVal.hasOwnProperty(key) && oldVal[key] != null && typeof oldVal[key] !== 'undefined')
+          text = `${oldVal[key]} -> ${newVal[key]}`;
+        return {
+          ...diff,
+          [key]: text
+        };
+      }, {});
+      return `${description}: ${JSON.stringify(diffSettings)}`;
+    } else {
+      if (oldVal == null || typeof oldVal === 'undefined')
+        return `${description}: ${newVal}`;
+      else
+        return `${description}: ${oldVal} -> ${newVal}`;
+    }
   }
 
   // add log message for article
@@ -451,6 +477,58 @@ class Article {
     } else {
       return false;
     }
+  }
+
+  /*
+   * return adjusted endtime for an article
+   * - if bidAll option is set, then return original time
+   * - if 1..n articles with endTime+-1 are found, then sort by articleId and return idx0+0s, idx1+2s, idx2+4s ...
+   * todo: improve spreading algorithm to better detect articles with similar endTime and spread better
+   *   also if many articles end at the same time, then the bid preparation time (10s) is not enough
+   */
+  getAdjustedBidTime() {
+    // bidAll, then we dont need to special handle articles ending at the same time
+    // todo group bid
+    if ($('#inpBidAll').is(':checked')) {
+      return this.articleEndTime;
+    }
+
+    // filter from https://stackoverflow.com/a/37616104
+    Object.filter = (obj, predicate) =>
+      Object.keys(obj)
+        .filter( key => predicate(obj[key]) )
+        .reduce( (res, key) => Object.assign(res, { [key]: obj[key] }), {} );
+
+    const rows = this.popup.table.DataTable.rows();
+    if (rows == null) return null;
+    const articles = rows.data();
+    // filter articles with endtime same as for the given article +/- 1
+    let filtered = Object.filter(articles, article => {
+      if (!article.hasOwnProperty('articleEndTime')) return false;
+      return (Math.abs(article.articleEndTime - this.articleEndTime) < 1000);
+    });
+
+    // only one article, no need to modify
+    if (filtered.length === 1) return this.articleEndTime;
+
+    // sort by articleId
+    let keys = Object.keys(filtered).sort(function(a,b) {
+      return filtered[a].articleId - filtered[b].articleId;
+    });
+    const findKey = function (obj, value) {
+      let key = null;
+      for (let prop in obj) {
+        if (obj.hasOwnProperty(prop)) {
+          if (obj[prop].articleId === value) key = prop;
+        }
+      }
+      return key;
+    };
+    // the index determines how many seconds an article bid will be earlier
+    let idx = findKey(filtered, this.articleId);
+    console.debug("Biet-O-Matic: getAdjustedBidTime() Adjusted Article %s bidTime by %ss, %d articles end at the same time (%O).",
+      this.articleId, keys.indexOf(idx), keys.length, filtered);
+    return (this.articleEndTime - ((keys.indexOf(idx)*2) * 1000));
   }
 
   toString () {
@@ -748,7 +826,11 @@ class ArticlesTable {
     }
     if (article.updateInfo(articleInfo, tabId) > 0) {
       row.invalidate('data').draw(false);
-      article.updateInfoInStorage(null, null, true);
+      // update info in storage, if there is any
+      article.updateInfoInStorage(null, null, true)
+        .catch(e => {
+          console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
+        });
     }
     this.highlightArticleIfExpired(row);
   }
@@ -1250,13 +1332,13 @@ class ArticlesTable {
    * - ebayArticleRefresh: from content script, simple info to refresh the row (update remaining time)
    * - getArticleInfo: return article info from row
    * - getArticleSyncInfo: return article info from sync storage
+   * - ebayArticleSetAuctionEndState: from content script to update the Auction State with given info
+   * - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
    * - addArticleLog: from content script to store log info for article
+   *
    * - browser.tabs.updated: reloaded/new url
    * - browser.tabs.removed: Tab closed
    * - storage changed
-   *
-   * - updateArticleStatus: from content script to update the Auction State with given info
-   * - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
    */
   registerEvents() {
     // listen to global events (received from other Browser window or background script)
@@ -1273,7 +1355,7 @@ class ArticlesTable {
               //updateFavicon($('#inpAutoBid').prop('checked'), sender.tab);
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: ebayArticleUpdated() internal error: %s", e.message);
+            console.warn("Biet-O-Matic: Event.ebayArticleUpdated internal error: %s", e.message);
             throw new Error(e.message);
           }
           break;
@@ -1288,7 +1370,7 @@ class ArticlesTable {
               article.updateInfoInStorage(request.detail, null).then();
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: ebayArticleMaxBidUpdated() internal error: %s", e.message);
+            console.warn("Biet-O-Matic: Event.ebayArticleMaxBidUpdated internal error: %s", e.message);
             throw new Error(e.message);
           }
           break;
@@ -1304,7 +1386,7 @@ class ArticlesTable {
                 dateCell.draw(false);
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: ebayArticleRefresh() internal error: %s", e.message);
+            console.warn("Biet-O-Matic: Event.ebayArticleRefresh internal error: %s", e.message);
             throw new Error(e.message);
           }
           break;
@@ -1323,7 +1405,7 @@ class ArticlesTable {
               }
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: getArticleInfo() internal error: %s", e.message);
+            console.warn("Biet-O-Matic: Event.getArticleInfo internal error: %s", e.message);
             throw new Error(e.message);
           }
           break;
@@ -1337,7 +1419,7 @@ class ArticlesTable {
               }
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: getArticleSyncInfo() internal error: %s", e.message);
+            console.warn("Biet-O-Matic: Event.getArticleSyncInfo internal error: %s", e.message);
             throw new Error(e.message);
           }
           break;
@@ -1355,8 +1437,53 @@ class ArticlesTable {
                 article.addLog(request.detail.message);
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: addArticleLog() internal error: %s", e.message);
+            console.warn("Biet-O-Matic: Event.addArticleLog internal error: %s", e.message);
             throw new Error(e.message);
+          }
+          break;
+        case 'ebayArticleSetAuctionEndState':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              const row = this.getRow(`#${request.articleId}`);
+              const article = row.data();
+              console.debug("Biet-O-Matic: Browser Event ebayArticleSetAuctionEndState received: sender=%O, state=%s",
+                sender, request.detail.auctionEndState);
+              if (request.hasOwnProperty('articleId')) {
+                // 1 == purchased
+                if (request.detail.hasOwnProperty('auctionEndState') && request.detail.auctionEndState === 1) {
+                  // todo implement group autobid
+                  if ($('#inpBidAll').is(':checked') === false) {
+                    console.debug("Biet-O-Matic: ebayArticleSetAuctionEndState() disabling autoBid - Article %s was purchased.",
+                      request.articleId);
+                    $('#inpAutoBid').prop('checked', false);
+                    this.updateSetting('autoBidEnabled', false);
+                  }
+                }
+                article.updateInfoInStorage(request.articleId, request.detail).catch(e => {
+                  console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
+                });
+              }
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: Event.ebayArticleSetAuctionEndState failed: %s", e.message);
+          }
+          break;
+        /*
+         * If two article end at the same time (+/- 1 seconds), then one of these should bid earlier to
+         * prevent that we purchase both
+         */
+        case 'ebayArticleGetAdjustedBidTime':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              console.debug("Biet-O-Matic: Browser Event ebayArticleGetAdjustedBidTime received: article=%s, sender=%O",
+                request.articleId, sender);
+              if (!request.hasOwnProperty('articleId')) {
+                return Promise.reject("Missing parameter articleId");
+              }
+              return Promise.resolve(this.getAdjustedBidTime(request.articleId, request.articleEndTime));
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: Event.ebayArticleGetAdjustedBidTime failed: %s", e.message);
           }
           break;
       }
@@ -1636,13 +1763,9 @@ class Popup {
 
   /*
    * register events:
-   * - ebayArticleUpdated: from content script with info about article
-   * - ebayArticleRefresh: from content script, simple info to refresh the row (update remaing time)
-   * - ebayArticleMaxBidUpdated: from content script to update maxBid info
    * - getWindowSettings: from content script to retrieve the settings for this window (e.g. autoBidEnabled)
-   * - addArticleLog: from content script to store log info for article
-   * - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
-   * - browser.tabs.onremoved: Tab closed
+   * - browserAction clicked
+   * - inputAutoBid clicked
    */
   registerEvents() {
     // listen to global events (received from other Browser window or background script)
