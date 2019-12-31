@@ -714,6 +714,11 @@ import "../css/contentScript.css";
     let maxBidInput = document.getElementById('MaxBidId');
     // id=BomAutoBid defined by us
     let autoBidInput = document.getElementById('BomAutoBid');
+    if (!info.hasOwnProperty('maxBid') && info.hasOwnProperty('articleMaxBid'))
+      info.maxBid = info.articleMaxBid;
+    if (!info.hasOwnProperty('autoBid') && info.hasOwnProperty('articleAutoBid'))
+      info.autoBid = info.articleMaxBid;
+
     if (maxBidInput != null) {
       if (info.maxBid != null) {
         try {

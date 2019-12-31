@@ -66,20 +66,6 @@ class Article {
     if (tab != null) {
       this.tabId = tab.id;
     }
-    // stored article, not currently open in tab
-    if (!this.hasOwnProperty('articleGroup') && info.hasOwnProperty('group'))
-      this.articleGroup = info.group;
-    if (!this.hasOwnProperty('articleBidPrice') && info.hasOwnProperty('bidPrice'))
-      this.articleBidPrice = info.bidPrice;
-    if (!this.hasOwnProperty('articleMaxBid') && info.hasOwnProperty('maxBid'))
-      this.articleMaxBid = info.maxBid;
-    if (!this.hasOwnProperty('articleAutoBid') && info.hasOwnProperty('autoBid'))
-      this.articleAutoBid = info.autoBid;
-    if (!this.hasOwnProperty('articleDescription') && info.hasOwnProperty('description'))
-      this.articleDescription = info.description;
-    if (!this.hasOwnProperty('articleEndTime') && info.hasOwnProperty('endTime'))
-      this.articleEndTime = info.endTime;
-
     this.popup = popup;
     this.articleDetailsShown = false;
   }
@@ -91,6 +77,52 @@ class Article {
   async init() {
     await this.addInfoFromStorage();
     return this;
+  }
+
+  /*
+ * Convert the short keys to article keys
+ * In version 0.2.x the information in the sync storage will be using the long key format
+ * e.g. maxBid -> articleMaxBid
+ * Note: the info which is sent to contentScript will still use the short format
+ */
+  static convertKeys(info) {
+    let converted = 0;
+    if (info.hasOwnProperty('autoBid')) {
+      info.articleAutoBid = info.autoBid;
+      delete info.autoBid;
+      converted++;
+    }
+    if (info.hasOwnProperty('minBid')) {
+      info.articleMinBid = info.minBid;
+      delete info.minBid;
+      converted++;
+    }
+    if (info.hasOwnProperty('maxBid')) {
+      info.articleMaxBid = info.maxBid;
+      delete info.maxBid;
+      converted++;
+    }
+    if (info.hasOwnProperty('description')) {
+      info.articleDescription = info.description;
+      delete info.description;
+      converted++;
+    }
+    if (info.hasOwnProperty('endTime')) {
+      info.articleEndTime = info.endTime;
+      delete info.endTime;
+      converted++;
+    }
+    if (info.hasOwnProperty('bidPrice')) {
+      info.articleBidPrice = info.bidPrice;
+      delete info.bidPrice;
+      converted++;
+    }
+    if (info.hasOwnProperty('group')) {
+      info.articleGroup = info.group;
+      delete info.group;
+      converted++;
+    }
+    return converted;
   }
 
   // Request article info from specific tab
@@ -145,26 +177,15 @@ class Article {
 
   // complement with DB info
   async addInfoFromStorage() {
-    let group = null;
-    let maxBid = null;
-    let autoBid = false;
     let result = await browser.storage.sync.get(this.articleId);
     if (Object.keys(result).length === 1) {
       let storInfo = result[this.articleId];
-      console.debug("Biet-O-Matic: Found info for Article %s in storage: %s", this.articleId, JSON.stringify(result));
-      // group
-      if (storInfo.hasOwnProperty('group') && storInfo.group != null)
-        group = storInfo.group;
-      // maxBid
-      if (storInfo.hasOwnProperty('maxBid') && storInfo.maxBid != null)
-        maxBid = storInfo.maxBid;
-      // autoBid
-      if (storInfo.hasOwnProperty('autoBid'))
-        autoBid = storInfo.autoBid;
+      let converted = Article.convertKeys(storInfo);
+      // add the info to the current article object
+      Object.assign(this, storInfo);
+      console.debug("Biet-O-Matic: addInfoFromStorage(%s) Found info for Article in storage (converted %d entries): %s",
+        this.articleId, converted, this.toString());
     }
-    this.articleGroup = group;
-    this.articleMaxBid = maxBid;
-    this.articleAutoBid = autoBid;
   }
 
   /*
@@ -172,16 +193,17 @@ class Article {
    *   will use values which are provided in the info object to update existing ones
    * - key: articleId
    * - from contentScript: minBid, maxBid, autoBid
-   * - from popup: group, description, bidPrice
    */
   async updateInfoInStorage(info, tabId = null, onlyIfExists = false) {
-    let storedInfo = {};
+    let oldStoredInfo = {};
     if (info == null || typeof info === 'undefined')
       return;
-    // restore from existing config
+    // get existing article information from storage - it will be merged with the new info
     let result = await browser.storage.sync.get(this.articleId);
     if (Object.keys(result).length === 1) {
-      storedInfo = result[this.articleId];
+      oldStoredInfo = result[this.articleId];
+      // update old keys in storedInfo (e.g. maxBid -> articleMaxBid, description -> articleDescription)
+      Article.convertKeys(oldStoredInfo);
     } else {
       // should we only store the info if an storage entry already exists?
       if (onlyIfExists === true) return false;
@@ -194,36 +216,44 @@ class Article {
         info.maxBid = Number.parseFloat(info.maxBid.replace(/,/, '.'));
       }
     }
+
+    // convert info short keys for storage (e.g. maxBid -> articleMaxBid)
+    let newStoredInfo = Object.assign({}, info);
+    Article.convertKeys(newStoredInfo);
+
+    // enhance with articleInfo
+    Object.assign(newStoredInfo, this);
+    // remove some info which doesnt need to be stored
+    delete newStoredInfo.popup;
+    delete newStoredInfo.tabId;
+    delete newStoredInfo.articleDetailsShown;
+
     // merge new info into existing settings
-    let newSettings = Object.assign({}, storedInfo, info);
-    // https://stackoverflow.com/a/37396358
+    let mergedStoredInfo = Object.assign({}, oldStoredInfo, newStoredInfo);
+    // Short diff: https://stackoverflow.com/a/37396358
     let diffSettings = Object.keys(info).reduce((diff, key) => {
-      if (storedInfo[key] === info[key]) return diff;
+      if (oldStoredInfo[key] === info[key]) return diff;
       let text = info[key];
-      if (storedInfo.hasOwnProperty(key) && storedInfo[key] != null && typeof storedInfo[key] !== 'undefined')
-        text = `${storedInfo[key]} -> ${info[key]}`;
+      if (oldStoredInfo.hasOwnProperty(key) && oldStoredInfo[key] != null && typeof oldStoredInfo[key] !== 'undefined')
+        text = `${oldStoredInfo[key]} -> ${info[key]}`;
       return {
         ...diff,
         [key]: text
       };
     }, {});
-    if (JSON.stringify(storedInfo) !== JSON.stringify(info)) {
+    if (JSON.stringify(oldStoredInfo) !== JSON.stringify(newStoredInfo)) {
       this.addLog({
         component: "Artikel",
         level: "Einstellungen",
         message: `Aktualisiert: '${JSON.stringify(diffSettings)}'`,
       });
-      // Finally add article info (description, bidPrice) which will be used when the article tab is not open
-      newSettings.endTime = this.articleEndTime;
-      newSettings.description = this.articleDescription;
-      newSettings.bidPrice = this.articleBidPrice;
-      // store the settings back to the storage
-      await browser.storage.sync.set({[this.articleId]: newSettings});
+      // store the info back to the storage
+      await browser.storage.sync.set({[this.articleId]: mergedStoredInfo});
       if (tabId != null) {
         // send update to article tab
         await browser.tabs.sendMessage(tabId, {
           action: 'UpdateArticleMaxBid',
-          detail: info
+          detail: info  // Note: use the original info with short keys
         });
       }
     }
@@ -421,6 +451,16 @@ class Article {
     } else {
       return false;
     }
+  }
+
+  toString () {
+    let str = '';
+    for (let p in this) {
+      if (this.hasOwnProperty(p)) {
+        str += p + '::' + this[p] + '\n';
+      }
+    }
+    return str;
   }
 }
 
@@ -727,7 +767,7 @@ class ArticlesTable {
 
   /*
  * Updates the maxBid input and autoBid checkbox for a given row
- * Note: the update can either be triggered from the article page, or via user editing on the datatable
+ * Note: the articleInfo keys are the short keys (maxBid, autoBid) as the info comes from contentScript
  * Also performs row redraw to show the updated data.
  */
   updateRowMaxBid(articleInfo = {}, row = null) {
@@ -814,12 +854,12 @@ class ArticlesTable {
     // retrieve article info from storage (maxBid)
     article.getInfoFromStorage()
       .then(storageInfo => {
-        if (storageInfo != null && storageInfo.hasOwnProperty('maxBid') && storageInfo.maxBid != null) {
+        if (storageInfo != null && storageInfo.hasOwnProperty('articleMaxBid') && storageInfo.articleMaxBid != null) {
           // redraw, tabid has been updated
-          console.debug("Biet-O-Matic: removeArticleIfBoring(%d), keeping article %s.", tabId, articleId);
+          console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), keeping article %s.", tabId, articleId);
           row.invalidate('data').draw(false);
         } else {
-          console.debug("Biet-O-Matic: removeArticleIfBoring(%d), removed article %s.", tabId, articleId);
+          console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), removed article %s.", tabId, articleId);
           // remove from table
           row.remove().draw(false);
         }
@@ -1448,8 +1488,6 @@ class ArticlesTable {
       row.invalidate('data').draw(false);
       // store info when inputs updated
       let info = {};
-      if (article.hasOwnProperty('articleEndTime'))
-        info.endTime = article.articleEndTime;
       if (article.hasOwnProperty('articleMaxBid'))
         info.maxBid = article.articleMaxBid;
       if (article.hasOwnProperty('articleAutoBid'))
@@ -1462,7 +1500,6 @@ class ArticlesTable {
           console.warn("Biet-O-Matic: Failed to store article info: %s", e.message);
         });
     });
-
 
     // datatable length change
     this.DataTable.on('length.dt', function (e, settings, len) {
