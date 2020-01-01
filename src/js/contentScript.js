@@ -33,7 +33,7 @@ class EbayArticle {
    * - check if the page is in expected format
    * - parse the page
    */
-  async init() {
+  async init(oldInfo) {
     // first we check if the page is a expected Article Page
     const body = document.getElementById("Body");
     if (body == null) {
@@ -50,8 +50,7 @@ class EbayArticle {
       console.log(msg);
       throw new Error(msg);
     }
-    // todo handleReload
-    if (this.hasOwnProperty('auctionEnded') && this.auctionEnded) {
+    if (oldInfo.hasOwnProperty('auctionEnded') && oldInfo.auctionEnded) {
       throw new Error("Biet-O-Mat: skipping on this page; bidding already performed.");
     }
 
@@ -82,6 +81,7 @@ class EbayArticle {
     browser.runtime.onMessage.addListener((request, sender) => {
       // return ebayArticleInfo back to Popup script
       if (request.action === "GetArticleInfo") {
+        console.log("Biet-O-Matic: Event.GetArticleInfo received");
         return Promise.resolve({detail: this});
       } else if (request.action === "UpdateArticleMaxBid") {
         // receive updated MaxBid info from Popup - update the document
@@ -315,36 +315,21 @@ class EbayArticle {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList') {
             const timeLeftInSeconds = (this.articleEndTime - Date.now()) / 1000;
-            if (timeLeftInSeconds <= 10) {
+            if (timeLeftInSeconds <= 30) {
               console.debug("Biet-O-Matic: Mutation received: %d seconds left", timeLeftInSeconds);
-              this.doBid(false)
+              this.doBid()
                 .catch(e => {
                   console.info("Biet-O-Matic: doBid() was aborted: %s", e.message);
-                  this.sendArticleLog(e);
+                  EbayArticle.sendArticleLog(this.articleId, e);
                 });
             }
             let oldN = mutation.removedNodes;
             let newN = mutation.target;
             oldN=oldN[0];
             if (typeof oldN !== 'undefined' && oldN.textContent !== newN.textContent) {
-              // price changed
-              this.articleBidPrice = EbayArticle.parsePriceString(newN.textContent).price;
-              // find Ebay MaxBidId Input
-              const maxBidInput = document.getElementById('MaxBidId');
-              if (maxBidInput == null) {
-                console.warn("Biet-O-Matic: Cannot find MaxBidId input!");
-                return;
-              }
-              // update minimumbid
-              let minBidValue = null;
-              if (maxBidInput.getAttribute('aria-label') != null) {
-                minBidValue = maxBidInput.getAttribute('aria-label')
-                  .replace(/\n/g, "")
-                  .replace(/\s+/g, " ");
-                minBidValue = EbayArticle.parsePriceString(minBidValue).price;
-                this.articleMinimumBid = minBidValue;
-              }
-              this.activateAutoBidButton(maxBidInput.value, minBidValue);
+              let info = EbayArticle.parsePageRefresh();
+              Object.assign(this, info);
+              this.activateAutoBidButton(info.articleMaxBid, info.articleMinimumBid);
               // send info to extension popup about new price
               browser.runtime.sendMessage({
                 action: 'ebayArticleUpdated',
@@ -510,8 +495,9 @@ class EbayArticle {
           // todo it could be wise to sanitize the HTML, e.g. remove aria, style and id tags
           value = domEntry.outerHTML;
           result.articleAuctionStateText = domEntry.textContent.trim()
-            .replace(/\n/g, "")
-            .replace(/\s+/g, " ");
+            .replace(/\n/g, '')
+            .replace(/\s+/g, ' ')
+            .replace(/[\s\|]+$/g, '')
           value = EbayArticle.cleanupHtmlString(value);
         } else {
           value = domEntry.textContent.trim();
@@ -668,7 +654,7 @@ class EbayArticle {
    * - messageObject { component: s, message: s, level: s}
    * TODO: use HTML for good/bad indication
    */
-  sendArticleLog(messageObject) {
+  static sendArticleLog(articleId, messageObject) {
     const message = {};
     message.timestamp = Date.now();
     message.message = JSON.stringify(messageObject);
@@ -682,12 +668,12 @@ class EbayArticle {
       message.level = messageObject.level;
     browser.runtime.sendMessage({
       action: 'addArticleLog',
-      articleId: this.articleId,
+      articleId: articleId,
       detail: {
         message: message
       },
     }).catch((e) => {
-      console.warn("Biet-O-Matic: sendArticleLog(), Cannot sendMessage: %s", e.message);
+      console.warn("Biet-O-Matic: sendArticleLog(%s), Cannot sendMessage: %s", articleId, e.message);
     });
   }
 
@@ -703,8 +689,8 @@ class EbayArticle {
   async doBid() {
     let simulate = false;
     let perfSnapshot = [];
-    EbayArticle.storePerfInfo("Initialisierung");
     try {
+      this.storePerfInfo("Initialisierung");
       // if end time reached, abort directly
       if ((this.hasOwnProperty('auctionEnded') && this.auctionEnded) || this.endTime <= Date.now()) {
         let t = Date.now() - this.endTime;
@@ -713,6 +699,21 @@ class EbayArticle {
           level: "Abbruch",
           message: `Auktion bereits beendet.`
         };
+      }
+      /*
+       * The following will ensure that the bid procedure will not be executed twice
+       * due to mutation observer the function will be called again, even after the auction ended
+       */
+      let bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${this.articleId}`));
+      if (bidInfo != null) {
+        if (bidInfo.hasOwnProperty('ended')) {
+          // bid has ended
+          console.debug("Biet-O-Matic: doBid(), bid already finished: %s", JSON.stringify(bidInfo));
+        } else {
+          // bid is already running
+          console.debug("Biet-O-Matic: doBid(), bid is already running: %s", JSON.stringify(bidInfo));
+        }
+        return;
       }
       const autoBidInput = await EbayArticle.waitFor('#BomAutoBid', 1000)
         .catch((e) => {
@@ -763,11 +764,7 @@ class EbayArticle {
         simulate = true;
       }
 
-      /*
-       * The following will ensure that the bid procedure will not be executed twice
-       * due to mutation observer the function will be called again, even after the auction ended
-       */
-      let bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${this.articleId}`));
+      // set bidInfo to ensure the bidding is not executed multiple times
       if (bidInfo == null) {
         // bid not yet running (or not anymore after page refresh)
         bidInfo = {
@@ -776,20 +773,11 @@ class EbayArticle {
           started: Date.now()
         };
         window.sessionStorage.setItem(`bidInfo:${this.articleId}`, JSON.stringify(bidInfo));
-      } else {
-        if (bidInfo.hasOwnProperty('ended')) {
-          // bid has ended
-          console.debug("Biet-O-Matic: doBid(), bid already finished: %s", JSON.stringify(bidInfo));
-        } else {
-          // bid is already running
-          console.debug("Biet-O-Matic: doBid(), bid is already running: %s", JSON.stringify(bidInfo));
-        }
-        return;
       }
 
       this.storePerfInfo("Phase1: Gebotsvorbereitung");
       console.log("Biet-O-Matic: Performing bid for article %s", this.articleId);
-      this.sendArticleLog({
+      EbayArticle.sendArticleLog(this.articleId, {
         component: "Bietvorgang",
         level: "Info",
         message: "Bietvorgang wird vorbereitet...",
@@ -880,8 +868,8 @@ class EbayArticle {
       }
 
       // todo: customizable bidding confirm time
-      EbayArticle.storePerfInfo("Phase3: Warten auf Bietzeitpunkt");
-      const wakeUpInMs = (modifiedEndTime - Date.now()) - 2000;
+      this.storePerfInfo("Phase3: Warten auf Bietzeitpunkt");
+      const wakeUpInMs = (modifiedEndTime - Date.now()) - 2500;
       await EbayArticle.wait(wakeUpInMs);
 
       // check again if autobid is enabled (except if we should bid for all articles anyway)
@@ -900,14 +888,12 @@ class EbayArticle {
       // Note: After closing the modal, the page will reload and the content script reinitialize!
       if (simulate) {
         // close modal
-        if (closeButton != null) {
-          closeButton.click();
-        }
+        if (closeButton != null) closeButton.click();
         console.log("Biet-O-Matic: Test bid performed for Article %s", this.articleId);
         this.storePerfInfo("Phase3: Testgebot beendet");
         // send info to popup about (almost) successful bid
         let t = this.articleEndTime - Date.now();
-        this.sendArticleLog({
+        EbayArticle.sendArticleLog(this.articleId, {
           component: "Bietvorgang",
           level: "Erfolg",
           message: `Test-Bietvorgang (bis zur Bestätigung) ${t}ms vor Ablauf der Auktion abgeschlossen.`,
@@ -919,13 +905,13 @@ class EbayArticle {
         this.storePerfInfo("Phase3: Gebot wurde abgegeben");
         // send info to popup
         const t = this.articleEndTime - Date.now();
-        this.sendArticleLog({
+        EbayArticle.sendArticleLog(this.articleId, {
           component: "Bietvorgang",
           level: "Erfolg",
           message: `Bietvorgang ${t}ms vor Ablauf der Auktion abgeschlossen.`,
         });
       }
-      // finally also submit performance info
+      // finally also send performance info to popup
       this.sendBidPerfInfo();
       // set bid process to "bidPerformed" - this
       bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${this.articleId}`));
@@ -935,17 +921,18 @@ class EbayArticle {
       }
     } catch (err) {
       // pass error through, will be forwarded to popup
+      console.log("Biet-O-Matic: doBid() aborted: %s", err.message);
       throw err;
     } finally {
-      console.debug("Biet-O-Matic: doBid() reached the end.");
+      //console.debug("Biet-O-Matic: doBid() reached the end.");
     }
   }
 
   // promisified setTimeout - simply wait for a defined time
   static wait(ms) {
     return new Promise(function (resolve) {
-      if (ms < 100) {
-        console.warn("Biet-O-Mat: wait(%s), too short, abort wait.", ms);
+      if (ms < 500) {
+        console.warn("Biet-O-Matic: wait(%s), too short, abort wait.", ms);
         resolve();
       } else {
         window.setTimeout(function () {
@@ -977,6 +964,7 @@ class EbayArticle {
    * store timing data in array - can be sent to popup
   */
   storePerfInfo(message) {
+    console.debug("Biet-O-Matic: storePerfInfo() Message=%s", message);
     this.perfInfo.push({
       date: Date.now(),
       perf: performance.now(),
@@ -1001,7 +989,7 @@ class EbayArticle {
     // calculate timeleft until auction end
     let timeLeft = this.articleEndTime - this.perfInfo[this.perfInfo.length - 1].date;
     result += `timeLeft = ${timeLeft}ms (${this.articleEndTime} - ${this.perfInfo[this.perfInfo.length - 2].date})`;
-    this.sendArticleLog({
+    EbayArticle.sendArticleLog(this.articleId, {
       component: "Bieten",
       level: "Performance",
       message: result,
@@ -1021,27 +1009,25 @@ class EbayArticle {
    * Inform popup about auction end state. It might not be the final state though.
    * This function will likely be called multiple times
    */
-  async sendAuctionEndState(state, simulate = false) {
-    if(!this.hasOwnProperty('articleId'))
-      throw new Error(`sendAuctionEndState(${this.articleId}): Cannot send, auctionId unknown.`);
+  static async sendAuctionEndState(articleId, state, simulate = false) {
     if (state == null)
-      throw new Error(`sendAuctionEndState(${this.articleId}): Cannot send, invalid state.`);
+      throw new Error(`sendAuctionEndState(${articleId}): Cannot send, invalid state.`);
     await browser.runtime.sendMessage({
       action: 'ebayArticleSetAuctionEndState',
-      articleId: this.articleId,
+      articleId: articleId,
       detail: {auctionEndState: state}
     });
     // add the ended state to the log
     const stateText = Object.keys(auctionEndStates).find(key => auctionEndStates[key] === state);
     if (simulate) {
       console.debug("Biet-O-Matic: Simulation is on, returning random state: %s", stateText);
-      this.sendArticleLog({
+      EbayArticle.sendArticleLog(articleId, {
         component: "Bietvorgang",
         level: "Status",
         message: `Bietvorgang mit simuliertem Ergebnis beendet: ${stateText} (${state})`,
       });
     } else {
-      this.sendArticleLog({
+      EbayArticle.sendArticleLog(articleId, {
         component: "Bietvorgang",
         level: "Status",
         message: `Bietvorgang Status wurde aktualisiert: ${stateText} (${state})`,
@@ -1051,15 +1037,43 @@ class EbayArticle {
   }
 
   /*
+   * When the mutation observer is called, the script will check for changed values
+   * - maxBid
+   * - minBid
+   * - bidCount
+   */
+  static parsePageRefresh() {
+    let result = {};
+    // DOM Element Parsing
+    const parseInfoArray = new Map([
+      ['articleId', ['#descItemNumber']],
+      ['articleBidPrice', [
+        '#prcIsum_bidPrice',           // normal running article
+        '#mainContent > div:nth-child(1) > table > tbody > tr:nth-child(6) > td > div > div:nth-child(2) > div.u-flL.w29.vi-price-np > span', // ended auction
+      ]],
+      ['articleBidCount', ['#qty-test']],
+      ['articleMinimumBid', ['#MaxBidId']],
+      ['articleAuctionState', ['#msgPanel']],
+    ]);
+
+    for (let item of parseInfoArray) {
+      let info = EbayArticle.parseInfoEntry(item[0], item[1]);
+      result = Object.assign({}, result, info);
+    }
+    return result;
+  }
+
+  /*
    * handle reload: for various reasons the page can reload or go even to a different page
    * - article ended and redirects to a recommended article -> redirect back
    * - reload when a modal was closed  -> resume bidding
    */
-  async handleReload() {
-    const ebayArticleInfo = {};
-    Object.assign(ebayArticleInfo, EbayArticle.parseInfoEntry(['#descItemNumber'], 'articleId'));
-    Object.assign(ebayArticleInfo, EbayArticle.parseInfoEntry(['#msgPanel'], 'articleAuctionState'));
-
+  static async handleReload() {
+    const ebayArticleInfo = EbayArticle.parsePageRefresh();
+    if (!ebayArticleInfo.hasOwnProperty('articleId')) {
+      console.debug("Biet-O-Matic: handleReload() Aborting, no articleId found: %s", JSON.stringify(ebayArticleInfo));
+      return ebayArticleInfo;
+    }
     // determine auction state - if any yet
     // TODO: think of a better way, to support languages or be robust against changing strings
     let state = auctionEndStates.unknown;
@@ -1078,6 +1092,17 @@ class EbayArticle {
       console.debug("Biet-O-Matic: handleReload() state=%s (%d)", ebayArticleInfo.articleAuctionStateText, state);
     }
 
+    // info related to previous bidding
+    const bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
+    // info from sync storage
+    const articleStoredInfo = browser.storage.sync.get(ebayArticleInfo.articleId);
+
+    /*
+     * retrieve settings from popup
+     * if simulation is on, then we define bid status:
+     * - if endPrice > bidPrice: overbid
+     * - if endPrice <= bidprice: purchased
+     */
     // retrieve settings from popup
     // if simulation is on, then we define successful bid status randomly with 33% chance (ended, overbid, purchased)
     const settings = await browser.runtime.sendMessage({
@@ -1088,7 +1113,13 @@ class EbayArticle {
       simulate = settings.simulate;
       if (simulate) {
         // https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/Global_Objects/Math/math.random
-        state = Math.floor(Math.random() * (3));
+        //state = Math.floor(Math.random() * (3));
+        if (bidInfo != null && ebayArticleInfo.articleBidPrice > bidInfo.maxBid)
+          state = auctionEndStates.overbid;
+        else if (bidInfo != null && ebayArticleInfo.articleBidPrice <= bidInfo.maxBid)
+          state = auctionEndStates.purchased;
+        else
+          state = auctionEndStates.unknown;
       }
     }
 
@@ -1098,17 +1129,13 @@ class EbayArticle {
      * - if articleState from stored result is incomplete (e.g. state.unknown), then send updated state
      * The popup can then use the result to decide e.g. to stop the automatic bidding
      */
-    const articleStoredInfo = await browser.runtime.sendMessage({
-      action: 'getArticleSyncInfo',
-      articleId: ebayArticleInfo.articleId
-    });
-    if (articleStoredInfo != null && articleStoredInfo.hasOwnProperty(ebayArticleInfo.articleId)) {
+    if (articleStoredInfo != null && typeof articleStoredInfo !== 'undefined' && articleStoredInfo.hasOwnProperty(ebayArticleInfo.articleId)) {
       const data = articleStoredInfo[ebayArticleInfo.articleId];
-      // Note: auctionEndState is set&used only by handleReload, furhter below
+      // Note: auctionEndState is set&used only by handleReload, further below
       if (data.hasOwnProperty('auctionEndState') &&
         (state !== auctionEndStates.unknown && data.auctionEndState === auctionEndStates.unknown)) {
         // send updated end state
-        this.sendAuctionEndState(state, simulate).catch(e => {
+        EbayArticle.sendAuctionEndState(ebayArticleInfo.articleId, state, simulate).catch(e => {
           console.warn("Biet-O-Matic: handleReload() Sending Auction End State failed: %s", e.message);
         });
       }
@@ -1118,21 +1145,28 @@ class EbayArticle {
      * If bidInfo exists in sessionStorage, it means a bid process was started before reload
      * we will inform the popup about the state indicated now on the page
      */
-    let bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
     if (bidInfo != null) {
-      console.debug("Biet-O-Matic: handleReload() Found bidInfo in sessionStorage: %s", JSON.stringify(bidInfo));
+      console.debug("Biet-O-Matic: handleReload(%s) Found bidInfo in sessionStorage: %s",
+        ebayArticleInfo.articleId, JSON.stringify(bidInfo));
       // go back to previous page (?)
       // remove bidinfo if the auction for sure ended
       if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
-        console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s", ebayArticleInfo.articleAuctionStateText);
+        console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s (%d)", ebayArticleInfo.articleAuctionStateText, state);
+        EbayArticle.sendAuctionEndState(ebayArticleInfo.articleId, state, simulate).catch(e => {
+          console.warn("Sending initial auction end state failed: %s", e.message);
+        });
         window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
         // set this, so the script will not trigger parsing further down
         ebayArticleInfo.auctionEnded = true;
-        this.sendAuctionEndState(state, simulate).catch(e => {
-          console.warn("Sending initial auction end state failed: %s", e.message);
-        });
+      } else {
+        // todo bidInfo should probably be deleted in some cases, to ensure that when a page was reloaded after
+        //  the bidding procedure was triggered once, the bidding can still be done
       }
+    } else {
+      console.debug("Biet-O-Matic: handleReload(%s) No bidInfo in sessionStorage",
+        ebayArticleInfo.articleId, JSON.stringify(bidInfo));
     }
+    return ebayArticleInfo;
   }
 
   toString () {
@@ -1146,6 +1180,10 @@ class EbayArticle {
   }
 }
 
+/*
+* MAIN
+*/
+
 (function () {
   'use strict';
 
@@ -1157,35 +1195,30 @@ class EbayArticle {
   }
   window.hasRun = true;
 
-  // Object containing determined Information from Ebay Article Page
-  let ebayArticleInfo = {};
+  EbayArticle.handleReload().then((reloadInfo) => {
+    const ebayArticle = new EbayArticle();
+    ebayArticle.init(reloadInfo)
+      .then(() => {
+        try {
+          console.debug("Biet-O-Matic: Initialized - Article Info: %s", ebayArticle.toString());
+          ebayArticle.extendPage();
+          ebayArticle.monitorChanges();
+          // send info to extension popup directly after initialization
+          browser.runtime.sendMessage({
+            action: 'ebayArticleUpdated',
+            detail: ebayArticle
+          }).catch(e => {
+            console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %s", e.message);
+          });
+        } catch (e) {
+          console.warn("Biet-O-Matic: Internal Error while post-initializing: %s", e.message);
+        }
+      })
+      .catch(e => {
+        console.warn("Biet-O-Matic: Article Init failed: %s", e.message);
+      });
+  }).catch(e => {
+    console.warn("Biet-O-Matic: handleReload() failed: %s", e.message);
+  });
 
-  // array with performance information (related to bidding)
-  let perfInfo = [];
-
-  /*
-   * MAIN
-   */
-
-  const ebayArticle = new EbayArticle();
-  ebayArticle.init()
-    .then(() => {
-      try {
-        console.debug("Biet-O-Matic: Initialized - Article Info: %s", ebayArticle.toString());
-        ebayArticle.extendPage();
-        ebayArticle.monitorChanges();
-        // send info to extension popup directly after initialization
-        // browser.runtime.sendMessage({
-        //   action: 'ebayArticleUpdated',
-        //   detail: ebayArticleInfo
-        // }).catch(e => {
-        //   console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %s", e.message);
-        // });
-      } catch (e) {
-        console.warn("Biet-O-Matic: Internal Error while post-initializing: %s", e.message);
-      }
-    })
-    .catch(e => {
-      console.warn("Biet-O-Matic: Article Init failed: %s", e.message);
-    });
 })();

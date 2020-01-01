@@ -146,17 +146,25 @@ tfoot input {
 .footer .fa-heart {
   color: #e52414;
   display: inline-block;
-  position: absolute;
   padding-top: 14px;
-  margin-left: 5px;
+  margin-left: 10px;
 }
 .footer p {
   display: inline-block;
 }
+.fa-github,
+.fa-question-circle {
+  color: #000;
+}
 
-/* Github */
-.footer .fa-github-square {
-  color: #55ACEE;
+.auctionEnded {
+  color: #cc0000;
+}
+.auctionEndsSoon {
+  text-shadow: 0 -0px 2px #9e7aa9;
+}
+.auctionEndsVerySoon {
+  text-shadow: 0 -0px 2px #c1b119;
 }
 
 /*
@@ -179,3 +187,24 @@ tfoot input {
   /* Bump it - jQuery UI is -8px */
   margin-left: -7px;
 }
+
+.row-group td {
+  background-color: #e6e6e6;
+  color: #757575;
+}
+
+/* raleway-regular - latin_latin-ext */
+/*
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 500;
+  src: local('Raleway'), local('Raleway-Regular'),
+  url('../../fonts/raleway-v14-latin_latin-ext-regular.woff2') format('woff2'), !* Chrome 26+, Opera 23+, Firefox 39+ *!
+  url('../../fonts/raleway-v14-latin_latin-ext-regular.woff') format('woff'); !* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ *!
+}
+* {
+  font-size: 100%;
+  font-family: 'Raleway', sans-serif;
+}
+*/
