@@ -497,7 +497,7 @@ class EbayArticle {
           result.articleAuctionStateText = domEntry.textContent.trim()
             .replace(/\n/g, '')
             .replace(/\s+/g, ' ')
-            .replace(/[\s\|]+$/g, '')
+            .replace(/[\s\|]+$/g, '');
           value = EbayArticle.cleanupHtmlString(value);
         } else {
           value = domEntry.textContent.trim();

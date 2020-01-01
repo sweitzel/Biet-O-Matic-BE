@@ -713,9 +713,9 @@ class ArticlesTable {
           name: 'articleEndTime',
           data: 'articleEndTime',
           searchable: false,
-          orderable: false,
+          orderable: true,
           render: ArticlesTable.renderArticleEndTime,
-          defaultContent: '?'
+          defaultContent: 7226582400000
         },
         {
           name: 'articleBidPrice',
@@ -754,8 +754,8 @@ class ArticlesTable {
           data: 'articleGroup',
           width: '80px',
           searchable: true,
-          orderable: false,
-          defaultContent: '',
+          orderable: true,
+          defaultContent: 'Keine Gruppe',
           render: ArticlesTable.renderArticleGroup
         },
         {
@@ -788,16 +788,17 @@ class ArticlesTable {
       pageLength: 25,
       responsive: {details: false},
       ordering: true,
-      order: [3, 'asc'],
+      order: [[3, 'asc']],
       orderFixed: {
         pre: [7, 'asc']
       },
-      orderMulti: true,
+      orderMulti: false,
       rowGroup: {
         className: 'row-group',
         dataSrc: 'articleGroup',
         emptyDataGroup: 'Keine Gruppe',
-        startRender: ArticlesTable.renderGroups
+        startRender: ArticlesTable.renderGroups,
+        endRender: null
       },
       dom: '<l<t>ip>',
       language: ArticlesTable.getDatatableTranslation('de_DE')
@@ -910,8 +911,7 @@ class ArticlesTable {
     //console.log("addArticle() called");
     if (article instanceof Article) {
       let row = this.DataTable.row.add(article);
-      //this.highlightArticleIfExpired(row);
-      row.draw(false);
+      row.draw(true);
       return row;
     } else {
       console.warn("Biet-O-Matic: Adding article failed; incorrect type: %O", article);
@@ -1156,7 +1156,9 @@ class ArticlesTable {
   }
 
   static renderArticleGroup(data, type, row) {
-    if (type !== 'display') return data;
+    if (type !== 'display') {
+      return data;
+    }
     console.debug("Biet-O-Matic: renderArticleGroup(%s) data=%s, type=%O, row=%O", row.articleId, data, type, row);
     let div = document.createElement('div');
     const inpGroup = document.createElement('input');
@@ -1308,7 +1310,10 @@ class ArticlesTable {
   }
 
   static renderArticleEndTime(data, type, row) {
-    if (type !== 'display' && type !== 'filter') return data;
+    if (type !== 'display') {
+      console.log("renderArticleEndTime returning data=%s (type=%s)", data, type);
+      return data;
+    }
     let span = document.createElement('span');
     span.textContent = 'unbegrenzt';
     if (typeof data !== 'undefined') {
