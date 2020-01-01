@@ -37,6 +37,111 @@ import '@fortawesome/fontawesome-free/css/all.css';
 
 import "../css/popup.css";
 
+/*
+ * All functions related to Auction Groups
+ * Group information is stored in browser sync storage under key GROUPS: { 'name': { autoBid: false }, ...]
+ */
+class Group {
+  static async getState(name) {
+    let result = await browser.storage.sync.get('GROUPS');
+    if (Object.keys(result).length === 1) {
+      const groupInfo = result.GROUPS;
+      //console.debug("Biet-O-Matic: Group.getState %s", JSON.stringify(groupInfo));
+      if (groupInfo.hasOwnProperty(name)) {
+        return groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === true;
+      } else {
+        // no value for this group stored yet
+        return false;
+      }
+    } else {
+      // no groups stored at all
+      return false;
+    }
+  }
+
+  static async setState(name, autoBid = false) {
+    let result = await browser.storage.sync.get('GROUPS');
+    const groupInfo = {};
+    if (Object.keys(result).length === 1)
+      Object.assign(groupInfo, result.GROUPS);
+
+    // check if the autoBid needs to be updated
+    if (groupInfo.hasOwnProperty(name) && groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === autoBid)
+      return;
+
+    groupInfo[name] = { autoBid: autoBid };
+    //console.log("group.setState %s", JSON.stringify(groupInfo));
+
+    // store the info back to the storage
+    await browser.storage.sync.set({GROUPS: groupInfo});
+  }
+
+  static async toggleState(name) {
+    if (typeof name === 'undefined')
+      return false;
+    let state = await Group.getState(name);
+    await Group.setState(name, !state);
+    return !state;
+  }
+
+  /*
+   * Add the proper class to the group name span
+   * requires a bit waiting, because the function will be called before the actual elements will be added
+   */
+  static renderState(id, name) {
+    Group.waitFor(`#${id}[name="${name}"]`, 1000).then(spanGroupAutoBid => {
+      if (spanGroupAutoBid == null || spanGroupAutoBid.length !== 1) {
+        console.warn("Biet-O-Matic: Group.renderState, could not find group span");
+        return;
+      }
+      Group.getState(name).then(autoBid => {
+        if (autoBid) {
+          spanGroupAutoBid.addClass('groupAutoBidEnabled');
+          spanGroupAutoBid.removeClass('groupAutoBidDisabled');
+        } else {
+          spanGroupAutoBid.addClass('groupAutoBidDisabled');
+          spanGroupAutoBid.removeClass('groupAutoBidEnabled');
+        }
+      }).catch(e => {
+        console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
+      });
+    }).catch(e => {
+      console.warn("Biet-O-Matic: Group.renderState(%s) failed: %s", name, e.message);
+    });
+  }
+
+  // promisified setTimeout - simply wait for a defined time
+  static wait(ms) {
+    return new Promise(function (resolve) {
+      if (ms < 500) {
+        console.warn("Biet-O-Matic: wait(%s), too short, abort wait.", ms);
+        resolve();
+      } else {
+        window.setTimeout(function () {
+          resolve();
+        }, ms);
+      }
+    });
+  }
+
+  // https://stackoverflow.com/questions/5525071/how-to-wait-until-an-element-exists
+  static waitFor(selector, timeout = 3000) {
+    return new Promise(function (resolve, reject) {
+      waitForElementToDisplay(selector, 250, timeout);
+      function waitForElementToDisplay(selector, time, timeout) {
+        if (timeout <= 0) {
+          reject(`waitFor(${selector}), timeout expired!`);
+        } else if ($(selector).length === 1) {
+          resolve($(selector));
+        } else {
+          setTimeout(function () {
+            waitForElementToDisplay(selector, time, timeout - time);
+          }, time);
+        }
+      }
+    });
+  }
+}
 
 /*
  * All functions related to an eBay Article
@@ -738,6 +843,10 @@ class ArticlesTable {
   async addArticlesFromStorage() {
     let storedInfo = await browser.storage.sync.get(null);
     Object.keys(storedInfo).forEach(articleId => {
+      if (!/^[0-9]+$/.test(articleId)) {
+        console.log("Biet-O-Matic: Skippig invalid stored articleId=%s", articleId);
+        return;
+      }
       let info = storedInfo[articleId];
       info.articleId = articleId;
       console.debug("Biet-O-Matic: addArticlesFromStorage(%s) info=%s", articleId, JSON.stringify(info));
@@ -977,7 +1086,7 @@ class ArticlesTable {
     const labelAutoBid = document.createElement('label');
     const chkAutoBid = document.createElement('input');
     chkAutoBid.id = 'chkAutoBid_' + row.articleId;
-    chkAutoBid.title = 'Aktiviert die "Automatisch Bieten" Funktion für diesen Artikel';
+    chkAutoBid.title = 'Aktiviert Automatisches Bieten für diesen Artikel';
     chkAutoBid.classList.add('ui-button');
     chkAutoBid.type = 'checkbox';
     chkAutoBid.defaultChecked = autoBid;
@@ -1018,7 +1127,9 @@ class ArticlesTable {
     return divArticleMaxBid.outerHTML;
   }
 
-  static renderGroups(rows, groupName, row) {
+  static renderGroups(rows, groupName) {
+    let td = document.createElement('td');
+    td.colSpan = rows.columns()[0].length;
     let div = document.createElement('div');
     let i = document.createElement('i');
     i.classList.add('fas', 'fa-shopping-cart', 'fa-fw');
@@ -1027,9 +1138,21 @@ class ArticlesTable {
     span.textContent = `${groupName} (${rows.count()})`;
     span.style.fontSize = '1.2em';
     span.style.fontWeight = 'normal';
-    div.appendChild(i);
-    div.appendChild(span);
-    return div.innerHTML;
+    td.appendChild(i);
+    td.appendChild(span);
+
+    let spanGroupAutoBid = document.createElement('span');
+    spanGroupAutoBid.id = 'spanGroupAutoBid';
+    spanGroupAutoBid.setAttribute('name', groupName);
+    spanGroupAutoBid.textContent = "Automatikmodus";
+    spanGroupAutoBid.style.position = 'absolute';
+    spanGroupAutoBid.style.right = '5px';
+    Group.renderState('spanGroupAutoBid', groupName);
+    td.appendChild(spanGroupAutoBid);
+    // append data-name to tr
+    return $('<tr/>')
+      .append(td)
+      .attr('data-name', groupName);
   }
 
   static renderArticleGroup(data, type, row) {
@@ -1727,12 +1850,13 @@ class ArticlesTable {
     /*
      * Collapsing groups: https://stackoverflow.com/a/48426471
      */
-    this.DataTable.on('click', 'tr.dtrg-start', e => {
-      console.log("XXX e=%O", e);
-      const name = $(e.target).data('name');
-      console.log("XXX name=%O", name);
-      this.collapsedGroups[name] = !this.collapsedGroups[name];
-      this.DataTable.draw(false);
+    this.DataTable.on('click', 'tr.row-group', e => {
+      const name = $(e.currentTarget).data('name');
+      Group.toggleState(name)
+        .then(() => Group.renderState('spanGroupAutoBid', name))
+        .catch(e => {
+        console.warn("Biet-O-Matic: Failed to toggle group %s autoBid state: %s", name, e.message);
+      });
     });
   }
 }

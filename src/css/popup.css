@@ -191,6 +191,27 @@ tfoot input {
 .row-group td {
   background-color: #e6e6e6;
   color: #757575;
+  cursor: pointer;
+}
+.row-group td:hover {
+   cursor: pointer;
+}
+
+.groupAutoBidEnabled {
+  color: #008206;
+  text-shadow: 1px 1px 2px #9cfda7;
+  user-select: none;
+}
+.groupAutoBidEnabled::after {
+  content: " aktiv";
+}
+.groupAutoBidDisabled {
+  color: #820000;
+  text-shadow: 1px 1px 2px #ec0000;
+  user-select: none;
+}
+.groupAutoBidDisabled::after {
+  content: " inaktiv";
 }
 
 /* raleway-regular - latin_latin-ext */
