@@ -156,7 +156,6 @@ class AutoBid {
       const currentWindow = await browser.windows.getCurrent({populate: false});
       AutoBid.beWindowId = `${window.location.hostname}:${currentWindow.id}`;
     }
-    console.log("XXX getId:%s", AutoBid.beWindowId);
     return AutoBid.beWindowId;
   }
 
@@ -175,12 +174,12 @@ class AutoBid {
 
   /*
    * return the info as is, to be evaluated external
-   * SETTINGS: {autoBid: {id: <Id>, autoBidEnabled: true}, otherSetting: xxxx}
+   * SETTINGS: {autoBid: {id: <Id>, autoBidEnabled: true, timestamp: xxx}, otherSetting: xxxx}
    */
   static async getSyncState() {
-    let info = {autoBidEnabled: false, id: null};
+    let info = {autoBidEnabled: false, id: null, timestamp: null};
     let result = await browser.storage.sync.get('SETTINGS');
-    console.log("XXX getSyncState() %s", JSON.stringify(result));
+    //console.log("XXX getSyncState() %s", JSON.stringify(result));
     if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
       const settingsInfo = result.SETTINGS;
       if (settingsInfo.hasOwnProperty('autoBid')) {
@@ -205,11 +204,15 @@ class AutoBid {
     let newSettings = {
       'autoBid': {
         'id': myId,
-        'autoBidEnabled': autoBidEnabled
+        'autoBidEnabled': autoBidEnabled,
+        'timestamp': Date.now()
       }
     };
 
-    if (autoBidEnabled === false) {
+    if (autoBidEnabled == null) {
+      // dead man switch, outdated entry should be removed
+      delete oldSettings.autoBid;
+    } else if (autoBidEnabled === false) {
       // remove the sync autoBid info, but only if the id stored there is ours (internet / sync problems could cause this)
       if (oldSettings.hasOwnProperty('autoBid') && oldSettings.autoBid.hasOwnProperty('id') && oldSettings.autoBid.id === myId) {
         delete oldSettings.autoBid;
@@ -266,17 +269,8 @@ class AutoBid {
     }
   }
 
-  /*
-   * Toggle the window autoBid (user initiated)
-   * - store local state in window.sessionStorage
-   * - update autoBid state in sync storage, the other instances will deactivate autoBid (sync storage changed event)
-   *   key will be constructed from extension install id + window id
-   */
-  static toggleState() {
-    // todo
-  }
-
   static renderState() {
+    console.debug("Biet-O-Matic: AutoBid.renderState() called.");
     AutoBid.getState().then(info => {
       AutoBid.jq.prop('checked', info.autoBidEnabled);
       // do not set sync state if simulation is on
@@ -345,6 +339,70 @@ class AutoBid {
     return spanPre.outerHTML + link.outerHTML + spanPost.outerHTML;
   }
 
+  /*
+   * If the window has autoBid enabled, then update timestamp in sync storage every 60 seconds
+   * This will ensure that in case a browser is closed/crashes/has no internet, the bidding can still be performed
+   */
+  static deadManSwitch() {
+    try {
+      let localState = AutoBid.getLocalState();
+      if (!localState.simulation && localState.autoBidEnabled) {
+        console.debug("Biet-O-Matic: AutoBid.deadManSwitch() called");
+        AutoBid.setSyncState(null).then(() => {
+          console.debug("Biet-O-Matic: AutoBid.setSyncState(%s) completed", localState.autoBidEnabled);
+        }).catch(e => {
+          console.warn("Biet-O-Matic: AutoBid.setSyncState(%s) failed: %s", localState.autoBidEnabled, e.message);
+        });
+      }
+      AutoBid.removeDeadAutoBid().catch(e => {
+        console.warn(`Biet-O-Matic: deadManSwitch() removeDeadAutoBid failed: ${e.message}`);
+      });
+    } catch (e) {
+      console.warn(`Biet-O-Matic: deadManSwitch() internal error: ${e.message}`);
+    }
+    setTimeout( function () {
+      AutoBid.deadManSwitch();
+    }, 60000);
+  }
+
+  // remove autoBid if the timestamp update was longer than 5 minutes ago
+  static async removeDeadAutoBid() {
+    let syncState = await AutoBid.getSyncState();
+    if (syncState.hasOwnProperty('timestamp') && syncState.timestamp != null) {
+      if ((Date.now() - syncState.timestamp)/1000 > 300 ) {
+        console.debug("Biet-O-Matic: removeDeadAutoBid() Removing dead entry: %s", JSON.stringify(syncState));
+        await AutoBid.setSyncState(null);
+      } else {
+        console.debug("Biet-O-Matic: removeDeadAutoBid() Entry good (%ss old)", (Date.now() - syncState.timestamp)/1000);
+      }
+    }
+  }
+
+  /*
+   * Check if the changeinfo is relevant for this instance
+   * Will be called when the storage update event is received
+   * - change was by different id
+   *   {"SETTINGS":{
+   *   "newValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138","timestamp":1577979582486}},
+   *   "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138","timestamp":1577979572481}}}}
+   */
+  static checkChangeIsRelevant(changeInfo) {
+    if (!changeInfo.hasOwnProperty('newValue')) {
+      console.log("Biet-O-Matic: checkChangeIsRelevant() newValue missing: %s", JSON.stringify(changeInfo));
+      return true;
+    }
+    const newValue = changeInfo.newValue;
+    if (newValue.length > 0 && AutoBid.hasOwnProperty('beWindowId') && newValue.autoBid.id === AutoBid.beWindowId) {
+      console.debug("Biet-O-Matic: AutoBid.checkChangeIsRelevant: Change is not relevant for this id=%s: %s",
+        AutoBid.beWindowId, JSON.stringify(newValue));
+      return false;
+    } else {
+      console.debug("Biet-O-Matic: AutoBid.checkChangeIsRelevant: Change is relevant for this id=%s: %s",
+        AutoBid.beWindowId, JSON.stringify(newValue));
+      return true;
+    }
+  }
+
   // should be called once
   static init() {
     if ($('#inpAutoBid').length === 0)
@@ -352,6 +410,7 @@ class AutoBid {
     AutoBid.jq = $('#inpAutoBid');
     AutoBid.renderState();
     AutoBid.registerEvents();
+    AutoBid.deadManSwitch();
   }
 }
 
@@ -764,7 +823,7 @@ class Article {
     if (this.hasOwnProperty('articleCurrency')) {
       currency = this.articleCurrency;
     } else {
-      console.warn("Biet-O-Matic: Article %s - using default currency EUR", this.articleId);
+      console.log("Biet-O-Matic: Article %s - using default currency EUR", this.articleId);
       currency = 'EUR';
     }
     let price;
@@ -1523,7 +1582,7 @@ class ArticlesTable {
 
   static renderArticleEndTime(data, type, row) {
     if (type !== 'display') {
-      console.log("renderArticleEndTime returning data=%s (type=%s)", data, type);
+      //console.log("renderArticleEndTime returning data=%s (type=%s)", data, type);
       return data;
     }
     let span = document.createElement('span');
@@ -1939,8 +1998,10 @@ class ArticlesTable {
       // "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138"}}}}
       if (area === 'sync') {
         if (changes.hasOwnProperty('SETTINGS')) {
-          console.log("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing AutoBid.");
-          AutoBid.renderState();
+          if(AutoBid.checkChangeIsRelevant(changes.SETTINGS)) {
+            console.log("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing AutoBid.");
+            AutoBid.renderState();
+          }
         }
       }
     });
@@ -1971,7 +2032,7 @@ class ArticlesTable {
         e.preventDefault();
         let tabId = e.target.id.match(/^tabid-([0-9]+)$/);
         tabId = Number.parseInt(tabId[1]);
-        browser.tabs.update(tabId, {active: true, drawAttention: true})
+        browser.tabs.update(tabId, {active: true})
           .catch(e => {
             console.log("Biet-O-Matic: Articles Table - Cannot activate Article Tab %d: %s", tabId, e.message);
           });

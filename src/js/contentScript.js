@@ -759,7 +759,7 @@ class EbayArticle {
         };
       }
       // enable test mode if specified by popup
-      if (settings.hasOwnProperty('simulate') && settings.simulate) {
+      if (settings.hasOwnProperty('simulation') && settings.simulation) {
         console.debug("Biet-O-Matic: Enable simulated bidding.");
         simulate = true;
       }
@@ -1109,8 +1109,8 @@ class EbayArticle {
       action: 'getWindowSettings',
     });
     let simulate = false;
-    if (settings != null && typeof settings !== 'undefined' && settings.hasOwnProperty('simulate')) {
-      simulate = settings.simulate;
+    if (settings != null && typeof settings !== 'undefined' && settings.hasOwnProperty('simulation')) {
+      simulate = settings.simulation;
       if (simulate) {
         // https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/Global_Objects/Math/math.random
         //state = Math.floor(Math.random() * (3));
