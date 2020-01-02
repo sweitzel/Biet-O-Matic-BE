@@ -42,6 +42,7 @@ import "../css/popup.css";
  * Group information is stored in browser sync storage under key GROUPS: { 'name': { autoBid: false }, ...]
  */
 class Group {
+  // returns the state of group autoBid: true|false
   static async getState(name) {
     let result = await browser.storage.sync.get('GROUPS');
     if (Object.keys(result).length === 1) {
@@ -814,6 +815,18 @@ class Article {
       return "";
     else
       return 'tabid-' + this.tabId;
+  }
+
+  // returns the autoBid state for window and article group
+  async getAutoBidState() {
+    const info = {
+      groupName: this.articleGroup,
+      groupAutoBid: await Group.getState(this.articleGroup)
+    };
+    // the the window info
+    const windowAutoBidInfo = AutoBid.getLocalState();
+    Object.assign(info, windowAutoBidInfo);
+    return info;
   }
 
   // get formatted bid price: EUR 123,12
@@ -1771,6 +1784,7 @@ class ArticlesTable {
    * - getArticleSyncInfo: return article info from sync storage
    * - ebayArticleSetAuctionEndState: from content script to update the Auction State with given info
    * - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
+   * - getAutoBidState: returns the state of window and group autoBid for the given articleId
    * - addArticleLog: from content script to store log info for article
    *
    * - browser.tabs.updated: reloaded/new url
@@ -1873,6 +1887,25 @@ class ArticlesTable {
             throw new Error(e.message);
           }
           break;
+        case 'getAutoBidState':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              let articleId;
+              if (request.hasOwnProperty('articleId'))
+                articleId = request.articleId;
+              else
+                articleId = this.getArticleIdByTabId(sender.tab.id);
+              console.debug("Biet-O-Matic: Browser Event getAutoBidState received from tab %s, article=%s",
+                sender.tab.id, articleId);
+              const row = this.getRow(`#${articleId}`);
+              const article = row.data();
+              return Promise.resolve(article.getAutoBidState());
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: Event.getArticleSyncInfo internal error: %s", e.message);
+            throw new Error(e.message);
+          }
+          break;
         case 'addArticleLog':
           try {
             if (this.currentWindowId === sender.tab.windowId) {
@@ -1904,9 +1937,9 @@ class ArticlesTable {
               console.debug("Biet-O-Matic: Browser Event ebayArticleSetAuctionEndState received: sender=%O, state=%s",
                 sender, request.detail.auctionEndState);
               if (request.hasOwnProperty('articleId')) {
-                // 1 == purchased
+                // 1 == purchased : then disable group autoBid
                 if (request.detail.hasOwnProperty('auctionEndState') && request.detail.auctionEndState === 1) {
-                  AutoBid.setState(false);
+                  Group.setState(article.articleGroup, false);
                 }
                 article.updateInfoInStorage(request.detail).catch(e => {
                   console.log("Biet-O-Matic: Unable to store article info: %s", e.message);

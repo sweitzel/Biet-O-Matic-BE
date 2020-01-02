@@ -740,9 +740,9 @@ class EbayArticle {
           message: "Automatisches bieten für Artikel inaktiv"
         };
       }
-      // retrieve settings from popup
-      let settings = await browser.runtime.sendMessage({action: 'getWindowSettings'});
-      if (settings == null || typeof settings === 'undefined' || !settings.hasOwnProperty('autoBidEnabled')) {
+      // check window/group autoBid status
+      let autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
+      if (autoBidInfo == null || typeof autoBidInfo === 'undefined' || !autoBidInfo.hasOwnProperty('autoBidEnabled')) {
         throw {
           component: "Bietvorgang",
           level: "Interner Fehler",
@@ -750,7 +750,7 @@ class EbayArticle {
         };
       }
       // ensure window autoBid is enabled
-      if (settings.autoBidEnabled === false) {
+      if (autoBidInfo.autoBidEnabled === false) {
         console.debug("Biet-O-Matic: doBid() abort, Window autoBid is off");
         throw {
           component: "Bietvorgang",
@@ -759,11 +759,19 @@ class EbayArticle {
         };
       }
       // enable test mode if specified by popup
-      if (settings.hasOwnProperty('simulation') && settings.simulation) {
+      if (autoBidInfo.hasOwnProperty('simulation') && autoBidInfo.simulation) {
         console.debug("Biet-O-Matic: Enable simulated bidding.");
         simulate = true;
       }
-
+      // ensure Group autoBid is enabled
+      if (autoBidInfo.hasOwnProperty('groupAutoBid') && autoBidInfo.groupAutoBid === false) {
+        console.debug("Biet-O-Matic: doBid() abort, Group %s autoBid is off", autoBidInfo.groupName);
+        throw {
+          component: "Bietvorgang",
+          level: "Abbruch",
+          message: `Automatisches bieten für Artikel Gruppe ${autoBidInfo.groupName} inaktiv`
+        };
+      }
       // set bidInfo to ensure the bidding is not executed multiple times
       if (bidInfo == null) {
         // bid not yet running (or not anymore after page refresh)
@@ -873,16 +881,29 @@ class EbayArticle {
       await EbayArticle.wait(wakeUpInMs);
 
       // check again if autobid is enabled (except if we should bid for all articles anyway)
-      if (!settings.hasOwnProperty('bidAllEnabled') || settings.bidAllEnabled === false) {
-        settings = await browser.runtime.sendMessage({action: 'getWindowSettings'});
-        if (settings.hasOwnProperty('autoBidEnabled') && settings.autoBidEnabled === false) {
-          console.info("Biet-O-Matic: doBid() abort, Window autoBid is now off.");
-          throw {
-            component: "Bietvorgang",
-            level: "Abbruch",
-            message: "Automatisches bieten wurde kurz vor der Gebot Bestätigung deaktiviert."
-          };
-        }
+      autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
+      if (autoBidInfo == null || typeof autoBidInfo === 'undefined' || !autoBidInfo.hasOwnProperty('autoBidEnabled')) {
+        throw {
+          component: "Bietvorgang",
+          level: "Interner Fehler",
+          message: "Konnte autoBidEnabled Option nicht erneut prüfen"
+        };
+      }
+      if (autoBidInfo.hasOwnProperty('autoBidEnabled') && autoBidInfo.autoBidEnabled === false) {
+        console.info("Biet-O-Matic: doBid() abort, Window autoBid is now off.");
+        throw {
+          component: "Bietvorgang",
+          level: "Abbruch",
+          message: "Automatisches bieten wurde kurz vor der Gebot Bestätigung deaktiviert."
+        };
+      }
+      if (autoBidInfo.hasOwnProperty('grouAutoBid') && autoBidInfo.groupAutoBid === false) {
+        console.info("Biet-O-Matic: doBid() abort, Group autoBid is now off.");
+        throw {
+          component: "Bietvorgang",
+          level: "Abbruch",
+          message: "Automatisches bieten für die Artikel Gruppe wurde kurz vor der Gebot Bestätigung deaktiviert."
+        };
       }
 
       // Note: After closing the modal, the page will reload and the content script reinitialize!
