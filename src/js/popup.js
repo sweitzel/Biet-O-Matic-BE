@@ -144,6 +144,218 @@ class Group {
 }
 
 /*
+ * Manage Window AutoBid
+ * - uses both window.sessionStorage and browser sync storage to maintain the state
+ * - only one window can have autoBid enabled
+ * - when simulation is enabled, the state is not stored to sync storage
+ */
+class AutoBid {
+  // own ID: Extension Id + Browser Window Id ->
+  static async getId() {
+    if (!AutoBid.hasOwnProperty('beWindowId')) {
+      const currentWindow = await browser.windows.getCurrent({populate: false});
+      AutoBid.beWindowId = `${window.location.hostname}:${currentWindow.id}`;
+    }
+    console.log("XXX getId:%s", AutoBid.beWindowId);
+    return AutoBid.beWindowId;
+  }
+
+  static getLocalState() {
+    const info = {autoBidEnabled: false, simulation: false};
+    let result = JSON.parse(window.sessionStorage.getItem('settings'));
+    if (result != null) {
+      Object.assign(info, result);
+    }
+    return info;
+  }
+  static setLocalState(autoBidEnabled, simulation) {
+    Popup.updateSetting('autoBidEnabled', autoBidEnabled);
+    Popup.updateSetting('simulation', simulation);
+  }
+
+  /*
+   * return the info as is, to be evaluated external
+   * SETTINGS: {autoBid: {id: <Id>, autoBidEnabled: true}, otherSetting: xxxx}
+   */
+  static async getSyncState() {
+    let info = {autoBidEnabled: false, id: null};
+    let result = await browser.storage.sync.get('SETTINGS');
+    console.log("XXX getSyncState() %s", JSON.stringify(result));
+    if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
+      const settingsInfo = result.SETTINGS;
+      if (settingsInfo.hasOwnProperty('autoBid')) {
+        Object.assign(info, settingsInfo.autoBid);
+        console.debug("Biet-O-Matic: AutoBid.getSyncState() stored=%s, info=%s",
+          JSON.stringify(settingsInfo), JSON.stringify(info));
+      }
+    }
+    return info;
+  }
+  /*
+   * set state in browser sync storage. Do not store simulation state here.
+   * - if autoBid is being disabled for this Id, then only update the syncInfo if the id is ours
+   */
+  static async setSyncState(autoBidEnabled) {
+    let result = await browser.storage.sync.get('SETTINGS');
+    let oldSettings = {};
+    if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
+      oldSettings = result.SETTINGS;
+    }
+    const myId = await AutoBid.getId();
+    let newSettings = {
+      'autoBid': {
+        'id': myId,
+        'autoBidEnabled': autoBidEnabled
+      }
+    };
+
+    if (autoBidEnabled === false) {
+      // remove the sync autoBid info, but only if the id stored there is ours (internet / sync problems could cause this)
+      if (oldSettings.hasOwnProperty('autoBid') && oldSettings.autoBid.hasOwnProperty('id') && oldSettings.autoBid.id === myId) {
+        delete oldSettings.autoBid;
+      }
+      newSettings = oldSettings;
+    } else {
+      newSettings = Object.assign({}, oldSettings, newSettings);
+    }
+    console.debug("AutoBid.setSyncState(%s) Setting autoBid info %s", autoBidEnabled, JSON.stringify(newSettings));
+    await browser.storage.sync.set({'SETTINGS': newSettings});
+  }
+
+  /*
+   * Determine autoBid state
+   * - returns generally the local state
+   * - if the sync state is enabled for a different window (Id) then disable autobid
+   * Note: this function is called by renderState, which will be called regularly to check for remote state updates
+   * return {enabled: true|false, simulation: true|false, id: <Id>|null, message: 'Text'}
+   */
+  static async getState() {
+    const info = {autoBidEnabled: false, simulation: false, id: null};
+    const localInfo = AutoBid.getLocalState();
+    const syncInfo = await AutoBid.getSyncState();
+
+    const myId = await AutoBid.getId();
+    Object.assign(info, localInfo);
+
+    // if sync state is for different id , then disable autoBid (sync state is only added if active)
+    if (syncInfo.hasOwnProperty('id') && syncInfo.id != null && syncInfo.id !== myId) {
+      if (info.simulation === false) {
+        info.autoBidEnabled = false;
+        AutoBid.setLocalState(info.autoBidEnabled);
+      }
+      info.messageHtml = AutoBid.getDisableMessage(syncInfo.id, info.simulation);
+    }
+    return info;
+  }
+
+  /*
+   * Set state in local storage and sync storage if not simulating
+   */
+  static setState(autoBidEnabled = false, simulation = false) {
+    AutoBid.setLocalState(autoBidEnabled, simulation);
+    // do not set sync state if simulation is on
+    if (simulation === false) {
+      AutoBid.setSyncState(autoBidEnabled).then(() => {
+        console.debug("Biet-O-Matic: AutoBid.setSyncState(%s) completed", autoBidEnabled);
+        AutoBid.renderState();
+      }).catch(e => {
+        console.warn("Biet-O-Matic: AutoBid.setSyncState(%s) failed: %s", autoBidEnabled, e.message);
+      });
+    } else {
+      AutoBid.renderState();
+    }
+  }
+
+  /*
+   * Toggle the window autoBid (user initiated)
+   * - store local state in window.sessionStorage
+   * - update autoBid state in sync storage, the other instances will deactivate autoBid (sync storage changed event)
+   *   key will be constructed from extension install id + window id
+   */
+  static toggleState() {
+    // todo
+  }
+
+  static renderState() {
+    AutoBid.getState().then(info => {
+      AutoBid.jq.prop('checked', info.autoBidEnabled);
+      // do not set sync state if simulation is on
+      if (info.simulation === false) {
+        $("#lblAutoBid").text('Automatikmodus');
+        $("#internal").addClass('hidden');
+      } else {
+        $("#lblAutoBid").text('Automatikmodus (Test)');
+        $("#internal").removeClass('hidden');
+      }
+      $("#autoBidMessage").empty();
+      // show info about other instances and their autoBid state
+      if (info.hasOwnProperty('message'))
+        $("#autoBidMessage").text(info.message);
+      else if (info.hasOwnProperty('messageHtml')) {
+        $("#autoBidMessage").append(info.messageHtml);
+      }
+      Popup.updateFavicon(info.autoBidEnabled, null, info.simulation);
+    }).catch(e => {
+      console.warn("Biet-O-Matic: AutoBid.renderState() failed: %s", e.message);
+    });
+  }
+
+  static registerEvents() {
+    // window inpAutoBid checkbox
+    AutoBid.jq.on('click', e => {
+      e.stopPropagation();
+      console.debug('Biet-O-Matic: Automatic mode toggled: %s - shift=%s, ctrl=%s', AutoBid.jq.is(':checked'), e.shiftKey, e.ctrlKey);
+      AutoBid.setState(AutoBid.jq.is(':checked'), e.shiftKey);
+    });
+  }
+
+  static getDisableMessage(otherId, simulation) {
+    const spanPre = document.createElement('span');
+    const link = document.createElement('a');
+    const spanPost = document.createElement('span');
+    if (simulation) {
+      spanPre.textContent = 'Automatikmodus ist in einem ';
+      link.href = `#${otherId}`;
+      link.id = 'windowLink';
+      link.textContent = 'anderen Fenster';
+      spanPost.textContent = ' aktiv.';
+    } else {
+      spanPre.textContent = 'Automatikmodus deaktiviert. Er wurde in einem ';
+      link.href = `#${otherId}`;
+      link.id = 'windowLink';
+      link.textContent = 'anderen Fenster';
+      spanPost.textContent = ' aktiviert.';
+    }
+
+    // jump to specific window
+    Group.waitFor('#windowLink').then(windowLink => {
+      windowLink.on('click', e => {
+        e.preventDefault();
+        const windowId = e.currentTarget.hash.split(':')[1];
+        if (/[0-9]+/.test(windowId)) {
+          browser.windows.update(Number.parseInt(windowId, 10), {focused: true}).catch(e => {
+            console.log("Biet-O-Matic: Cannot activate specified window %s: %s", windowId, e.message);
+          });
+        } else {
+          console.warn("Biet-O-Matic: Cannot activate specified window, id is not a number: %s", windowId);
+        }
+      });
+    });
+
+    return spanPre.outerHTML + link.outerHTML + spanPost.outerHTML;
+  }
+
+  // should be called once
+  static init() {
+    if ($('#inpAutoBid').length === 0)
+      console.warn("Biet-O-Matic: AutoBid cannot be initialized: inpAutoBid not found, inpAutoBid=%O", $('#inpAutoBid'));
+    AutoBid.jq = $('#inpAutoBid');
+    AutoBid.renderState();
+    AutoBid.registerEvents();
+  }
+}
+
+/*
  * All functions related to an eBay Article
  * - hold info for DataTable
  * -
@@ -1159,7 +1371,7 @@ class ArticlesTable {
     if (type !== 'display') {
       return data;
     }
-    console.debug("Biet-O-Matic: renderArticleGroup(%s) data=%s, type=%O, row=%O", row.articleId, data, type, row);
+    //console.debug("Biet-O-Matic: renderArticleGroup(%s) data=%s, type=%O, row=%O", row.articleId, data, type, row);
     let div = document.createElement('div');
     const inpGroup = document.createElement('input');
     inpGroup.id = 'inpGroup_' + row.articleId;
@@ -1517,8 +1729,6 @@ class ArticlesTable {
               console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received from tab %s, articleId=%s, articleDescription=%s",
                 sender.tab.id, request.detail.articleId, request.detail.articleDescription);
               this.updateArticle(request.detail, null, sender.tab.id);
-              // update BE favicon for this tab
-              //updateFavicon($('#inpAutoBid').prop('checked'), sender.tab);
             }
           } catch (e) {
             console.warn("Biet-O-Matic: Event.ebayArticleUpdated internal error: %s", e.message);
@@ -1637,9 +1847,7 @@ class ArticlesTable {
               if (request.hasOwnProperty('articleId')) {
                 // 1 == purchased
                 if (request.detail.hasOwnProperty('auctionEndState') && request.detail.auctionEndState === 1) {
-                  // todo implement group autobid
-                  $('#inpAutoBid').prop('checked', false);
-                  Popup.updateSetting('autoBidEnabled', false);
+                  AutoBid.setState(false);
                 }
                 article.updateInfoInStorage(request.detail).catch(e => {
                   console.log("Biet-O-Matic: Unable to store article info: %s", e.message);
@@ -1725,7 +1933,16 @@ class ArticlesTable {
 
     // listen for changes to browser storage area (settings, article info)
     browser.storage.onChanged.addListener((changes, area) => {
-      console.log("XXX browser %s storage changed: %s", area, JSON.stringify(changes));
+      console.debug("Biet-O-Matic: Event.StorageChanged(%s) changed: %s", area, JSON.stringify(changes));
+      // {"SETTINGS":{
+      // "newValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:1166"}},
+      // "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138"}}}}
+      if (area === 'sync') {
+        if (changes.hasOwnProperty('SETTINGS')) {
+          console.log("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing AutoBid.");
+          AutoBid.renderState();
+        }
+      }
     });
 
     /*
@@ -1754,7 +1971,7 @@ class ArticlesTable {
         e.preventDefault();
         let tabId = e.target.id.match(/^tabid-([0-9]+)$/);
         tabId = Number.parseInt(tabId[1]);
-        browser.tabs.update(tabId, {active: true})
+        browser.tabs.update(tabId, {active: true, drawAttention: true})
           .catch(e => {
             console.log("Biet-O-Matic: Articles Table - Cannot activate Article Tab %d: %s", tabId, e.message);
           });
@@ -1981,59 +2198,25 @@ class Popup {
     browser.browserAction.onClicked.addListener(function (tab, clickData) {
       if (this.whoIAm.currentWindow.id === tab.windowId) {
         console.debug('Biet-O-Matic: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
-        const toggle = $('#inpAutoBid');
-        let checked = toggle.prop('checked');
         // only toggle favicon for ebay tabs
         if (tab.url.startsWith(browser.extension.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/)) {
-          toggle.prop('checked', !checked);
-          Popup.updateSetting('autoBidEnabled', !checked);
-          // note, in chrome the action click cannot be modified with shift
-          Popup.updateSetting('simulate', false);
-          Popup.updateFavicon(!checked, null, false);
+          AutoBid.toggleState();
         }
-      }
-    });
-
-    // window inpAutoBid checkbox
-    const inpAutoBid = $('#inpAutoBid');
-    inpAutoBid.on('click', e => {
-      e.stopPropagation();
-      console.debug('Biet-O-Matic: Automatic mode toggled: %s - shift=%s, ctrl=%s', inpAutoBid.is(':checked'), e.shiftKey, e.ctrlKey);
-      Popup.updateSetting('autoBidEnabled', inpAutoBid.is(':checked'));
-      // when shift is pressed while clicking autobid checkbox, enable Simulation mode
-      if (inpAutoBid.is(':checked') && e.shiftKey) {
-        console.log("Biet-O-Matic: Enabling Simulation mode.");
-        Popup.updateFavicon(inpAutoBid.is(':checked'), null, true);
-        Popup.updateSetting('simulate', true);
-        $("#lblAutoBid").text('Automatikmodus (Test)');
-        $("#internal").removeClass('hidden');
-      } else {
-        Popup.updateFavicon(inpAutoBid.is(':checked'), null, false);
-        Popup.updateSetting('simulate', false);
-        $("#lblAutoBid").text('Automatikmodus');
-        $("#internal").addClass('hidden');
       }
     });
   }
 
   /*
    * Restore settings from window session storage
+   * - autoBid settings
+   * - dataTable length (pagination)
    */
   restoreSettings() {
-    // inpAutoBid
+    AutoBid.init();
+
     let result = JSON.parse(window.sessionStorage.getItem('settings'));
     if (result != null) {
       console.debug("Biet-O-Matic: restoreSettings() updating from session storage: settings=%s", JSON.stringify(result));
-      if (result.hasOwnProperty('autoBidEnabled')) {
-        $('#inpAutoBid').prop('checked', result.autoBidEnabled);
-      }
-      if (result.hasOwnProperty('simulate') && result.simulate) {
-        $("#lblAutoBid").text('Automatikmodus (Test)');
-        Popup.updateFavicon($('#inpAutoBid').is(':checked'), null, true);
-        $("#internal").removeClass('hidden');
-      } else {
-        Popup.updateFavicon($('#inpAutoBid').is(':checked'));
-      }
       // pagination setting for articlesTable
       if (result.hasOwnProperty('articlesTableLength') && this.table != null) {
         this.table.DataTable.page.len(result.articlesTableLength).draw();
@@ -2044,14 +2227,16 @@ class Popup {
   /*
    * update setting in session storage:
    * autoBidEnabled - Automatic Bidding enabled
-   * bidAllEnabled  - Bid should be placed for all articles, even one was already won.
-   * simulate       - Perfom simulated bidding (do all , but not confirm the bid)
+   * simulation     - Perfom simulated bidding (do all , but not confirm the bid)
    */
   static updateSetting(key, value) {
     console.debug("Biet-O-Matic: updateSetting() key=%s, value=%s", key, JSON.stringify(value));
     let result = JSON.parse(window.sessionStorage.getItem('settings'));
     if (result == null)
       result = {};
+    // remove old settings
+    if (result.hasOwnProperty('simulate'))
+      delete result.simulate;
     result[key] = value;
     window.sessionStorage.setItem('settings', JSON.stringify(result));
   }
@@ -2107,7 +2292,6 @@ class Popup {
       browser.browserAction.setIcon({imageData: favImg, tabId: tab.id});
     }
   }
-
 }
 
 //region Favicon Handling
