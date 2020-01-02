@@ -239,11 +239,11 @@ class AutoBid {
 
     // if sync state is for different id , then disable autoBid (sync state is only added if active)
     if (syncInfo.hasOwnProperty('id') && syncInfo.id != null && syncInfo.id !== myId) {
-      if (info.simulation === false) {
+      info.messageHtml = AutoBid.getDisableMessage(syncInfo.id, info.autoBidEnabled, info.simulation);
+      if (info.simulation === false || info.autoBid === true) {
         info.autoBidEnabled = false;
         AutoBid.setLocalState(info.autoBidEnabled);
       }
-      info.messageHtml = AutoBid.getDisableMessage(syncInfo.id, info.simulation);
     }
     return info;
   }
@@ -309,11 +309,11 @@ class AutoBid {
     });
   }
 
-  static getDisableMessage(otherId, simulation) {
+  static getDisableMessage(otherId, autoBidEnabled, simulation) {
     const spanPre = document.createElement('span');
     const link = document.createElement('a');
     const spanPost = document.createElement('span');
-    if (simulation) {
+    if (simulation || autoBidEnabled === false) {
       spanPre.textContent = 'Automatikmodus ist in einem ';
       link.href = `#${otherId}`;
       link.id = 'windowLink';
