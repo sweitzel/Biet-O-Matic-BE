@@ -149,6 +149,13 @@ tfoot input {
   padding-top: 14px;
   margin-left: 10px;
 }
+.footer .fa-heart:after {
+  content: "Spenden";
+  margin-left: 5px;
+  color: #000;
+  font-size: x-small;
+}
+
 .footer p {
   display: inline-block;
 }
