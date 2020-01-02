@@ -44,10 +44,13 @@ import "../css/popup.css";
 class Group {
   // returns the state of group autoBid: true|false
   static async getState(name) {
+    // name=null -> name=Keine Gruppe
+    if (name == null || typeof name === 'undefined')
+      name = 'Keine Gruppe';
     let result = await browser.storage.sync.get('GROUPS');
     if (Object.keys(result).length === 1) {
       const groupInfo = result.GROUPS;
-      //console.debug("Biet-O-Matic: Group.getState %s", JSON.stringify(groupInfo));
+      console.debug("Biet-O-Matic: Group.getState(%s:%s) %s", name, typeof name, JSON.stringify(groupInfo));
       if (groupInfo.hasOwnProperty(name)) {
         return groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === true;
       } else {
@@ -61,6 +64,9 @@ class Group {
   }
 
   static async setState(name, autoBid = false) {
+    // name=null -> name=Keine Gruppe
+    if (name == null || typeof name === 'undefined')
+      name = 'Keine Gruppe';
     let result = await browser.storage.sync.get('GROUPS');
     const groupInfo = {};
     if (Object.keys(result).length === 1)
@@ -734,31 +740,38 @@ class Article {
   }
 
   static getDiffMessage(description, oldVal, newVal) {
-    if (typeof oldVal === 'object') {
-      // Short diff: https://stackoverflow.com/a/37396358
-      let diffResult = Object.keys(newVal).reduce((diff, key) => {
-        if (key === 'articleAuctionState') return diff; // ignore this, too long
-        if (oldVal[key] === newVal[key]) return diff;
-        let text = this.getDiffMessage(key, oldVal[key], newVal[key]);
-        return {
-          ...diff,
-          [key]: text
-        };
-      }, {});
-      if (Object.keys(diffResult).length > 0) {
-        const messages = [];
-        Object.keys(diffResult).forEach(key => {
-          messages.push(diffResult[key]);
-        });
-        return `${description}: ${messages.join('; ')}`;
+    try {
+      console.debug("getDiffMessage() description=%s, oldVal = %O (%s), newVal=%O",
+        description, oldVal, typeof oldVal, newVal);
+      if (oldVal != null && typeof oldVal === 'object') {
+        // Short diff: https://stackoverflow.com/a/37396358
+        let diffResult = Object.keys(newVal).reduce((diff, key) => {
+          if (key === 'articleAuctionState') return diff; // ignore this, too long
+          if (oldVal[key] === newVal[key]) return diff;
+          let text = this.getDiffMessage(key, oldVal[key], newVal[key]);
+          return {
+            ...diff,
+            [key]: text
+          };
+        }, {});
+        if (Object.keys(diffResult).length > 0) {
+          const messages = [];
+          Object.keys(diffResult).forEach(key => {
+            messages.push(diffResult[key]);
+          });
+          return `${description}: ${messages.join('; ')}`;
+        } else {
+          return null;
+        }
       } else {
-        return null;
+        if (oldVal == null || typeof oldVal === 'undefined')
+          return `${description}: ${newVal}`;
+        else
+          return `${description}: ${oldVal} -> ${newVal}`;
       }
-    } else {
-      if (oldVal == null || typeof oldVal === 'undefined')
-        return `${description}: ${newVal}`;
-      else
-        return `${description}: ${oldVal} -> ${newVal}`;
+    } catch(e) {
+      console.warn(`getDiffMessage(${description}) failed: ${e.message}`);
+      return `${description}: Kann die Unterschiede nicht anzeigen!`;
     }
   }
 
@@ -819,9 +832,12 @@ class Article {
 
   // returns the autoBid state for window and article group
   async getAutoBidState() {
+    let groupName = 'Keine Gruppe';
+    if (this.hasOwnProperty('articleGroup') && this.articleGroup != null && typeof this.articleGroup !== 'undefined' )
+      groupName = this.articleGroup;
     const info = {
-      groupName: this.articleGroup,
-      groupAutoBid: await Group.getState(this.articleGroup)
+      groupName: groupName,
+      groupAutoBid: await Group.getState(groupName)
     };
     // the the window info
     const windowAutoBidInfo = AutoBid.getLocalState();
@@ -1760,22 +1776,6 @@ class ArticlesTable {
   }
 
   /*
-   * If an article is close to ending or ended, highlight the endDate
-   * if it ended, highlight the status as well
-   */
-  highlightArticleIfExpired(row) {
-    let article = row.data();
-    let node = this.DataTable.cell(`#${article.articleId}`, 'articleEndTime:name').node();
-    if (article.articleEndTime - Date.now() < 0) {
-      // ended
-      $(node).css('color', 'red');
-    } else if (article.articleEndTime - Date.now() < 600) {
-      // ends in 10 minute
-      $(node).css('text-shadow', '0px -0px 2px #FF0000');
-    }
-  }
-
-  /*
    * Events for the Articles Table:
    * - ebayArticleUpdated: from content script with info about article
    * - ebayArticleMaxBidUpdated: from content script to update maxBid info
@@ -1902,7 +1902,7 @@ class ArticlesTable {
               return Promise.resolve(article.getAutoBidState());
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: Event.getArticleSyncInfo internal error: %s", e.message);
+            console.warn("Biet-O-Matic: Event.getAutoBidState internal error: %s", e.message);
             throw new Error(e.message);
           }
           break;
@@ -2294,7 +2294,9 @@ class Popup {
         console.debug('Biet-O-Matic: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
         // only toggle favicon for ebay tabs
         if (tab.url.startsWith(browser.extension.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/)) {
-          AutoBid.toggleState();
+          AutoBid.toggleState().catch(e => {
+            console.log("Biet-O-Matic: Browser Action clicked, AutoBid.toggleState failed: %s", e.message);
+          });
         }
       }
     });

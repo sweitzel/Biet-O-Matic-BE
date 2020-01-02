@@ -335,7 +335,7 @@ class EbayArticle {
                 action: 'ebayArticleUpdated',
                 detail: this
               }).catch((e) => {
-                console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %O", e);
+                console.warn(`Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: ${e.message}`);
               });
             } else {
               // send trigger to extension popup, so it can refresh the date (timeleft)
@@ -371,7 +371,7 @@ class EbayArticle {
       ],
       ['articleBidPrice', [
         '#prcIsum_bidPrice',           // normal running article
-        '#mainContent > div:nth-child(1) > table > tbody > tr:nth-child(6) > td > div > div:nth-child(2) > div.u-flL.w29.vi-price-np > span', // ended auction
+        'div.vi-price-np > span',      // ended auction
       ]],
       ['articleBuyPrice', [
         '#prcIsum'                     // sofortkauf
@@ -383,6 +383,33 @@ class EbayArticle {
       ['articleBidCount', ['#qty-test']],
       ['articleMinimumBid', ['#MaxBidId']]
     ]);
+    for (let item of parseInfoArray) {
+      let info = EbayArticle.parseInfoEntry(item[0], item[1]);
+      result = Object.assign({}, result, info);
+    }
+    return result;
+  }
+
+  /*
+ * When the mutation observer is called, the script will check for changed values
+ * - maxBid
+ * - minBid
+ * - bidCount
+ */
+  static parsePageRefresh() {
+    let result = {};
+    // DOM Element Parsing
+    const parseInfoArray = new Map([
+      ['articleId', ['#descItemNumber']],
+      ['articleBidPrice', [
+        '#prcIsum_bidPrice',           // normal running article
+        '#mainContent > div:nth-child(1) > table > tbody > tr:nth-child(6) > td > div > div:nth-child(2) > div.u-flL.w29.vi-price-np > span', // ended auction
+      ]],
+      ['articleBidCount', ['#qty-test']],
+      ['articleMinimumBid', ['#MaxBidId']],
+      ['articleAuctionState', ['#msgPanel']],
+    ]);
+
     for (let item of parseInfoArray) {
       let info = EbayArticle.parseInfoEntry(item[0], item[1]);
       result = Object.assign({}, result, info);
@@ -1055,33 +1082,6 @@ class EbayArticle {
       });
     }
     return true;
-  }
-
-  /*
-   * When the mutation observer is called, the script will check for changed values
-   * - maxBid
-   * - minBid
-   * - bidCount
-   */
-  static parsePageRefresh() {
-    let result = {};
-    // DOM Element Parsing
-    const parseInfoArray = new Map([
-      ['articleId', ['#descItemNumber']],
-      ['articleBidPrice', [
-        '#prcIsum_bidPrice',           // normal running article
-        '#mainContent > div:nth-child(1) > table > tbody > tr:nth-child(6) > td > div > div:nth-child(2) > div.u-flL.w29.vi-price-np > span', // ended auction
-      ]],
-      ['articleBidCount', ['#qty-test']],
-      ['articleMinimumBid', ['#MaxBidId']],
-      ['articleAuctionState', ['#msgPanel']],
-    ]);
-
-    for (let item of parseInfoArray) {
-      let info = EbayArticle.parseInfoEntry(item[0], item[1]);
-      result = Object.assign({}, result, info);
-    }
-    return result;
   }
 
   /*
