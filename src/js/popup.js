@@ -1244,7 +1244,7 @@ class ArticlesTable {
           }
         });
       } else {
-        console.debug("Biet-O-Matic: openArticleTabsForBidding() skipping run - Window autoBid disabled.");
+        //console.debug("Biet-O-Matic: openArticleTabsForBidding() skipping run - Window autoBid disabled.");
       }
     } catch (e) {
       console.warn(`Biet-O-Matic: openArticleTabsForBidding() Internal Error: ${e.message}`);
@@ -1553,11 +1553,17 @@ class ArticlesTable {
     labelAutoBid.appendChild(spanAutoBid);
 
     if (closedArticle === true) {
+      labelAutoBid.classList.add('ui-state-disabled');
       inpMaxBid.disabled = true;
       chkAutoBid.disabled = true;
     } else {
       // maxBid was entered, check if the autoBid field can be enabled
-      chkAutoBid.disabled = !row.activateAutoBid();
+      if (row.activateAutoBid()) {
+        chkAutoBid.disabled = false;
+      } else {
+        labelAutoBid.classList.add('ui-state-disabled');
+        chkAutoBid.disabled = true;
+      }
       // set tooltip for button to minBidValue
       // if the maxBid is < minimum bidding price or current Price, add highlight color
       if ((row.articleEndTime - Date.now() > 0) && chkAutoBid.disabled) {
@@ -1571,6 +1577,7 @@ class ArticlesTable {
       // disable maxBid/autoBid if article ended
       if (row.articleEndTime - Date.now() <= 0) {
         //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
+        labelAutoBid.classList.add('ui-state-disabled');
         inpMaxBid.disabled = true;
         chkAutoBid.disabled = true;
       }
@@ -1939,9 +1946,6 @@ class ArticlesTable {
     let dateCell = $('#articles').DataTable().cell(`#${articleId}`, 'articleEndTime:name');
     // redraw date
     if (dateCell !== 'undefined' && dateCell.length === 1) {
-      console.log("Redraw date: %O", dateCell);
-      // invalidate seems enough to ensure the date is redrawn
-      // draw(false) cannot be used -> leads to removing focus off maxbid input
       dateCell.invalidate('data').draw(false);
     }
   }
