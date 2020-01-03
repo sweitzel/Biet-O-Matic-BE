@@ -2282,6 +2282,8 @@ class ArticlesTable {
         // check if maxBid > buyPrice (sofortkauf), then adjust it to the buyprice - 1 cent
         if (article.hasOwnProperty('articleBuyPrice') && article.articleMaxBid > article.articleBuyPrice) {
           article.articleMaxBid = article.articleBuyPrice - 0.01;
+        } else if (article.hasOwnProperty('articleMinimumBid') && article.articleMaxBid < article.articleMinimumBid) {
+          article.articleMaxBid = article.articleMinimumBid;
         }
       } else if (e.target.id.startsWith('chkAutoBid_')) {
         // autoBid checkbox was clicked
