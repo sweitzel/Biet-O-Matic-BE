@@ -953,17 +953,21 @@ class Article {
   }
 
   // close the article tab, except its active
-  closeTab(doNotCloseIfActive = false) {
+  closeTab(onlyCloseIfNotActive = false, onlyCloseIfOpenedForBidding = true) {
     if (this.tabId == null) {
       console.debug("Article.closeTab() Article %s, Tab=%s: Skip - no tabId", this.articleId, this.tabId);
       return;
     }
+    if (onlyCloseIfOpenedForBidding && !this.tabOpenedForBidding) {
+      return;
+    }
     browser.tabs.get(this.tabId).then(tab => {
-      if ((this.hasOwnProperty('tabOpenedForBidding') && this.tabOpenedForBidding === false) || (doNotCloseIfActive && tab.active)) {
+      if ((this.hasOwnProperty('tabOpenedForBidding') && this.tabOpenedForBidding === false) || (onlyCloseIfNotActive && tab.active)) {
         console.debug("Article.closeTab() Article %s, Tab=%s: Dont close (%O)", this.articleId, this.tabId, tab);
         return;
       }
       browser.tabs.remove(this.tabId).then(() => {
+        console.debug("Article.closeTab() Article %s, Tab=%s: Closed.", this.articleId, this.tabId);
         // hopefully this will lead to log entry for article
         if (this.hasOwnProperty('tabOpenedForBidding'))
           delete this.tabOpenedForBidding;
@@ -1364,7 +1368,7 @@ class ArticlesTable {
     //console.log("addArticle() called");
     if (article instanceof Article) {
       let row = this.DataTable.row.add(article);
-      row.draw(true);
+      this.DataTable.draw(false);
       return row;
     } else {
       console.warn("Biet-O-Matic: Adding article failed; incorrect type: %O", article);
@@ -2344,6 +2348,21 @@ class ArticlesTable {
           row.child(ArticlesTable.renderArticleLog(row.data())).show();
           row.data().articleDetailsShown = true;
         }
+      }
+    });
+
+    // remember last focused event
+    this.DataTable.on('focus', 'tr input', e => {
+      console.debug('Biet-O-Matic: configureUi() INPUT Focus Event this=%O', e);
+      this.lastFocusedInput = e.target.id;
+    });
+
+    // handle redraw: restore focus in last input
+    this.DataTable.on('draw.dt', (e) => {
+      if (this.hasOwnProperty('lastFocusedInput')) {
+        Group.waitFor(`#${this.lastFocusedInput}`, 200).then(lastFocusedInput => {
+          lastFocusedInput.focus();
+        });
       }
     });
 
