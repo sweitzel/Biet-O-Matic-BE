@@ -96,7 +96,7 @@ class Group {
    * requires a bit waiting, because the function will be called before the actual elements will be added
    */
   static renderState(id, name) {
-    Group.waitFor(`#${id}[name="${name}"]`, 1000).then(spanGroupAutoBid => {
+    Group.waitFor(`#${id}[name="${name}"]`, 500).then(spanGroupAutoBid => {
       if (spanGroupAutoBid == null || spanGroupAutoBid.length !== 1) {
         console.warn("Biet-O-Matic: Group.renderState, could not find group span");
         return;
@@ -159,7 +159,7 @@ class Group {
 class AutoBid {
   // own ID: Extension Id + Browser Window Id ->
   static async getId() {
-    if (!AutoBid.hasOwnProperty('beWindowId')) {
+    if (!AutoBid.hasOwnProperty('beWindowId') || AutoBid.beWindowId == null) {
       const currentWindow = await browser.windows.getCurrent({populate: false});
       AutoBid.beWindowId = `${window.location.hostname}:${currentWindow.id}`;
     }
@@ -420,6 +420,8 @@ class AutoBid {
     AutoBid.deadManSwitch();
   }
 }
+// static class vars
+AutoBid.beWindowId = null;
 
 /*
  * All functions related to an eBay Article
@@ -869,8 +871,8 @@ class Article {
 
   // same logic as activateAutoBid from contentScript
   activateAutoBid() {
-    console.debug("Biet-O-Matic: activateAutoBid(), maxBidValue=%s (%s), minBidValue=%s (%s)",
-      this.articleMaxBid, typeof this.articleMaxBid,  this.articleMinimumBid, typeof this.articleMinimumBid);
+    console.debug("Biet-O-Matic: activateAutoBid(%s), maxBidValue=%s (%s), minBidValue=%s (%s)",
+      this.articleId, this.articleMaxBid, typeof this.articleMaxBid,  this.articleMinimumBid, typeof this.articleMinimumBid);
     //let isMaxBidEntered = (Number.isNaN(maxBidValue) === false);
     const isMinBidLargerOrEqualBidPrice = (this.articleMinimumBid >= this.articleBidPrice);
     const isMaxBidLargerOrEqualMinBid = (this.articleMaxBid >= this.articleMinimumBid);
@@ -942,7 +944,7 @@ class Article {
     let tab = browser.tabs.create({
       url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + this.articleId,
       active: false,
-      openerTabId: Popup.tabId
+      openerTabId: this.popup.tabId
     });
     this.tabid = tab.id;
     this.tabOpenedForBidding = tabOpenedForBidding;
@@ -974,9 +976,16 @@ class Article {
 
   toString () {
     let str = '';
+    String.prototype.trunc =
+      function(n){
+        return this.substr(0,n-1)+(this.length>n?'...':'');
+      };
     for (let p in this) {
       if (this.hasOwnProperty(p)) {
-        str += p + '::' + this[p] + '\n';
+        let v = null;
+        if (this[p] != null)
+          v  = (this[p] || '').toString().trunc(64);
+        str += `${p}=${v} (${typeof this[p]})\n`;
       }
     }
     return str;
@@ -1234,7 +1243,7 @@ class ArticlesTable {
           }
         });
       } else {
-        console.debug("Biet-O-Matic: openArticleTabsForBidding() skipping - autoBid disabled");
+        console.debug("Biet-O-Matic: openArticleTabsForBidding() skipping run - Window autoBid disabled.");
       }
     } catch (e) {
       console.warn(`Biet-O-Matic: openArticleTabsForBidding() Internal Error: ${e.message}`);
@@ -1293,7 +1302,7 @@ class ArticlesTable {
       }
       let info = storedInfo[articleId];
       info.articleId = articleId;
-      console.debug("Biet-O-Matic: addArticlesFromStorage(%s) info=%s", articleId, JSON.stringify(info));
+      //console.debug("Biet-O-Matic: addArticlesFromStorage(%s) info=%s", articleId, JSON.stringify(info));
       // add article if not already in table
       if (this.getRow(`#${articleId}`).length < 1) {
         let article = new Article(this.popup, info);
@@ -1571,6 +1580,7 @@ class ArticlesTable {
     return divArticleMaxBid.outerHTML;
   }
 
+  // render row groups
   static renderGroups(rows, groupName) {
     let td = document.createElement('td');
     td.colSpan = rows.columns()[0].length;
@@ -1578,6 +1588,7 @@ class ArticlesTable {
     let i = document.createElement('i');
     i.classList.add('fas', 'fa-shopping-cart', 'fa-fw');
     i.style.fontSize = '1.2em';
+    i.style.paddingTop = '0.5em';
     let span = document.createElement('span');
     span.textContent = `${groupName} (${rows.count()})`;
     span.style.fontSize = '1.2em';
@@ -1587,10 +1598,11 @@ class ArticlesTable {
 
     let spanGroupAutoBid = document.createElement('span');
     spanGroupAutoBid.id = 'spanGroupAutoBid';
+    spanGroupAutoBid.classList.add('ui-button');
     spanGroupAutoBid.setAttribute('name', groupName);
     spanGroupAutoBid.textContent = "Automatikmodus";
-    spanGroupAutoBid.style.position = 'absolute';
-    spanGroupAutoBid.style.right = '5px';
+    spanGroupAutoBid.style.float = 'right';
+    // renderState can take up to 500ms
     Group.renderState('spanGroupAutoBid', groupName);
     td.appendChild(spanGroupAutoBid);
     // append data-name to tr
@@ -1817,7 +1829,7 @@ class ArticlesTable {
       browser.tabs.create({
         url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + article.articleId,
         active: false,
-        openerTabId: Popup.tabId
+        openerTabId: this.popup.tabId
       }).then(tab => {
         article.tabId = tab.id;
         row.invalidate('data').draw(false);
@@ -1894,7 +1906,7 @@ class ArticlesTable {
    */
   static async reloadTab(tabId = null) {
     if (tabId == null) return;
-    if (Popup.rateLimit('reloadTab', tabId, 60*1000)) {
+    if (Popup.checkRateLimit('reloadTab', tabId, 60*1000)) {
       return;
     }
     await browser.tabs.reload(tabId);
@@ -1919,7 +1931,7 @@ class ArticlesTable {
 
   // limit to once a minute
   static redrawArticleDate(articleId) {
-    if (Popup.rateLimit('redrawArticleDate', articleId, 60*1000)) {
+    if (Popup.checkRateLimit('redrawArticleDate', articleId, 60*1000)) {
       return;
     }
     // redraw date (COLUMN 3)
@@ -2019,7 +2031,8 @@ class ArticlesTable {
         case 'getArticleInfo':
           try {
             if (this.currentWindowId === sender.tab.windowId) {
-              console.debug("Biet-O-Matic: Browser Event getArticleInfo received from tab %s", sender.tab.id);
+              console.debug("Biet-O-Matic: Browser Event getArticleInfo(%s) received from tab %s",
+                request.articleId, sender.tab.id);
               if (request.hasOwnProperty('articleId')) {
                 // determine row by articleId
                 const row = this.getRow(`#${request.articleId}`);
@@ -2446,7 +2459,7 @@ class Popup {
       switch (request.action) {
         case 'getWindowSettings':
           if (this.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event getWindowSettings received: sender=%O", sender);
+            console.debug("Biet-O-Matic: Browser Event getWindowSettings received from tab %s", sender.tab.id);
             return Promise.resolve(JSON.parse(window.sessionStorage.getItem('settings')));
           }
           break;
@@ -2559,10 +2572,7 @@ class Popup {
    * execute the specified function maximum every limitMs milliseconds
    * returns true if the rate limit applies
    */
-  static rateLimit(name, key, limitMs) {
-    //console.log("XXX rateLimit: %s", JSON.stringify(this.rateLimit));
-    if (!Popup.hasOwnProperty('rateLimit'))
-      Popup.rateLimit = {};
+  static checkRateLimit(name, key, limitMs) {
     if (Popup.rateLimit.hasOwnProperty(name) && Popup.rateLimit[name].hasOwnProperty(key)) {
       if ((Date.now() - Popup.rateLimit[name][key]) < limitMs) {
         return true;
@@ -2574,6 +2584,8 @@ class Popup {
     return false;
   }
 }
+// static class-var declaration outside the class
+Popup.rateLimit = {};
 
 //region Favicon Handling
 class Favicon {
@@ -2648,7 +2660,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const popup = new Popup(BOM_VERSION);
   popup.init()
     .then(() => {
-      console.debug("Biet-O-Matic: DOMContentLoaded handler for window with id = %d completed (%O).",
+      console.info("Biet-O-Matic: Initialization for window with id = %d completed (%O).",
         popup.whoIAm.currentWindow.id, popup.whoIAm.currentWindow);
     })
     .catch(e => {
