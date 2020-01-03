@@ -1154,6 +1154,7 @@ class ArticlesTable {
         endRender: null
       },
       dom: '<l<t>ip>',
+      stateSave: false,
       language: ArticlesTable.getDatatableTranslation('de_DE')
     });
   }
@@ -2172,6 +2173,19 @@ class ArticlesTable {
      */
     browser.tabs.onUpdated.addListener((tabId, changeInfo, tabInfo) => {
       try {
+        // "https://www.ebay.de/c/18021266829#oid184096781363"
+        const ebayRecommendationUrl = /(www\.ebay\.[a-z]{1,3})\/c\/([0-9]+)#oid([0-9]+)/;
+        if (changeInfo.status === 'loading' && tabInfo.hasOwnProperty('url') && ebayRecommendationUrl.test(tabInfo.url) ) {
+          let matches = tabInfo.url.match(ebayRecommendationUrl);
+          let host = matches[1];
+          let articleId = matches[3];
+          browser.tabs.update(tabId, {
+            url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + articleId + '&nordt=true&orig_cvip=true&rt=nc',
+            openerTabId: this.popup.tabId,
+          }).then(() => {
+            console.log("onUpdatedListener found bad ebay t=%O c=%s, redirecting to %s : %s", tabInfo, JSON.stringify(changeInfo), host, articleId);
+          });
+        }
         // status == complete, then inject content script, request info and update table
         if (changeInfo.status === 'complete') {
           console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%s',
@@ -2369,7 +2383,7 @@ class ArticlesTable {
     });
 
     /*
-     * Collapsing groups: https://stackoverflow.com/a/48426471
+     * Toggle Group autobid
      */
     this.DataTable.on('click', 'tr.row-group', e => {
       const name = $(e.currentTarget).data('name');
