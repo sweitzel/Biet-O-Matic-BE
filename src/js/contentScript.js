@@ -232,14 +232,14 @@ class EbayArticle {
    * - #prcIsum_bidPrice: Current price of the article
    * - #BomAutoBid: AutoBid
    */
-  monitorChanges() {
-    const maxBidInput = document.getElementById('MaxBidId');
-    const bomAutoBid = document.getElementById('BomAutoBid');
+  async monitorChanges() {
+    const maxBidInput = await EbayArticle.waitFor('#MaxBidId', 2000);
+    const bomAutoBid = await EbayArticle.waitFor('#BomAutoBid', 2000);
     // max bid input changed?
     if (maxBidInput != null) {
       maxBidInput.addEventListener('change', (e) => {
-        const bomAutoBidNew = document.getElementById('BomAutoBid');
         const maxBidInputNew = document.getElementById('MaxBidId');
+        const bomAutoBidNew = document.getElementById('BomAutoBid');
         if (maxBidInputNew != null) {
           //updateMaxBidInput(maxBidInputNew.value);
           // replace , with .
@@ -341,6 +341,7 @@ class EbayArticle {
               // send trigger to extension popup, so it can refresh the date (timeleft)
               browser.runtime.sendMessage({
                 action: 'ebayArticleRefresh',
+                articleId: this.articleId
               }).catch((e) => {
                 console.warn("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed - reloading page!: %s", e.message);
                 location.reload();
@@ -1222,8 +1223,8 @@ class EbayArticle {
       .then(() => {
         try {
           console.debug("Biet-O-Matic: Initialized - Article Info: %s", ebayArticle.toString());
-          ebayArticle.extendPage();
           ebayArticle.monitorChanges();
+          ebayArticle.extendPage();
           // send info to extension popup directly after initialization
           browser.runtime.sendMessage({
             action: 'ebayArticleUpdated',
