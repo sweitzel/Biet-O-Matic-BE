@@ -594,6 +594,7 @@ class EbayArticle {
    * http://booden.net/ContentCleaner.aspx
    * - elements: div, span
    * - tags: class, style, id
+   * - a href add target _blank
    */
   static cleanupHtmlString(html) {
     //Extension for getting the tagName
@@ -627,7 +628,7 @@ class EbayArticle {
     const attributesAllowed = [];
     attributesAllowed.div = "|id|class|style|";
     attributesAllowed.span = "|class|style|";
-    attributesAllowed.a = "|class|href|name|";
+    attributesAllowed.a = "|class|href|name|target|";
     //console.log("Before: %s", $(jqHtml).html());
     try {
       html = html.replace(/(\r\n|\n|\r)/gm, '');
@@ -650,6 +651,12 @@ class EbayArticle {
       EbayArticle.clearUnsupportedTagsAndAttributes(el, tagsAllowed, attributesAllowed, emptyTagsAllowed);
       try {
         const tag = el.tagName();
+        // add target to links
+        if (tag === 'a') {
+          if (!el.get(0).attributes.target) {
+            el.attr('target', '_blank');
+          }
+        }
         if (tagsAllowed.indexOf("|" + tag + "|") < 0) {
           if (tag === "style" || tag === "script")
             el.remove();
