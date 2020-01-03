@@ -236,7 +236,9 @@ class EbayArticle {
     const maxBidInput = await EbayArticle.waitFor('#MaxBidId', 2000);
     const bomAutoBid = await EbayArticle.waitFor('#BomAutoBid', 2000);
     // max bid input changed?
-    if (maxBidInput != null) {
+    if (maxBidInput == null) {
+      return;
+    } else {
       maxBidInput.addEventListener('change', (e) => {
         const maxBidInputNew = document.getElementById('MaxBidId');
         const bomAutoBidNew = document.getElementById('BomAutoBid');
@@ -887,13 +889,13 @@ class EbayArticle {
       }
 
       // get confirm button
-      const confirmButton = await EbayArticle.waitFor('#confirm_button', 1000)
+      const confirmButton = await EbayArticle.waitFor('#confirm_button', 2000)
         .catch((e) => {
           console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
           throw {
             component: "Bietvorgang",
             level: "Fehler beim bieten",
-            message: "Element #confirm_body konnte innerhalb von 500ms nicht gefunden werden!"
+            message: "Element #confirm_body konnte innerhalb von 2s nicht gefunden werden!"
           };
         });
 

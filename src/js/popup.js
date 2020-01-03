@@ -1521,8 +1521,8 @@ class ArticlesTable {
    */
   static renderArticleMaxBid(data, type, row) {
     if (type !== 'display' && type !== 'filter') return data;
-    //console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
-    if (!row.hasOwnProperty('articleBidPrice'))
+    console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
+    if (!row.hasOwnProperty('articleBidPrice') && data == null)
       return 'Sofortkauf';
     let autoBid = false;
     let closedArticle = false;
@@ -2294,7 +2294,7 @@ class ArticlesTable {
         // normally with input type=number this should not be necessary - but there was a problem reported...
         article.articleMaxBid = Number.parseFloat(e.target.value.replace(/,/, '.'));
         // check if maxBid > buyPrice (sofortkauf), then adjust it to the buyprice - 1 cent
-        if (article.hasOwnProperty('articleBuyPrice') && article.articleMaxBid > article.articleBuyPrice) {
+        if (article.hasOwnProperty('articleBuyPrice') && article.articleMaxBid >= article.articleBuyPrice) {
           article.articleMaxBid = article.articleBuyPrice - 0.01;
         } else if (article.hasOwnProperty('articleMinimumBid') && article.articleMaxBid < article.articleMinimumBid) {
           article.articleMaxBid = article.articleMinimumBid;
@@ -2378,6 +2378,8 @@ class ArticlesTable {
       if (this.hasOwnProperty('lastFocusedInput')) {
         Group.waitFor(`#${this.lastFocusedInput}`, 200).then(lastFocusedInput => {
           lastFocusedInput.focus();
+        }).catch(e => {
+          console.log("Biet-O-Matic: draw.dt cannot activate input %s: %s", this.lastFocusedInput, e.message);
         });
       }
     });
