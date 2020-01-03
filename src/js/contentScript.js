@@ -634,7 +634,7 @@ class EbayArticle {
     const tagsAllowed = "|div|span|a|strong|br|";
     const attributesAllowed = [];
     attributesAllowed.div = "|id|class|style|";
-    attributesAllowed.span = "|class|style|";
+    attributesAllowed.span = "|id|class|style|";
     attributesAllowed.a = "|class|href|name|target|";
     //console.log("Before: %s", $(jqHtml).html());
     try {
