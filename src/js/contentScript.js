@@ -264,6 +264,13 @@ class EbayArticle {
             maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE',
               {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
             this.articleMaxBid = maxBidInputValue;
+          } else if (this.hasOwnProperty('articleMinimumBid') && maxBidInputValue < this.articleMinimumBid) {
+            console.log("Biet-O-Matic: monitorChanges() updated maxBid %s to %s (minimum bid price)",
+              maxBidInputValue, this.articleMinimumBid);
+            maxBidInputValue = Number.parseFloat(this.articleMinimumBid.toString());
+            maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE',
+              {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
+            this.articleMaxBid = maxBidInputValue;
           } else {
             maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE',
               {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
