@@ -766,7 +766,7 @@ class Article {
           return null;
         }
       } else {
-        if (oldVal == null || typeof oldVal === 'undefined')
+        if (oldVal == null || typeof oldVal === 'undefined' || oldVal === newVal)
           return `${description}: ${newVal}`;
         else
           return `${description}: ${oldVal} -> ${newVal}`;
@@ -941,8 +941,9 @@ class Article {
   // open article in a new tab
   async openTab(tabOpenedForBidding = false) {
     console.log("Biet-O-Matic: Article.openTab(%s) Opening Article Tab (tabOpenedForBidding=%s)", this.articleId, tabOpenedForBidding);
+    // orig_cvip will go directly to the original bidding page
     let tab = browser.tabs.create({
-      url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + this.articleId,
+      url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + this.articleId + '&orig_cvip=true',
       active: false,
       openerTabId: this.popup.tabId
     });
@@ -1042,7 +1043,7 @@ class ArticlesTable {
             let div = document.createElement("div");
             div.id = data;
             let a = document.createElement('a');
-            a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId;
+            a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId  + '&orig_cvip=true';
             a.id = row.getArticleLinkId();
             a.text = data;
             a.target = '_blank';
@@ -1827,7 +1828,7 @@ class ArticlesTable {
     if (article.tabId == null) {
       console.debug("Biet-O-Matic: toggleArticleTab(%s) Opening", article.articleId);
       browser.tabs.create({
-        url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + article.articleId,
+        url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + article.articleId  + '&orig_cvip=true',
         active: false,
         openerTabId: this.popup.tabId
       }).then(tab => {
