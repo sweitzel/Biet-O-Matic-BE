@@ -96,10 +96,13 @@ tfoot input {
   opacity: 1.0 !important;
 }
 
+#mainContent {
+  margin-bottom: 50px;
+}
 .footer {
-  position: fixed;
-  left: 0;
-  bottom: 0;
+  position: relative;
+  height: 40px;
+  margin-top: -40px;
   width: 100%;
   background-color: #f9f9f9;
   color: #000;
@@ -113,8 +116,6 @@ tfoot input {
   margin-block-end: 1em;
 }
 .footer #right {
-  width:33%;
-  float:left;
   overflow:hidden !important;
   text-align: right;
   margin-block-start: 1em;
@@ -127,6 +128,7 @@ tfoot input {
 }
 .footer a {
   text-decoration: none;
+  line-height: 40px;
 }
 /* Style all font awesome icons */
 .footer .fab + .footer .far + .footer .fas {
@@ -146,7 +148,6 @@ tfoot input {
 .footer .fa-heart {
   color: #e52414;
   display: inline-block;
-  padding-top: 14px;
   margin-left: 10px;
 }
 .footer .fa-heart:after {
