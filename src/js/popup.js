@@ -890,52 +890,58 @@ class Article {
   }
 
   /*
-   * return adjusted endtime for an article
-   * - if bidAll option is set, then return original time
-   * - if 1..n articles with endTime+-1 are found, then sort by articleId and return idx0+0s, idx1+2s, idx2+4s ...
-   * todo: improve spreading algorithm to better detect articles with similar endTime and spread better
-   *   also if many articles end at the same time, then the bid preparation time (10s) is not enough
+   * Adjust article bid times to ensure that minimum 10s are between to biddings
+   * - determine all autoBid-enabled articles for same group as this article
+   * - sort by articleId and articleEndTime
+   * - start from end and build new object with key articleId
+   * - store reason why adjusted (collided articles)
    */
-  getAdjustedBidTime() {
-    // bidAll, then we dont need to special handle articles ending at the same time
-    // todo group bid
-
-    // filter from https://stackoverflow.com/a/37616104
-    Object.filter = (obj, predicate) =>
-      Object.keys(obj)
-        .filter( key => predicate(obj[key]) )
-        .reduce( (res, key) => Object.assign(res, { [key]: obj[key] }), {} );
-
-    const rows = this.popup.table.DataTable.rows();
-    if (rows == null) return null;
-    const articles = rows.data();
-    // filter articles with endtime same as for the given article +/- 1
-    let filtered = Object.filter(articles, article => {
-      if (!article.hasOwnProperty('articleEndTime')) return false;
-      return (Math.abs(article.articleEndTime - this.articleEndTime) < 1000);
+  perlenschnur() {
+    const articles = {};
+    this.popup.table.DataTable.rows().every(row => {
+      const article = row.data();
+      if (article.articleGroup !== this.articleGroup)
+        return;
+      if (article.autoBidEnabled === false)
+        return;
+      articles[article.articleId] = {
+        articleEndTime: article.articleEndTime
+      };
     });
 
-    // only one article, no need to modify
-    if (filtered.length === 1) return this.articleEndTime;
+    const sorter = function(a,b) {
+      // sort by articleId if endTimes are same
+      if (a.articleEndTime === b.articleEndTime) {
+        return a.articleId - b.articleId;
+      }
+      return a.articleEndTime > b.articleEndTime ? 1 : -1;
+    };
 
-    // sort by articleId
-    let keys = Object.keys(filtered).sort(function(a,b) {
-      return filtered[a].articleId - filtered[b].articleId;
-    });
-    const findKey = function (obj, value) {
-      let key = null;
-      for (let prop in obj) {
-        if (obj.hasOwnProperty(prop)) {
-          if (obj[prop].articleId === value) key = prop;
+    /*
+     * Iterate through keys, and adjust to ensure 10 seconds between endTimes
+     *
+     */
+    let previous = null;
+    for (let i = Object.keys(articles).length; i >= 0; --i) {
+      // sort the array on every iteration, because we modify the articleEndTimes
+      const keys = Object.keys(articles).sort(sorter);
+      const key = keys[i];
+      if (previous != null && (articles[previous].articleEndTime - articles[key].articleEndTime) < 10*1000) {
+        const prevId = articles[previous].articleId;
+        const diff = (articles[key].articleEndTime - (articles[prevId].articleEndTime - 10*1000)) / 1000;
+        articles[key].adjustmentReason = `Bietzeit um ${diff}s angepasst, da mit Artikel ${prevId} kollidiert.`;
+        // todo adjust the bidding preparation time (currently hardcoded to 30s)
+        // leave 5s buffer
+        if (articles[previous].articleEndTime < (Date.now() + 5*1000)) {
+          console.warn(`Biet-O-Matic: Failed to adjust Article ${articles[key].articleId} bidding time, would be too close to its end time!`);
+        } else {
+          articles[key].articleEndTime = articles[previous].articleEndTime - 10*1000;
         }
       }
-      return key;
-    };
-    // the index determines how many seconds an article bid will be earlier
-    let idx = findKey(filtered, this.articleId);
-    console.debug("Biet-O-Matic: getAdjustedBidTime() Adjusted Article %s bidTime by %ss, %d articles end at the same time (%O).",
-      this.articleId, keys.indexOf(idx), keys.length, filtered);
-    return (this.articleEndTime - ((keys.indexOf(idx)*2) * 1000));
+      previous = key;
+    }
+    // finally return the interesting result
+    return articles[this.articleId];
   }
 
   // open article in a new tab
@@ -2153,7 +2159,8 @@ class ArticlesTable {
               }
               const row = this.getRow(`#${request.articleId}`);
               const article = row.data();
-              return Promise.resolve(article.getAdjustedBidTime());
+              // {articleEndTime: <adjustedTime>, adjustmentReason}
+              return Promise.resolve(article.perlenschnur());
             }
           } catch (e) {
             console.warn("Biet-O-Matic: Event.ebayArticleGetAdjustedBidTime failed: %s", e.message);
