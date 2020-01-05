@@ -7,6 +7,19 @@ type: "docs"
 
 # Handbuch
 
+## Voraussetzungen
+### Genaue System Uhr
+BE verwendet die Systemuhr, um Aufgaben zu gewissen Zeitpunkte auszuführen. Besonders wichtig ist es natürlich,
+das das Maximal Gebot bei eBay eingeht, bevor die Auktion endet - und auf der anderen Seite auch nicht zu früh - damit 
+nicht andere Bieter sich eine Gebot-Schlacht liefern. 
+
+Von daher stellen sie bitte sicher das ihr PC die Zeit automatisch mit der Internet Zeit synchronisiert. Seit Windows
+7 ist diese Funktion übrigens eingebaut und standardmäßig aktiv. Allerdings kann es vorkommen das das voreingestellte
+Interval nicht ausreicht (beispielsweise bei einem ungenauen Zeitgeber der Hardware) und hier eine Anpassung nötig ist.
+
+BE hat übrigens keine technische Möglichkeit die Zeit selbständig zu korrigieren - hierzu fehlen im Browser die
+Berechtigungen. 
+
 ## Erweiterungs Verwaltung 
 ### Installation
 Die Installation der BE erfolgt über den Browser Erweiterungs Store. Hierbei ist nichts spezielles zu beachten.
