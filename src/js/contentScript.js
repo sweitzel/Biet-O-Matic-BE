@@ -119,6 +119,7 @@ class EbayArticle {
     buttonInput.id ="BomAutoBid";
     buttonInput.classList.add('tgl', 'tgl-skewed');
     buttonInput.type = 'checkbox';
+    buttonInput.disabled = true;
     buttonDiv.appendChild(buttonInput);
     let buttonLabel = document.createElement("label");
     buttonLabel.classList.add('tgl-btn');
