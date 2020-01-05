@@ -25,6 +25,7 @@ const auctionEndStates = {
 class EbayArticle {
   constructor() {
     this.articleId = null;
+    this.articleEndTime = null;
     this.perfInfo = [];
   }
 
@@ -37,17 +38,17 @@ class EbayArticle {
     // first we check if the page is a expected Article Page
     const body = document.getElementById("Body");
     if (body == null) {
-      console.log("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
+      console.info("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
       throw new Error("Biet-O-Mat: skipping on this page; no Body element");
     }
     const itemType = body.getAttribute("itemtype");
     if (itemType == null) {
-      console.log("Biet-O-Mat: skipping on this page; no itemtype in body element");
+      console.info("Biet-O-Mat: skipping on this page; no itemtype in body element");
       throw new Error("Biet-O-Mat: skipping on this page; no itemtype in body element");
     }
     if (itemType !== "https://schema.org/Product") {
       let msg = `Biet-O-Mat: skipping on this page; unexpected itemtype in body element: ${itemType}`;
-      console.log(msg);
+      console.info(msg);
       throw new Error(msg);
     }
     if (oldInfo.hasOwnProperty('auctionEnded') && oldInfo.auctionEnded) {
@@ -247,6 +248,8 @@ class EbayArticle {
           // replace , with .
           let maxBidInputValue = maxBidInputNew.value.replace(/,/, '.');
           maxBidInputValue = Number.parseFloat(maxBidInputValue);
+          if (Number.isNaN(maxBidInputValue))
+            maxBidInputValue = '0';
           this.articleMaxBid = maxBidInputValue;
           // update minimum bid
           let minBidValue = null;
@@ -759,34 +762,9 @@ class EbayArticle {
         }
         return;
       }
-      const autoBidInput = await EbayArticle.waitFor('#BomAutoBid', 1000)
-        .catch((e) => {
-          console.log("Biet-O-Matic: Bidding failed: AutoBid Button missing!");
-          throw {
-            component: "Bietvorgang",
-            level: "Fehler beim bieten",
-            message: "Element #BomAutoBid konnte innerhalb von 1s nicht gefunden werden!"
-          };
-        });
-      if (autoBidInput == null) {
-        throw {
-          component: "Bietvorgang",
-          level: "Fehler beim bieten",
-          message: "AutoBid Knopf nicht gefunden"
-        };
-      }
-      // ensure article autoBid is checked
-      if (autoBidInput.checked === false) {
-        console.debug("Biet-O-Matic: doBid() abort, Article autoBid is off");
-        throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Automatisches bieten für Artikel inaktiv"
-        };
-      }
       // check window/group autoBid status
       let autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
-      if (autoBidInfo == null || typeof autoBidInfo === 'undefined' || !autoBidInfo.hasOwnProperty('autoBidEnabled')) {
+      if (autoBidInfo == null || typeof autoBidInfo === 'undefined') {
         throw {
           component: "Bietvorgang",
           level: "Interner Fehler",
@@ -802,19 +780,28 @@ class EbayArticle {
           message: "Automatisches bieten für Fenster inaktiv"
         };
       }
-      // enable test mode if specified by popup
-      if (autoBidInfo.hasOwnProperty('simulation') && autoBidInfo.simulation) {
-        console.debug("Biet-O-Matic: Enable simulated bidding.");
-        simulate = true;
-      }
       // ensure Group autoBid is enabled
-      if (autoBidInfo.hasOwnProperty('groupAutoBid') && autoBidInfo.groupAutoBid === false) {
+      if (autoBidInfo.groupAutoBid === false) {
         console.debug("Biet-O-Matic: doBid() abort, Group %s autoBid is off", autoBidInfo.groupName);
         throw {
           component: "Bietvorgang",
           level: "Abbruch",
           message: `Automatisches bieten für Artikel Gruppe ${autoBidInfo.groupName} inaktiv`
         };
+      }
+      // ensure article autoBid is checked
+      if (autoBidInfo.articleAutoBid === false) {
+        console.debug("Biet-O-Matic: doBid() abort, Article autoBid is off");
+        throw {
+          component: "Bietvorgang",
+          level: "Abbruch",
+          message: "Automatisches bieten für diesen Artikel inaktiv"
+        };
+      }
+      // enable test mode if specified by popup
+      if (autoBidInfo.simulation) {
+        console.debug("Biet-O-Matic: Enable simulated bidding.");
+        simulate = true;
       }
       // set bidInfo to ensure the bidding is not executed multiple times
       if (bidInfo == null) {
@@ -828,7 +815,7 @@ class EbayArticle {
       }
 
       this.storePerfInfo("Phase1: Gebotsvorbereitung");
-      console.log("Biet-O-Matic: Performing bid for article %s", this.articleId);
+      console.info("Biet-O-Matic: Performing bid for article %s", this.articleId);
       EbayArticle.sendArticleLog(this.articleId, {
         component: "Bietvorgang",
         level: "Info",
@@ -906,20 +893,26 @@ class EbayArticle {
        */
 
       // contact popup to check if we should perform the bid earlier (multiple articles could end at the same time)
-      let modifiedEndTime = await browser.runtime.sendMessage({
+      let modifiedEndTime = this.articleEndTime;
+      const ebayArticleGetAdjustedBidTimeResult = await browser.runtime.sendMessage({
         action: 'ebayArticleGetAdjustedBidTime',
         articleId: this.articleId,
-        articleEndTime: this.articleEndTime
       });
-      if (modifiedEndTime == null) {
-        console.warn("Biet-O-Matic: Unable to get ebayArticleGetAdjustedBidTime result!");
-        modifiedEndTime = this.articleEndTime;
+      console.log("XXX result = %O", ebayArticleGetAdjustedBidTimeResult);
+      // result format {"articleEndTime":1578180835000,"adjustmentReason":"Bietzeit um 6s angepasst, da Gefahr der Überschneidung mit Artikel 223821015319."}
+      if (ebayArticleGetAdjustedBidTimeResult == null || !ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('articleEndTime')) {
+        console.log("Biet-O-Matic: Unable to get ebayArticleGetAdjustedBidTime result!");
       } else {
-        console.debug("Biet-O-Matic: Modified bidTime: %ds earlier.",
-          (this.articleEndTime - modifiedEndTime) / 1000);
+        if (ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('adjustmentReason')) {
+          modifiedEndTime = ebayArticleGetAdjustedBidTimeResult.articleEndTime;
+          EbayArticle.sendArticleLog(this.articleId, {
+            component: "Bietvorgang",
+            level: "Info",
+            message: ebayArticleGetAdjustedBidTimeResult.adjustmentReason,
+          });
+        }
       }
 
-      // todo: customizable bidding confirm time
       this.storePerfInfo("Phase3: Warten auf Bietzeitpunkt");
       const wakeUpInMs = (modifiedEndTime - Date.now()) - 2500;
       await EbayArticle.wait(wakeUpInMs);
@@ -954,7 +947,7 @@ class EbayArticle {
       if (simulate) {
         // close modal
         if (closeButton != null) closeButton.click();
-        console.log("Biet-O-Matic: Test bid performed for Article %s", this.articleId);
+        console.info("Biet-O-Matic: Test bid performed for Article %s", this.articleId);
         this.storePerfInfo("Phase3: Testgebot beendet");
         // send info to popup about (almost) successful bid
         let t = this.articleEndTime - Date.now();
@@ -966,7 +959,7 @@ class EbayArticle {
       } else {
         // confirm the bid
         confirmButton.click();
-        console.log("Biet-O-Matic: Bid submitted for Article %s", this.articleId);
+        console.info("Biet-O-Matic: Bid submitted for Article %s", this.articleId);
         this.storePerfInfo("Phase3: Gebot wurde abgegeben");
         // send info to popup
         const t = this.articleEndTime - Date.now();
@@ -986,7 +979,7 @@ class EbayArticle {
       }
     } catch (err) {
       // pass error through, will be forwarded to popup
-      console.log("Biet-O-Matic: doBid() aborted: %s", err.message);
+      //console.log("Biet-O-Matic: doBid() aborted: %s", err.message);
       throw err;
     } finally {
       //console.debug("Biet-O-Matic: doBid() reached the end.");
@@ -1239,24 +1232,26 @@ class EbayArticle {
       .then(() => {
         try {
           console.debug("Biet-O-Matic: Initialized - Article Info: %s", ebayArticle.toString());
-          ebayArticle.monitorChanges();
-          ebayArticle.extendPage();
           // send info to extension popup directly after initialization
           browser.runtime.sendMessage({
             action: 'ebayArticleUpdated',
             detail: ebayArticle
+          }).then(() => {
+            // wait with page extension until we inform the popup, else messages might get lost (e.g. early maxBid set)
+            ebayArticle.monitorChanges();
+            ebayArticle.extendPage();
           }).catch(e => {
-            console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: %s", e.message);
+            console.error(`Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: ${e.message}`);
           });
         } catch (e) {
-          console.warn("Biet-O-Matic: Internal Error while post-initializing: %s", e.message);
+          console.warn(`Biet-O-Matic: Internal Error while post-initializing: ${e.message}`);
         }
       })
       .catch(e => {
-        console.warn("Biet-O-Matic: Article Init failed: %s", e.message);
+        console.error(`Biet-O-Matic: Article Init failed: ${e.message}`);
       });
   }).catch(e => {
-    console.warn("Biet-O-Matic: handleReload() failed: %s", e.message);
+    console.warn(`Biet-O-Matic: handleReload() failed: ${e.message}`);
   });
 
 })();
