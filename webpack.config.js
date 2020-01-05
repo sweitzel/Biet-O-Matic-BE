@@ -1,4 +1,4 @@
-var webpack = require("webpack"),
+const webpack = require("webpack"),
   path = require("path"),
   fileSystem = require("fs"),
   env = require("./utils/env"),
@@ -6,7 +6,8 @@ var webpack = require("webpack"),
   CopyWebpackPlugin = require("copy-webpack-plugin"),
   HtmlWebpackPlugin = require("html-webpack-plugin"),
   WriteFilePlugin = require("write-file-webpack-plugin"),
-  ZipPlugin = require('zip-webpack-plugin');
+  ZipPlugin = require('zip-webpack-plugin'),
+  ShellPlugin = require('webpack-shell-plugin');
 // load the secrets
 var alias = {};
 
@@ -56,7 +57,10 @@ var options = {
   },
   plugins: [
     // clean the build folder
-    new CleanWebpackPlugin(),
+    new CleanWebpackPlugin({
+      verbose: false,
+      cleanAfterEveryBuildPatterns: [path.join(__dirname, "documentation", "public", "**")],
+    }),
     // expose and write the allowed env vars on the compiled bundle
     new webpack.EnvironmentPlugin(["NODE_ENV"]),
     new webpack.DefinePlugin({
@@ -91,6 +95,16 @@ var options = {
         from:  path.join(__dirname, "src", "*.png"),
         to: path.join(__dirname, "build"),
         flatten: true
+      }
+    ]),
+    // Run hugo command after build
+    new ShellPlugin({
+      onBuildEnd: ['hugo.bat']
+    }),
+    new CopyWebpackPlugin([
+      {
+        from:  path.join(__dirname, "documentation", "public"),
+        to: path.join(__dirname, "build", "doc")
       }
     ]),
     new ZipPlugin({

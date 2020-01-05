@@ -10,7 +10,8 @@
     "intro.js": "^2.9.3",
     "jquery": "^3.4.1",
     "jquery-ui-dist": "^1.12.1",
-    "webextension-polyfill": "0.6.0"
+    "webextension-polyfill": "0.6.0",
+    "webpack-shell-plugin": "^0.5.0"
   },
   "devDependencies": {
     "clean-webpack-plugin": "3.0.0",

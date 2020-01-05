@@ -5,4 +5,3 @@ build/
 **/*.zip
 /build.crx
 /build.pem
-/documentation/data/resources/
