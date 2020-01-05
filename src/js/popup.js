@@ -2434,11 +2434,13 @@ class ArticlesTable {
       //console.debug('Biet-O-Matic: configureUi() INPUT Focus Event this=%O', e);
       if (e.currentTarget.id.match(/^inpGroup_/))
         this.lastFocusedInput = e.target.id;
+      else
+        this.lastFocusedInput = null;
     });
 
     // handle redraw: restore focus in last input
     this.DataTable.on('draw.dt', (e) => {
-      if (this.hasOwnProperty('lastFocusedInput')) {
+      if (this.hasOwnProperty('lastFocusedInput') && this.lastFocusedInput != null) {
         Group.waitFor(`#${this.lastFocusedInput}`, 200).then(lastFocusedInput => {
           if (document.activeElement !== lastFocusedInput)
             lastFocusedInput.focus();
