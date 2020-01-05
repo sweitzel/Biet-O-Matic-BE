@@ -61,7 +61,6 @@ div#msgPanel .msg span.statusContent a {
 .pnl .red {
   background-color: #ffc0ba;
 }
-
 /*endregion*/
 
 .hidden {
@@ -74,3 +73,167 @@ td.details-control > i {
 td.details-control > i:hover {
   cursor: pointer;
 }
+
+#articles_length {
+  margin: 10px 0 10px 0;
+}
+
+tfoot input {
+  width: 100%;
+  padding: 3px;
+  box-sizing: border-box;
+}
+
+/* buttons */
+.warning-hover:hover{color:#ff5722!important}
+.button-zoom {
+  opacity: 0.9;
+  cursor: pointer;
+}
+.button-zoom:hover {
+  transition :transform 0.2s ease-in-out;
+  transform: scale3d(1.2, 1.2, 1.2);
+  opacity: 1.0 !important;
+}
+
+#mainContent {
+  margin-bottom: 50px;
+}
+.footer {
+  position: relative;
+  height: 40px;
+  margin-top: -40px;
+  width: 100%;
+  background-color: #f9f9f9;
+  color: #000;
+}
+.footer #left {
+  width:33%;
+  float:left;
+  text-align: left;
+  margin-left: 1em;
+  margin-block-start: 1em;
+  margin-block-end: 1em;
+}
+.footer #right {
+  overflow:hidden !important;
+  text-align: right;
+  margin-block-start: 1em;
+  margin-block-end: 1em;
+}
+.footer #center {
+  float:left;
+  width:33%;
+  text-align:center;
+}
+.footer a {
+  text-decoration: none;
+  line-height: 40px;
+}
+/* Style all font awesome icons */
+.footer .fab + .footer .far + .footer .fas {
+  padding: 20px;
+  font-size: 30px;
+  width: 50px;
+}
+/* Add a hover effect if you want */
+.footer .fab + .footer .far + .footer .fas {
+  opacity: 0.05;
+  cursor: pointer;
+}
+.footer .fab:hover + .footer .far:hover + .footer .fas:hover {
+  opacity: 0.9;
+}
+/* Heart */
+.footer .fa-heart {
+  color: #e52414;
+  display: inline-block;
+  margin-left: 10px;
+}
+.footer .fa-heart:after {
+  content: "Spenden";
+  margin-left: 5px;
+  color: #000;
+  font-size: x-small;
+}
+
+.footer p {
+  display: inline-block;
+}
+.fa-github,
+.fa-question-circle {
+  color: #000;
+}
+
+.auctionEnded {
+  color: #cc0000;
+}
+.auctionEndsSoon {
+  text-shadow: 0 -0px 2px #9e7aa9;
+}
+.auctionEndsVerySoon {
+  text-shadow: 0 -0px 2px #c1b119;
+}
+
+/*
+ * Allow Font Awesome Icons in lieu of jQuery UI and only apply when using a FA icon
+ * https://jsfiddle.net/lbriquet/397488j4/
+ */
+.ui-icon[class*=" fa-"] {
+  /* Remove the jQuery UI Icon */
+  background: none repeat scroll 0 0 transparent;
+  /* Remove the jQuery UI Text Indent */
+  text-indent: 0;
+  /* Bump it up - jQuery UI is -8px */
+  margin-top: -0.5em;
+}
+/* Allow use of icon-large to be properly aligned */
+.ui-icon.icon-large {
+  margin-top: -0.75em;
+}
+.ui-button-icon-only .ui-icon[class*=" fa-"] {
+  /* Bump it - jQuery UI is -8px */
+  margin-left: -7px;
+}
+
+.row-group td {
+  background-color: #e6e6e6;
+  color: #757575;
+  cursor: pointer;
+}
+.row-group td:hover {
+   cursor: pointer;
+}
+
+.groupAutoBidEnabled {
+  color: #3f563f;
+  text-shadow: 1px 1px 2px #9cfda7;
+  user-select: none;
+}
+.groupAutoBidEnabled::after {
+  content: " aktiv";
+}
+.groupAutoBidDisabled {
+  color: #820000;
+  text-shadow: 1px 1px 2px #e88b88;
+  user-select: none;
+}
+.groupAutoBidDisabled::after {
+  content: " inaktiv";
+}
+
+/* raleway-regular - latin_latin-ext */
+/*
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 500;
+  src: local('Raleway'), local('Raleway-Regular'),
+  url('../../fonts/raleway-v14-latin_latin-ext-regular.woff2') format('woff2'), !* Chrome 26+, Opera 23+, Firefox 39+ *!
+  url('../../fonts/raleway-v14-latin_latin-ext-regular.woff') format('woff'); !* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ *!
+}
+* {
+  font-size: 100%;
+  font-family: 'Raleway', sans-serif;
+}
+*/

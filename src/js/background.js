@@ -33,7 +33,7 @@ async function openBomTab(tab, clickData) {
   // query tab for specified or current window with extension URL
   let tabs = await browser.tabs.query({
     windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
-    url: browser.extension.getURL('popup.html')
+    url: browser.runtime.getURL('popup.html')
   });
   for (let i = 0; i < tabs.length; i++) {
     if (i > 0) {
@@ -61,7 +61,7 @@ async function openBomTab(tab, clickData) {
   // if no BOM tab is open, create one
   if (tabs.length === 0) {
     await browser.tabs.create({
-      url: browser.extension.getURL('popup.html'),
+      url: browser.runtime.getURL('popup.html'),
       windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
       pinned: true,
       index: 0

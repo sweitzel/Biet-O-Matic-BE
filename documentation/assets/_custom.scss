@@ -1,0 +1,59 @@
+// You can add custom styles here.
+
+/* quicksand-500 - latin_latin-ext */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 500;
+  src: local('Quicksand'),
+       url('fonts/quicksand-v19-latin_latin-ext-500.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('fonts/quicksand-v19-latin_latin-ext-500.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+/* quicksand-700 - latin_latin-ext */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Quicksand Bold'),
+       url('fonts/quicksand-v19-latin_latin-ext-700.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('fonts/quicksand-v19-latin_latin-ext-700.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+
+// {{< columns >}}
+.book-columns {
+  margin-left: -$padding-16;
+  margin-right: -$padding-16;
+  text-align: justify;
+  word-break: break-word;
+  hyphens: manual;
+  > div {
+    margin: $padding-16 0;
+    // max-width: 50%;
+    min-width: $body-min-width * 0.66;
+    padding: 0 $padding-16;
+  }
+}
+
+body {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 500;
+  font-size: 100%;
+  hyphens: manual;
+  text-align: justify
+}
+
+.book-toc nav {
+  top: 10px;
+  width: 18rem;
+  letter-spacing: 0.1px;
+}
+
+.inline-svg {
+  display: inline-block;
+  height: 1.15rem;
+  width: 1.15rem;
+  top: 0.15rem;
+  position: relative;
+}
+
+//@import "plugins/numbered";

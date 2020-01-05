@@ -1,0 +1,7 @@
+# hugo server --environment production
+
+baseURL = '/'
+relativeURLs  = true
+cleanDestinationDir = true
+minify = true
+uglyurls = true
