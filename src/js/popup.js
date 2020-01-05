@@ -167,7 +167,7 @@ class AutoBid {
   }
 
   static getLocalState() {
-    const info = {autoBidEnabled: false, simulation: false};
+    const info = {};
     let result = JSON.parse(window.sessionStorage.getItem('settings'));
     if (result != null) {
       Object.assign(info, result);
@@ -197,6 +197,7 @@ class AutoBid {
     }
     return info;
   }
+
   /*
    * set state in browser sync storage. Do not store simulation state here.
    * - if autoBid is being disabled for this Id, then only update the syncInfo if the id is ours
@@ -218,9 +219,9 @@ class AutoBid {
 
     if (autoBidEnabled == null) {
       // dead man switch, outdated entry should be removed
-      delete oldSettings.autoBid;
+      delete newSettings.autoBid;
     } else if (autoBidEnabled === false) {
-      // remove the sync autoBid info, but only if the id stored there is ours (internet / sync problems could cause this)
+      // remove the sync autoBid info, but only if the id stored there is ours (internet / sync problems could maybe cause this)
       if (oldSettings.hasOwnProperty('autoBid') && oldSettings.autoBid.hasOwnProperty('id') && oldSettings.autoBid.id === myId) {
         delete oldSettings.autoBid;
       }
@@ -234,13 +235,14 @@ class AutoBid {
 
   /*
    * Determine autoBid state
-   * - returns generally the local state
+   * - prefers generally the local state
    * - if the sync state is enabled for a different window (Id) then disable autobid
+   * - if sync state for this window is present, but local state is not set, then use sync state (extension update)
    * Note: this function is called by renderState, which will be called regularly to check for remote state updates
-   * return {enabled: true|false, simulation: true|false, id: <Id>|null, message: 'Text'}
+   * return {autoBidEnabled: true|false, simulation: true|false, id: <Id>|null, message: 'Text'}
    */
   static async getState() {
-    const info = {autoBidEnabled: false, simulation: false, id: null};
+    let info = {autoBidEnabled: false, simulation: false, id: null};
     const localInfo = AutoBid.getLocalState();
     const syncInfo = await AutoBid.getSyncState();
 
@@ -250,21 +252,25 @@ class AutoBid {
     // if sync state is for different id , then disable autoBid (sync state is only added if active)
     if (syncInfo.hasOwnProperty('id') && syncInfo.id != null && syncInfo.id !== myId) {
       info.messageHtml = AutoBid.getDisableMessage(syncInfo.id, info.autoBidEnabled, info.simulation);
-      if (info.simulation === false || info.autoBid === true) {
+      if (info.simulation === false && syncInfo.autoBidEnabled === true) {
         info.autoBidEnabled = false;
         AutoBid.setLocalState(info.autoBidEnabled);
       }
+    } else if (Object.keys(localInfo).length === 0) {
+        Object.assign(info, syncInfo);
+        // initially set localState after extension update
+        AutoBid.setLocalState(info.autoBidEnabled, info.simulation);
     }
     return info;
   }
 
   /*
-   * Set state in local storage and sync storage if not simulating
+   * Set state in local storage and sync storage (if not simulating)
    */
   static setState(autoBidEnabled = false, simulation = false) {
     AutoBid.setLocalState(autoBidEnabled, simulation);
-    // do not set sync state if simulation is on
-    if (simulation === false) {
+    // do not set sync state if simulation is on (but handle shift when autoBid is disabled with shift pressed)
+    if (simulation === false || autoBidEnabled === false) {
       AutoBid.setSyncState(autoBidEnabled).then(() => {
         console.debug("Biet-O-Matic: AutoBid.setSyncState(%s) completed", autoBidEnabled);
         AutoBid.renderState();
@@ -274,6 +280,12 @@ class AutoBid {
     } else {
       AutoBid.renderState();
     }
+  }
+
+  static async toggleState() {
+    const state = await AutoBid.getState();
+    AutoBid.setState(!state.autoBidEnabled, state.simulation);
+    return !state;
   }
 
   static renderState() {
@@ -308,6 +320,20 @@ class AutoBid {
       console.debug('Biet-O-Matic: Automatic mode toggled: %s - shift=%s, ctrl=%s', AutoBid.jq.is(':checked'), e.shiftKey, e.ctrlKey);
       AutoBid.setState(AutoBid.jq.is(':checked'), e.shiftKey);
     });
+
+    window.addEventListener('hashchange', (e) => {
+      e.preventDefault();
+      const windowId = window.location.hash.split(':')[1];
+      if (/[0-9]+/.test(windowId)) {
+        browser.windows.update(Number.parseInt(windowId, 10), {focused: true}).catch(e => {
+          console.log("Biet-O-Matic: Cannot activate specified window %s: %s", windowId, e.message);
+        });
+      } else {
+        console.warn("Biet-O-Matic: getDisableMessage() Cannot activate specified window, id is not a number: %s", windowId);
+      }
+      window.location.hash = '';
+      return false;
+    });
   }
 
   static getDisableMessage(otherId, autoBidEnabled, simulation) {
@@ -328,20 +354,25 @@ class AutoBid {
       spanPost.textContent = ' aktiviert.';
     }
 
+
     // jump to specific window
-    Group.waitFor('#windowLink').then(windowLink => {
-      windowLink.on('click', e => {
-        e.preventDefault();
-        const windowId = e.currentTarget.hash.split(':')[1];
-        if (/[0-9]+/.test(windowId)) {
-          browser.windows.update(Number.parseInt(windowId, 10), {focused: true}).catch(e => {
-            console.log("Biet-O-Matic: Cannot activate specified window %s: %s", windowId, e.message);
-          });
-        } else {
-          console.warn("Biet-O-Matic: Cannot activate specified window, id is not a number: %s", windowId);
-        }
-      });
-    });
+    // Group.waitFor('#windowLink')
+    //   .then(windowLink => {
+    //     windowLink.on('click', e => {
+    //       e.preventDefault();
+    //       const windowId = e.currentTarget.hash.split(':')[1];
+    //       if (/[0-9]+/.test(windowId)) {
+    //         browser.windows.update(Number.parseInt(windowId, 10), {focused: true}).catch(e => {
+    //           console.log("Biet-O-Matic: Cannot activate specified window %s: %s", windowId, e.message);
+    //         });
+    //       } else {
+    //         console.warn("Biet-O-Matic: getDisableMessage() Cannot activate specified window, id is not a number: %s", windowId);
+    //       }
+    //     });
+    //   }, 1000)
+    //   .catch(e => {
+    //     console.log("Biet-O-Matic: getDisableMessage() Cannot add listener for window link: %s", e.message);
+    //   });
 
     return spanPre.outerHTML + link.outerHTML + spanPost.outerHTML;
   }
@@ -355,7 +386,7 @@ class AutoBid {
       let localState = AutoBid.getLocalState();
       if (!localState.simulation && localState.autoBidEnabled) {
         console.debug("Biet-O-Matic: AutoBid.deadManSwitch() called");
-        AutoBid.setSyncState(null).then(() => {
+        AutoBid.setSyncState(localState.autoBidEnabled).then(() => {
           console.debug("Biet-O-Matic: AutoBid.setSyncState(%s) completed", localState.autoBidEnabled);
         }).catch(e => {
           console.warn("Biet-O-Matic: AutoBid.setSyncState(%s) failed: %s", localState.autoBidEnabled, e.message);
@@ -366,10 +397,11 @@ class AutoBid {
       });
     } catch (e) {
       console.warn(`Biet-O-Matic: deadManSwitch() internal error: ${e.message}`);
+    } finally {
+      setTimeout( function () {
+        AutoBid.deadManSwitch();
+      }, 60000);
     }
-    setTimeout( function () {
-      AutoBid.deadManSwitch();
-    }, 60000);
   }
 
   // remove autoBid if the timestamp update was longer than 5 minutes ago
@@ -1183,7 +1215,7 @@ class ArticlesTable {
    *   - skip if group autoBid is disabled
    *   - if tab is open just reload it
    *   - open tab
-   *
+   * The function will schedule itself to be executed every 30s
    */
   async openArticleTabsForBidding() {
     try {
@@ -1193,9 +1225,7 @@ class ArticlesTable {
         this.DataTable.rows().every(async function (rowIdx, tableLoop, rowLoop) {
           const article = this.data();
           // update date column for closed tab (open tabs will be handled by ebayArticleRefresh event)
-          if (!article.hasOwnProperty('tabId') || article.tabId == null) {
-            ArticlesTable.redrawArticleDate(article.articleId);
-          }
+          ArticlesTable.redrawArticleDate(article.articleId);
           if (!article.hasOwnProperty('articleEndTime')) {
             console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, no endTime", article.articleId);
             return;
@@ -1270,10 +1300,11 @@ class ArticlesTable {
       }
     } catch (e) {
       console.warn(`Biet-O-Matic: openArticleTabsForBidding() Internal Error: ${e.message}`);
+    } finally {
+      setTimeout(() => {
+        this.openArticleTabsForBidding();
+      }, 30000);
     }
-    setTimeout(() => {
-      this.openArticleTabsForBidding();
-    }, 30000);
   }
 
   // add open article tabs to the table
@@ -1383,7 +1414,7 @@ class ArticlesTable {
 
   // add an article to the table and return the row or null if failed
   addArticle(article) {
-    //console.log("addArticle() called");
+    console.log("Biet-O-Matic addArticle(%s) called.", article.articleId);
     if (article instanceof Article) {
       let row = this.DataTable.row.add(article);
       this.DataTable.draw(false);
@@ -1483,7 +1514,7 @@ class ArticlesTable {
     }
 
     // article already in table?
-    const rowByArticleId = this.DataTable.row(`#${articleId}`);
+    const rowByArticleId = this.getRow(`#${articleId}`);
     // check if article is already open in another tab
     if (rowByArticleId.length !== 0 && typeof rowByArticleId !== 'undefined') {
       if (rowByArticleId.data().tabId != null && rowByArticleId.data().tabId !== tab.id) {
@@ -1538,7 +1569,7 @@ class ArticlesTable {
    */
   static renderArticleMaxBid(data, type, row) {
     if (type !== 'display' && type !== 'filter') return data;
-    console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
+    //console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
     if (!row.hasOwnProperty('articleBidPrice') && data == null)
       return 'Sofortkauf';
     let autoBid = false;
@@ -1999,6 +2030,7 @@ class ArticlesTable {
               console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received from tab %s, articleId=%s, articleDescription=%s",
                 sender.tab.id, request.detail.articleId, request.detail.articleDescription);
               this.updateArticle(request.detail, null, sender.tab.id);
+              return Promise.resolve(true);
             }
           } catch (e) {
             console.warn("Biet-O-Matic: Event.ebayArticleUpdated internal error: %s", e.message);
@@ -2259,6 +2291,18 @@ class ArticlesTable {
       }
     });
 
+    // listener for extension updates
+    browser.runtime.onInstalled.addListener(function (details) {
+      if (details.reason === "install") {
+        console.info("Biet-O-Matic: Extension freshly installed.");
+      } else if (details.reason === "update") {
+        let thisVersion = browser.runtime.getManifest().version;
+        if (details.previousVersion !== thisVersion) {
+          console.info('Updated from version %s to %s!', details.previousVersion, thisVersion);
+        }
+      }
+    });
+
     /*
      * listen for changes to window storage (logs)
      *        Note: does not fire if generated on same tab
@@ -2387,15 +2431,17 @@ class ArticlesTable {
 
     // remember last focused event
     this.DataTable.on('focus', 'tr input', e => {
-      console.debug('Biet-O-Matic: configureUi() INPUT Focus Event this=%O', e);
-      this.lastFocusedInput = e.target.id;
+      //console.debug('Biet-O-Matic: configureUi() INPUT Focus Event this=%O', e);
+      if (e.currentTarget.id.match(/^inpGroup_/))
+        this.lastFocusedInput = e.target.id;
     });
 
     // handle redraw: restore focus in last input
     this.DataTable.on('draw.dt', (e) => {
       if (this.hasOwnProperty('lastFocusedInput')) {
         Group.waitFor(`#${this.lastFocusedInput}`, 200).then(lastFocusedInput => {
-          lastFocusedInput.focus();
+          if (document.activeElement !== lastFocusedInput)
+            lastFocusedInput.focus();
         }).catch(e => {
           console.log("Biet-O-Matic: draw.dt cannot activate input %s: %s", this.lastFocusedInput, e.message);
         });
@@ -2514,7 +2560,7 @@ class Popup {
    */
   registerEvents() {
     // listen to global events (received from other Browser window or background script)
-    browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    browser.runtime.onMessage.addListener((request, sender) => {
       //console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
       switch (request.action) {
         case 'getWindowSettings':
@@ -2528,11 +2574,11 @@ class Popup {
 
     // toggle autoBid for window when button in browser menu clicked
     // the other button handler is setup below
-    browser.browserAction.onClicked.addListener(function (tab, clickData) {
+    browser.browserAction.onClicked.addListener((tab, clickData) => {
       if (this.whoIAm.currentWindow.id === tab.windowId) {
         console.debug('Biet-O-Matic: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
         // only toggle favicon for ebay tabs
-        if (tab.url.startsWith(browser.extension.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/)) {
+        if (tab.url.startsWith(browser.runtime.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/)) {
           AutoBid.toggleState().catch(e => {
             console.log("Biet-O-Matic: Browser Action clicked, AutoBid.toggleState failed: %s", e.message);
           });

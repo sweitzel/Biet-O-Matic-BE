@@ -138,7 +138,7 @@ class EbayArticle {
         this.updateMaxBidInfo(storInfo);
       }
     });
-    this.activateAutoBidButton();
+    //this.activateAutoBidButton();
   }
 
   /*
@@ -235,7 +235,10 @@ class EbayArticle {
    */
   async monitorChanges() {
     const maxBidInput = await EbayArticle.waitFor('#MaxBidId', 2000);
-    const bomAutoBid = await EbayArticle.waitFor('#BomAutoBid', 2000);
+    const bomAutoBid = await EbayArticle.waitFor('#BomAutoBid', 2000)
+      .catch(e => {
+        throw new Error("Biet-O-Matic: monitorChanges() cannot find BomAutoBid button, aborting");
+      });
     // max bid input changed?
     if (maxBidInput == null) {
       return;
@@ -1236,12 +1239,12 @@ class EbayArticle {
           browser.runtime.sendMessage({
             action: 'ebayArticleUpdated',
             detail: ebayArticle
-          }).then(() => {
-            // wait with page extension until we inform the popup, else messages might get lost (e.g. early maxBid set)
-            ebayArticle.monitorChanges();
-            ebayArticle.extendPage();
           }).catch(e => {
             console.error(`Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: ${e.message}`);
+          });
+          ebayArticle.extendPage();
+          ebayArticle.monitorChanges().catch(e => {
+            console.warn(`Biet-O-Matic: monitorChanges() failed: ${e.message}`);
           });
         } catch (e) {
           console.warn(`Biet-O-Matic: Internal Error while post-initializing: ${e.message}`);
