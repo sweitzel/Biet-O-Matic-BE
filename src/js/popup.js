@@ -115,7 +115,7 @@ class Group {
         });
       })
       .catch(e => {
-        console.warn("Biet-O-Matic: Group.renderState(%s) failed (Probably not found): %s", name, e.message);
+        console.log("Biet-O-Matic: Group.renderState(%s) failed (Probably not found): %s", name, e.message);
       });
   }
 
@@ -158,6 +158,7 @@ class Group {
   static updateFromChanges(changes) {
     if (!changes.hasOwnProperty('newValue'))
       return;
+    // todo: Do we have to handle removed groups?
     Object.keys(changes.newValue).forEach(groupName => {
       Group.renderState('spanGroupAutoBid', groupName);
     });
@@ -494,9 +495,7 @@ class Article {
         this[e] = info[e];
     });
     // add open tab info
-    if (tab != null) {
-      this.tabId = tab.id;
-    }
+    if (tab != null) this.tabId = tab.id;
     this.popup = popup;
     this.articleDetailsShown = false;
   }
@@ -719,7 +718,7 @@ class Article {
   /*
    * merge updated info and add the change to the article log
    */
-  updateInfo(info, tabId) {
+  updateInfo(info) {
     let modified = 0;
     let messages = [];
     // tabId should not be handled here, because its window specific
@@ -1016,7 +1015,8 @@ class Article {
 
   // open article in a new tab
   async openTab(tabOpenedForBidding = false) {
-    console.log("Biet-O-Matic: Article.openTab(%s) Opening Article Tab (tabOpenedForBidding=%s)", this.articleId, tabOpenedForBidding);
+    console.log("Biet-O-Matic: Article.openTab(%s) Opening Article Tab (tabOpenedForBidding=%s)",
+      this.articleId, tabOpenedForBidding);
     // orig_cvip will go directly to the original bidding page
     let tab = browser.tabs.create({
       url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + this.articleId + '&orig_cvip=true',
@@ -1319,8 +1319,8 @@ class ArticlesTable {
             .catch(e => console.warn(`Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state! ${e.message}`));
           if (groupAutoBid === true) {
             let shouldOpenTab = true;
-            if (article.hasOwnProperty('tabOpenedForBidding') && article.tabOpenedForBidding &&
-              article.hasOwnProperty('tabId') && article.tabId != null) {
+            console.log("XXX article=%s articleInfo=%s", article.articleId, article.toString());
+            if (article.tabOpenedForBidding && article.hasOwnProperty('tabId') && article.tabId != null) {
               // already open and refreshed
               console.debug("Biet-O-Matic: openArticleTabsForBidding() Skipping, article %s is already open", article.articleId);
               return;
@@ -1426,7 +1426,7 @@ class ArticlesTable {
     let storedInfo = await browser.storage.sync.get(null);
     Object.keys(storedInfo).forEach(articleId => {
       if (!/^[0-9]+$/.test(articleId)) {
-        console.log("Biet-O-Matic: Skippig invalid stored articleId=%s", articleId);
+        console.log("Biet-O-Matic: Skipping invalid stored articleId=%s", articleId);
         return;
       }
       let info = storedInfo[articleId];
@@ -1503,9 +1503,8 @@ class ArticlesTable {
   /*
    * update article with fresh information
    * - if row is null, it will be determined by articleId
-   * - if tabId is null, updateInfo will not inform the article tab
    */
-  updateArticle(articleInfo, row = null, tabId = null) {
+  updateArticle(articleInfo, row = null) {
     if (row == null)
       row = this.getRow(`#${articleInfo.articleId}`);
     if (row == null || row.length !== 1) return;
@@ -1515,7 +1514,7 @@ class ArticlesTable {
     if (article.articleId !== articleInfo.articleId) {
       throw new Error("updateArticle() ArticleInfo and Row do not match!");
     }
-    if (article.updateInfo(articleInfo, tabId) > 0) {
+    if (article.updateInfo(articleInfo) > 0) {
       row.invalidate('data').draw(false);
       // update info in storage, if there is any, do not inform the articleTab
       article.updateInfoInStorage(articleInfo, null, true)
@@ -1578,25 +1577,25 @@ class ArticlesTable {
     - if in table, update the entry
     - also check if same tab has been reused
   */
-  addOrUpdateArticle(articleInfo, tab) {
-    if (!articleInfo.hasOwnProperty('articleId')) {
+  addOrUpdateArticle(articleInfo, tab = null) {
+    if (!articleInfo.hasOwnProperty('articleId'))
       return;
-    }
+    let tabId = null;
+    if (tab != null) tabId = tab.id;
     let articleId = articleInfo.articleId;
-    //console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%s', articleId, tab, JSON.stringify(articleInfo));
-
+    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%s', articleId, tab, JSON.stringify(articleInfo));
     // check if tab articleId changed
-    const oldArticleId = this.getArticleIdByTabId(tab.id);
+    const oldArticleId = this.getArticleIdByTabId(tabId);
     if (oldArticleId != null && oldArticleId !== articleInfo.articleId) {
       // remove article from the table, or unset at least the tabId
-      this.removeArticleIfBoring(tab.id);
+      this.removeArticleIfBoring(tabId);
     }
 
     // article already in table?
     const rowByArticleId = this.getRow(`#${articleId}`);
     // check if article is already open in another tab
-    if (rowByArticleId.length !== 0 && typeof rowByArticleId !== 'undefined') {
-      if (rowByArticleId.data().tabId != null && rowByArticleId.data().tabId !== tab.id) {
+    if (tab != null && rowByArticleId.length !== 0 && typeof rowByArticleId !== 'undefined') {
+      if (rowByArticleId.data().tabId != null && rowByArticleId.data().tabId !== tabId) {
         throw new Error(`Article ${articleId} is already open in another tab (${rowByArticleId.data().tabId})!`);
       }
     }
@@ -1608,7 +1607,7 @@ class ArticlesTable {
       });
     } else {
       // article in table - update it
-      this.updateArticle(articleInfo, rowByArticleId, tab.id);
+      this.updateArticle(articleInfo, rowByArticleId);
     }
   }
 
@@ -1634,8 +1633,9 @@ class ArticlesTable {
           row.invalidate('data').draw(false);
         } else {
           console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), removed article %s.", tabId, articleId);
-          // remove from table
-          row.remove().draw(false);
+          // remove from table (recheck if the row still exists)
+          const rowFresh = this.DataTable.row(`#${articleId}`);
+          rowFresh.remove().draw(false);
         }
       });
   }
@@ -1952,6 +1952,19 @@ class ArticlesTable {
     });
   }
 
+  // remove an article from the table
+  removeArticleFromTable(articleId) {
+    if (articleId == null) return;
+    const row = this.DataTable.row(`#${articleId}`);
+    if (typeof row === 'undefined' || row.length === 0) return;
+    // remove from table
+    try {
+      row.remove().draw(false);
+    } catch (e) {
+      console.info("Biet-O-Matic: removeArticleFromTable(%s) failed: %s", e.message);
+    }
+  }
+
   /*
    * toggle article tab:
    * - if closed open the article in a new tab, else
@@ -2108,7 +2121,7 @@ class ArticlesTable {
             if (this.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received from tab %s, articleId=%s, articleDescription=%s",
                 sender.tab.id, request.detail.articleId, request.detail.articleDescription);
-              this.updateArticle(request.detail, null, sender.tab.id);
+              this.updateArticle(request.detail, null);
               return Promise.resolve(true);
             }
           } catch (e) {
@@ -2156,7 +2169,8 @@ class ArticlesTable {
                   return Promise.reject(`Specified article ${request.articleId} not found in table`);
                 }
                 if (article.tabId !== sender.tab.id) {
-                  console.log("Biet-O-Matic: ebayArticleRefresh() Article %s - Found tabId mismatch %s -> %s", request.articleId);
+                  console.log("Biet-O-Matic: ebayArticleRefresh() Article %s - Found tabId mismatch %s -> %s",
+                      request.articleId, article.tabId, sender.tab.id);
                 }
                 article.tabRefreshed = Date.now();
                 ArticlesTable.redrawArticleDate(request.articleId);
@@ -2258,7 +2272,7 @@ class ArticlesTable {
                 sender, request.detail.auctionEndState);
               article.handleAuctionEnded(request.detail)
                 .then(() => {
-                  this.updateArticle(request.detail, null, sender.tab.id);
+                  this.updateArticle(request.detail, null);
                   return Promise.resolve(true);
                 })
                 .catch(e => {
@@ -2363,7 +2377,7 @@ class ArticlesTable {
 
     // listen for changes to browser storage area (settings, article info)
     browser.storage.onChanged.addListener((changes, area) => {
-      console.debug("Biet-O-Matic: Event.StorageChanged(%s) changed: s", area, JSON.stringify(changes));
+      console.debug("Biet-O-Matic: Event.StorageChanged(%s) changed: %s", area, JSON.stringify(changes));
       // {"SETTINGS":{
       // "newValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:1166"}},
       // "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138"}}}}
@@ -2381,8 +2395,22 @@ class ArticlesTable {
           console.info("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing Groups.");
           Group.updateFromChanges(changes.GROUPS);
         }
+        // check if a new article has been added, or has been updated by another instance of BE
+        Object.keys(changes).forEach(key => {
+          // {"333462193472":{
+          // "oldValue":{"articleAuctionState":"...}}}
+          // "newValue":... (not if removed)
+          if (/[0-9]+/.test(key)) {
+            if (changes[key].hasOwnProperty('newValue')) {
+              console.info("Biet-O-Matic: Browser Sync Storage Settings changed for article %s -> addOrUpdate article", key);
+              this.addOrUpdateArticle(changes[key].newValue);
+            } else {
+              console.info("Biet-O-Matic: Browser Sync Storage Settings removed for article %s. -> remove article", key);
+              this.removeArticleFromTable(key);
+            }
+          }
+        });
       }
-      // check if a new article has been added, or has been updated by another instance of BE
     });
 
     /*

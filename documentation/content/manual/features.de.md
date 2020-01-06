@@ -11,9 +11,13 @@ weight: 101
 
 ### Gruppen
 Gruppen können verwendet werden, um verschiedene Artikel Typen simultan zu verfolgen und automatisch zu ersteigern.
-Es wird pro Gruppe immer nur ein Artikel ersteigert, danach wird die Gruppen-Automatik deaktiviert.
-Der Nutzer kann also einfach beliebig viele Gruppen erzeugen, um die gewünschten Artikel zu ersteigern.
 
+> Es wird pro Gruppe immer nur ein Artikel ersteigert, danach wird die Gruppen-Automatik deaktiviert.  
+> Falls es gewünscht sein sollte mehrere Artikel einer Gruppe zu ersteigern, kann die Gruppen Automatik per Hand
+> wieder aktiviert werden  
+> Alternativ können sie kleinere Gruppen erstellen. Im Extremfall also nur ein Artikel pro Gruppe, um alle Artikel
+> zu ersteigern. 
+ 
 {{< image src="features_be_gruppe.de.png" alt="Gruppen" >}}
 
 * Artikel können jederzeit in Gruppen zugewiesen werden
