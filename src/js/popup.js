@@ -1059,7 +1059,7 @@ class Article {
   // close the article tab, except its active
   closeTab(onlyCloseIfNotActive = false, onlyCloseIfOpenedForBidding = true) {
     if (this.tabId == null) {
-      console.debug("Article.closeTab() Article %s, Tab=%s: Skip - no tabId", this.articleId, this.tabId);
+      console.debug("Biet-O-Matic: Article.closeTab() Article %s, Tab=%s: Skip - no tabId", this.articleId, this.tabId);
       return;
     }
     if (onlyCloseIfOpenedForBidding && !this.tabOpenedForBidding) {
@@ -1067,7 +1067,7 @@ class Article {
     }
     browser.tabs.get(this.tabId).then(tab => {
       if ((this.hasOwnProperty('tabOpenedForBidding') && this.tabOpenedForBidding === false) || (onlyCloseIfNotActive && tab.active)) {
-        console.debug("Article.closeTab() Article %s, Tab=%s: Dont close (%O)", this.articleId, this.tabId, tab);
+        console.debug("Biet-O-Matic: Article.closeTab() Article %s, Tab=%s: Dont close (%O)", this.articleId, this.tabId, tab);
         return;
       }
       browser.tabs.remove(this.tabId).then(() => {
@@ -1538,7 +1538,7 @@ class ArticlesTable {
       row = this.getRow(`#${articleInfo.articleId}`);
     if (row == null || row.length !== 1) return;
     const article = row.data();
-    console.log("Biet-O-Matic: updateArticle(%s)", articleInfo.articleId);
+    console.debug("Biet-O-Matic: updateArticle(%s) info=%O", articleInfo.articleId, articleInfo);
     // sanity check if the info + row match
     if (article.articleId !== articleInfo.articleId) {
       throw new Error("updateArticle() ArticleInfo and Row do not match!");
@@ -1615,7 +1615,7 @@ class ArticlesTable {
     let tabId = null;
     if (tab != null) tabId = tab.id;
     let articleId = articleInfo.articleId;
-    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%O', articleId, tab, JSON.stringify(articleInfo));
+    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%O', articleId, tab, articleInfo);
     // check if tab articleId changed
     const oldArticleId = this.getArticleIdByTabId(tabId);
     if (oldArticleId != null && oldArticleId !== articleInfo.articleId) {
@@ -1649,7 +1649,8 @@ class ArticlesTable {
             action: 'UpdateArticleMaxBid',
             detail: {articleMaxBid: articleInfo.articleMaxBid, articleAutoBid: articleInfo.articleAutoBid}
           }).catch(e => {
-            console.log("Biet-O-Matic: addOrUpdateArticle() Sending UpdateArticleMaxBid to tab %s failed: %s", tabId, e.message);
+            console.log("Biet-O-Matic: addOrUpdateArticle() Sending UpdateArticleMaxBid to tab %s failed: %s",
+              tabId, e.message);
           });
         }
       }
@@ -1984,17 +1985,25 @@ class ArticlesTable {
    * - settings from browser sync storage
    */
   removeArticle(rowNode) {
-    if (typeof rowNode === 'undefined' || rowNode.length !== 1)
-      return;
-    const row = this.DataTable.row(rowNode);
-    if (typeof row === 'undefined' || row.length !== 1)
-      return;
-    const article = row.data();
-    article.removeAllLogs();
-    row.child(false);
-    article.removeInfoFromStorage().then(() => {
-      row.invalidate('data').draw(false);
-    });
+    try {
+      if (typeof rowNode === 'undefined' || rowNode.length !== 1)
+        return;
+      const row = this.DataTable.row(rowNode);
+      if (typeof row === 'undefined' || row.length !== 1)
+        return;
+      const article = row.data();
+      article.removeAllLogs();
+      row.child(false);
+      article.removeInfoFromStorage()
+        .then(() => {
+          row.invalidate('data').draw(false);
+        })
+        .catch(e => {
+          console.log("Biet-O-Matic: removeArticle(%s) removeInfoFromStorage failed: %s", article.articleId, e.message);
+        });
+    } catch (e) {
+      console.log("Biet-O-Matic: removeArticle(%s) failed: %s", rowNode, e.message);
+    }
   }
 
   // remove an article from the table
@@ -2553,7 +2562,7 @@ class ArticlesTable {
       Popup.updateSetting('articlesTableLength', len);
     });
 
-    // if articleId cell is clicked, active the tab of that article
+    // articleButtons: activate tab, remove article
     this.DataTable.on('click', '#articleButtons', e => {
       e.preventDefault();
       let tr = $(e.target).closest('tr');
