@@ -523,7 +523,7 @@ class Article {
       converted++;
     }
     if (info.hasOwnProperty('minBid')) {
-      info.articleMinBid = info.minBid;
+      info.articleMinimumBid = info.minBid;
       delete info.minBid;
       converted++;
     }
@@ -686,7 +686,7 @@ class Article {
     // merge new info into existing settings
     let mergedStoredInfo = Object.assign({}, oldStoredInfo, newStoredInfo);
     let diffText = Article.getDiffMessage('Aktualisiert', oldStoredInfo, newStoredInfo);
-    console.log("oldInfo=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, newStoredInfo, mergedStoredInfo, diffText);
+    //console.log("oldInfo=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, newStoredInfo, mergedStoredInfo, diffText);
     if (diffText != null) {
       this.addLog({
         component: "Artikel",
@@ -717,59 +717,61 @@ class Article {
 
   /*
    * merge updated info and add the change to the article log
+   * - group, maxBid and autoBid are only needed for browser sync feature
    */
   updateInfo(info) {
-    let modified = 0;
+    let modifiedForStorage = 0;
+    let modifiedForDisplay = 0;
     let messages = [];
     // tabId should not be handled here, because its window specific
     // articleDescription
     if (info.hasOwnProperty('articleDescription') && info.articleDescription !== this.articleDescription) {
       messages.push(Article.getDiffMessage('Beschreibung', this.articleDescription, info.articleDescription));
       this.articleDescription = info.articleDescription;
-      modified++;
+      modifiedForStorage++;
       // todo: optionally deactivate autoBid for this article?
     }
     // articleBidPrice
     if (info.hasOwnProperty('articleBidPrice') && info.articleBidPrice !== this.articleBidPrice) {
       messages.push(Article.getDiffMessage('Auktionspreis', this.articleBidPrice, info.articleBidPrice));
       this.articleBidPrice = info.articleBidPrice;
-      modified++;
+      modifiedForStorage++;
     }
     // articleBidCount
     if (info.hasOwnProperty('articleBidCount') && info.articleBidCount !== this.articleBidCount) {
       messages.push(Article.getDiffMessage('Anzahl Gebote', this.articleBidCount, info.articleBidCount));
       this.articleBidCount = info.articleBidCount;
-      modified++;
+      modifiedForStorage++;
     }
     // articleBidPrice
     if (info.hasOwnProperty('articleBuyPrice') && info.articleBuyPrice !== this.articleBuyPrice) {
       messages.push(Article.getDiffMessage('Kaufpreis', this.articleBuyPrice, info.articleBuyPrice));
       this.articleBuyPrice = info.articleBuyPrice;
-      modified++;
+      modifiedForStorage++;
     }
     // articleShippingCost
     if (info.hasOwnProperty('articleShippingCost') && info.articleShippingCost !== this.articleShippingCost) {
       messages.push(Article.getDiffMessage('Lieferkosten', this.articleShippingCost, info.articleShippingCost));
       this.articleShippingCost = info.articleShippingCost;
-      modified++;
+      modifiedForStorage++;
     }
     // articleShippingMethods
     if (info.hasOwnProperty('articleShippingMethods') && info.articleShippingMethods !== this.articleShippingMethods) {
       messages.push(Article.getDiffMessage('Liefermethoden', this.articleShippingMethods, info.articleShippingMethods));
       this.articleShippingMethods = info.articleShippingMethods;
-      modified++;
+      modifiedForStorage++;
     }
     // articleMinimumBid
     if (info.hasOwnProperty('articleMinimumBid') && info.articleMinimumBid !== this.articleMinimumBid) {
       messages.push(Article.getDiffMessage('Minimal Gebot', this.articleMinimumBid, info.articleMinimumBid));
       this.articleMinimumBid = info.articleMinimumBid;
-      modified++;
+      modifiedForStorage++;
     }
     // articleEndTime
     if (info.hasOwnProperty('articleEndTime') && info.articleEndTime !== this.articleEndTime) {
       messages.push(Article.getDiffMessage('Auktionsende', this.articleEndTime, info.articleEndTime));
       this.articleEndTime = info.articleEndTime;
-      modified++;
+      modifiedForStorage++;
     }
     // articleAuctionState
     if (info.hasOwnProperty('articleAuctionState') && info.articleAuctionState !== this.articleAuctionState) {
@@ -779,16 +781,35 @@ class Article {
         this.articleAuctionStateText = info.articleAuctionStateText;
       else
         this.articleAuctionStateText = "Text fehlt";
-      modified++;
+      modifiedForStorage++;
     }
-    if (modified > 0) {
+    // autoBid (do not log or count as modified as the storage is already up-to-date)
+    if (info.hasOwnProperty('articleAutoBid')) {
+      this.articleAutoBid = info.articleAutoBid;
+      modifiedForDisplay++;
+    }
+    // maxBid (do not log or count as modified as the storage is already up-to-date)
+    if (info.hasOwnProperty('articleMaxBid')) {
+      this.articleMaxBid = info.articleMaxBid;
+      modifiedForDisplay++;
+    }
+    // articleGroup (do not log or count as modified as the storage is already up-to-date)
+    if (info.hasOwnProperty('articleGroup')) {
+      this.articleGroup = info.articleGroup;
+      modifiedForDisplay++;
+    }
+
+    if (modifiedForStorage > 0) {
       this.addLog({
         component: "Artikel",
         level: "Aktualisierung",
         message: messages.join('; '),
       });
     }
-    return modified;
+    return {
+      modifiedForStorage: modifiedForStorage,
+      modifiedForDisplay: modifiedForDisplay
+    };
   }
 
   static getDiffMessage(description, oldVal, newVal) {
@@ -1514,13 +1535,16 @@ class ArticlesTable {
     if (article.articleId !== articleInfo.articleId) {
       throw new Error("updateArticle() ArticleInfo and Row do not match!");
     }
-    if (article.updateInfo(articleInfo) > 0) {
+    const modifiedInfo = article.updateInfo(articleInfo);
+    if (modifiedInfo.modifiedForStorage > 0 || modifiedInfo.modifiedForDisplay > 0) {
       row.invalidate('data').draw(false);
       // update info in storage, if there is any, do not inform the articleTab
-      article.updateInfoInStorage(articleInfo, null, true)
-        .catch(e => {
-          console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
-        });
+      if (modifiedInfo.modifiedForStorage > 0) {
+        article.updateInfoInStorage(articleInfo, null, true)
+          .catch(e => {
+            console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
+          });
+      }
     }
     //this.highlightArticleIfExpired(row);
   }
@@ -1577,13 +1601,13 @@ class ArticlesTable {
     - if in table, update the entry
     - also check if same tab has been reused
   */
-  addOrUpdateArticle(articleInfo, tab = null) {
+  addOrUpdateArticle(articleInfo, tab = null, updatedFromRemote = false) {
     if (!articleInfo.hasOwnProperty('articleId'))
       return;
     let tabId = null;
     if (tab != null) tabId = tab.id;
     let articleId = articleInfo.articleId;
-    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%s', articleId, tab, JSON.stringify(articleInfo));
+    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%O', articleId, tab, JSON.stringify(articleInfo));
     // check if tab articleId changed
     const oldArticleId = this.getArticleIdByTabId(tabId);
     if (oldArticleId != null && oldArticleId !== articleInfo.articleId) {
@@ -1608,6 +1632,19 @@ class ArticlesTable {
     } else {
       // article in table - update it
       this.updateArticle(articleInfo, rowByArticleId);
+      // send update to article tab (update maxBid, autoBid)
+      if (updatedFromRemote && articleInfo.hasOwnProperty('articleMaxBid') && articleInfo.hasOwnProperty('articleAutoBid')) {
+        const row = this.getRow(`#${articleInfo.articleId}`);
+        if (row.data().hasOwnProperty('tabId') && row.data().tabId != null) {
+          let tabId = row.data().tabId;
+          browser.tabs.sendMessage(tabId, {
+            action: 'UpdateArticleMaxBid',
+            detail: {articleMaxBid: articleInfo.articleMaxBid, articleAutoBid: articleInfo.articleAutoBid}
+          }).catch(e => {
+            console.log("Biet-O-Matic: addOrUpdateArticle() Sending UpdateArticleMaxBid to tab %s failed: %s", tabId, e.message);
+          });
+        }
+      }
     }
   }
 
@@ -1956,9 +1993,13 @@ class ArticlesTable {
   removeArticleFromTable(articleId) {
     if (articleId == null) return;
     const row = this.DataTable.row(`#${articleId}`);
+    const article = row.data();
     if (typeof row === 'undefined' || row.length === 0) return;
     // remove from table
     try {
+      // also close eventually open tab
+      if (article != null && typeof article !== 'undefined' && article.hasOwnProperty('tabId') && article.tabId != null)
+        article.closeTab(false, false);
       row.remove().draw(false);
     } catch (e) {
       console.info("Biet-O-Matic: removeArticleFromTable(%s) failed: %s", e.message);
@@ -2377,7 +2418,7 @@ class ArticlesTable {
 
     // listen for changes to browser storage area (settings, article info)
     browser.storage.onChanged.addListener((changes, area) => {
-      console.debug("Biet-O-Matic: Event.StorageChanged(%s) changed: %s", area, JSON.stringify(changes));
+      //console.debug("Biet-O-Matic: Event.StorageChanged(%s) changed: %s", area, JSON.stringify(changes));
       // {"SETTINGS":{
       // "newValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:1166"}},
       // "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138"}}}}
@@ -2403,7 +2444,7 @@ class ArticlesTable {
           if (/[0-9]+/.test(key)) {
             if (changes[key].hasOwnProperty('newValue')) {
               console.info("Biet-O-Matic: Browser Sync Storage Settings changed for article %s -> addOrUpdate article", key);
-              this.addOrUpdateArticle(changes[key].newValue);
+              this.addOrUpdateArticle(changes[key].newValue, null, true);
             } else {
               console.info("Biet-O-Matic: Browser Sync Storage Settings removed for article %s. -> remove article", key);
               this.removeArticleFromTable(key);
