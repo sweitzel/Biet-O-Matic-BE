@@ -1045,7 +1045,14 @@ class Article {
       openerTabId: this.popup.tabId
     });
     this.tabId = tab.id;
-    this.tabOpenedForBidding = tabOpenedForBidding;
+    if (tabOpenedForBidding) {
+      this.tabOpenedForBidding = true;
+      this.addLog({
+        component: "Bietvorgang",
+        level: "Info",
+        message: `Artikel Tab wurde zum Bieten geöffnet (${tab.id}).`
+      });
+    }
     return tab.id;
   }
 
