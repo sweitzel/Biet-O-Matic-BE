@@ -666,14 +666,14 @@ class Article {
 
     // enhance with articleInfo
     Object.assign(newStoredInfo, this);
-    // remove some info which doesnt need to be stored
-    delete newStoredInfo.popup;
-    delete newStoredInfo.tabId;
-    delete newStoredInfo.articleDetailsShown;
+
+    Article.removeUnwantedInfo(oldStoredInfo);
+    Article.removeUnwantedInfo(newStoredInfo);
 
     // merge new info into existing settings
     let mergedStoredInfo = Object.assign({}, oldStoredInfo, newStoredInfo);
     let diffText = Article.getDiffMessage('Aktualisiert', oldStoredInfo, newStoredInfo);
+    console.log("oldInfo=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, newStoredInfo, mergedStoredInfo, diffText);
     if (diffText != null) {
       this.addLog({
         component: "Artikel",
@@ -692,18 +692,23 @@ class Article {
     }
   }
 
+  // remove information from object which should not be stored
+  static removeUnwantedInfo(info) {
+    delete info.popup;
+    delete info.tabId;
+    delete info.tabRefreshed;
+    delete info.tabOpenedForBidding;
+    delete info.articleDetailsShown;
+    delete info.perfInfo;
+  }
+
   /*
    * merge updated info and add the change to the article log
    */
   updateInfo(info, tabId) {
     let modified = 0;
     let messages = [];
-    // new tabId
-    if (tabId != null && tabId !== this.tabId) {
-      messages.push(Article.getDiffMessage('Tab', this.tabId, tabId));
-      this.tabId = tabId;
-      modified++;
-    }
+    // tabId should not be handled here, because its window specific
     // articleDescription
     if (info.hasOwnProperty('articleDescription') && info.articleDescription !== this.articleDescription) {
       messages.push(Article.getDiffMessage('Beschreibung', this.articleDescription, info.articleDescription));
@@ -760,7 +765,7 @@ class Article {
       if (info.hasOwnProperty('articleAuctionStateText'))
         this.articleAuctionStateText = info.articleAuctionStateText;
       else
-        this.articleAuctionStateText = "oops";
+        this.articleAuctionStateText = "Text fehlt";
       modified++;
     }
     if (modified > 0) {
@@ -777,12 +782,18 @@ class Article {
     try {
       //console.debug("getDiffMessage() description=%s, oldVal = %O (%s), newVal=%O",
       //  description, oldVal, typeof oldVal, newVal);
+      let numberOfDifferences = 0;
       if (oldVal != null && typeof oldVal === 'object') {
         // Short diff: https://stackoverflow.com/a/37396358
         let diffResult = Object.keys(newVal).reduce((diff, key) => {
-          if (key.match(/^(articleAuctionState|articleAuctionStateText|articleBidCount|articleBidPrice|tabRefreshed|articleMinimumBid)$/))
+          // just check if the keys are different, but do not add to diff output
+          if (key.match(/^(articleAuctionState|articleAuctionStateText|articleBidCount|articleBidPrice|tabRefreshed|articleMinimumBid)$/)) {
+            if (oldVal[key] !== newVal[key])
+              numberOfDifferences++;
             return diff;
+          }
           if (oldVal[key] === newVal[key]) return diff;
+          numberOfDifferences++;
           let text = this.getDiffMessage(key, oldVal[key], newVal[key]);
           return {
             ...diff,
@@ -796,7 +807,11 @@ class Article {
           });
           return `${description}: ${messages.join('; ')}`;
         } else {
-          return null;
+          if (numberOfDifferences > 0) {
+            return `${description}: ${numberOfDifferences} sonstige Änderungen`;
+          } else {
+            return null;
+          }
         }
       } else {
         if (oldVal == null || typeof oldVal === 'undefined' || oldVal === newVal)
@@ -994,7 +1009,7 @@ class Article {
       active: false,
       openerTabId: this.popup.tabId
     });
-    this.tabid = tab.id;
+    this.tabId = tab.id;
     this.tabOpenedForBidding = tabOpenedForBidding;
     return tab.id;
   }
@@ -1024,6 +1039,52 @@ class Article {
     }).catch(e => {
       console.log("Biet-O-Matic: Article.closeTab() browser.tabs.get failed: %s", e.message);
     });
+  }
+
+  /*
+   * ArticlesTable received event from Article tab with auction end state
+   * - this can be called multiple times, the state change be updated several times (e.g. unknown -> purchased)
+   * - update article 'auctionEndState' in storage
+   * - add status to article log
+   * - close tab if it was opened for bidding
+   */
+  async handleAuctionEnded(info) {
+    try {
+      if (!info.hasOwnProperty('auctionEndState'))
+        info.auctionEndState = null;
+      // 1 == purchased : then disable group autoBid
+      if (info.auctionEndState === 1) {
+        await Group.setState(this.articleGroup, false);
+      }
+      await this.updateInfoInStorage(info)
+        .catch(e => {
+          console.warn("Biet-O-Matic: Unable to store article info: %s", e.message);
+        });
+      // add the ended state to the article log
+      this.addLog({
+        component: "Bietvorgang",
+        level: "Status",
+        message: Article.stateToText(info.auctionEndState),
+      });
+    } catch (e) {
+      console.log("Biet-O-Matic: Article.handleAuctionEnded(%s) failed: %s, info=%s", JSON.stringify(info), e.message)
+    }
+    // close tab in 10 seconds if its still inactive (if the user activates the tab, it will stay open)
+    setTimeout(() => {
+      this.closeTab(true);
+    }, 10000);
+  }
+
+  // convert state id to text
+  static stateToText(state) {
+    if (state === 0)
+      return "Auktion nicht erfolgreich - Das Gebot konnte vermutlich nicht rechtzeitig abgegeben werden!";
+    else if (state === 1)
+      return "Auktion erfolgreich, der Artikel wurde gekauft."
+    else if (state === 2)
+      return "Auktion nicht erfolgreich, sie wurden überboten."
+    else
+      return "Der finale Status ist noch nicht bekannt."
   }
 
   toString () {
@@ -1425,7 +1486,11 @@ class ArticlesTable {
     }
   }
 
-  // update article with fresh information
+  /*
+   * update article with fresh information
+   * - if row is null, it will be determined by articleId
+   * - if tabId is null, updateInfo will not inform the article tab
+   */
   updateArticle(articleInfo, row = null, tabId = null) {
     if (row == null)
       row = this.getRow(`#${articleInfo.articleId}`);
@@ -1438,8 +1503,8 @@ class ArticlesTable {
     }
     if (article.updateInfo(articleInfo, tabId) > 0) {
       row.invalidate('data').draw(false);
-      // update info in storage, if there is any
-      article.updateInfoInStorage(null, null, true)
+      // update info in storage, if there is any, do not inform the articleTab
+      article.updateInfoInStorage(articleInfo, null, true)
         .catch(e => {
           console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
         });
@@ -2170,22 +2235,13 @@ class ArticlesTable {
               const article = row.data();
               console.debug("Biet-O-Matic: Browser Event ebayArticleSetAuctionEndState received: sender=%O, state=%s",
                 sender, request.detail.auctionEndState);
-              if (request.hasOwnProperty('articleId')) {
-                // 1 == purchased : then disable group autoBid
-                if (request.detail.hasOwnProperty('auctionEndState') && request.detail.auctionEndState === 1) {
-                  Group.setState(article.articleGroup, false);
-                }
-                article.updateInfoInStorage(request.detail).catch(e => {
-                  console.warn("Biet-O-Matic: Unable to store article info: %s", e.message);
-                });
-                // close tab in 10 seconds if its still inactive (if the user activates the tab, it will stay open)
-                setTimeout((doNotCloseIfActive) => {
-                  article.closeTab(doNotCloseIfActive);
-                }, 10000, true);
-              }
+              await article.handleAuctionEnded(request.detail);
+              this.updateArticle(request.detail, null, sender.tab.id);
+              return Promise.resolve(true);
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: Event.ebayArticleSetAuctionEndState failed: %s", e.message);
+            console.warn(`Biet-O-Matic: Event.ebayArticleSetAuctionEndState failed: ${e.message}`);
+            return Promise.reject(`Popup Event.ebayArticleSetAuctionEndState failed: ${e.message}`)
           }
           break;
         /*
@@ -2223,39 +2279,41 @@ class ArticlesTable {
      */
     browser.tabs.onUpdated.addListener((tabId, changeInfo, tabInfo) => {
       try {
-        // "https://www.ebay.de/c/18021266829#oid184096781363"
-        const ebayRecommendationUrl = /(www\.ebay\.[a-z]{1,3})\/c\/([0-9]+)#oid([0-9]+)/;
-        if (changeInfo.status === 'loading' && tabInfo.hasOwnProperty('url') && ebayRecommendationUrl.test(tabInfo.url) ) {
-          let matches = tabInfo.url.match(ebayRecommendationUrl);
-          let host = matches[1];
-          let articleId = matches[3];
-          browser.tabs.update(tabId, {
-            url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + articleId + '&nordt=true&orig_cvip=true&rt=nc',
-            openerTabId: this.popup.tabId,
-          }).then(() => {
-            console.log("onUpdatedListener found bad ebay t=%O c=%s, redirecting to %s : %s", tabInfo, JSON.stringify(changeInfo), host, articleId);
-          });
-        }
-        // status == complete, then inject content script, request info and update table
-        if (changeInfo.status === 'complete') {
-          console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tab=%s',
-            tabId, JSON.stringify(changeInfo), JSON.stringify(tabInfo));
-          if (!tabInfo.hasOwnProperty('url')) {
-            throw new Error("Tab Info is missing URL - permission issue?!");
-          }
-          Article.getInfoFromTab(tabInfo)
-            .then(articleInfo => {
-              if (articleInfo.hasOwnProperty('detail')) {
-                // if same article, then update it, else remove old, add new
-                this.addOrUpdateArticle(articleInfo.detail, tabInfo);
-              } else {
-                // new URL is not for an article (or couldnt be parsed) - remove the old article
-                this.removeArticleIfBoring(tabInfo.id);
-              }
-            })
-            .catch(e => {
-              console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
+        if (this.currentWindowId === tabInfo.windowId) {
+          // "https://www.ebay.de/c/18021266829#oid184096781363"
+          const ebayRecommendationUrl = /(www\.ebay\.[a-z]{1,3})\/c\/([0-9]+)#oid([0-9]+)/;
+          if (changeInfo.status === 'loading' && tabInfo.hasOwnProperty('url') && ebayRecommendationUrl.test(tabInfo.url)) {
+            let matches = tabInfo.url.match(ebayRecommendationUrl);
+            let host = matches[1];
+            let articleId = matches[3];
+            browser.tabs.update(tabId, {
+              url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + articleId + '&nordt=true&orig_cvip=true&rt=nc',
+              openerTabId: this.popup.tabId,
+            }).then(() => {
+              console.log("onUpdatedListener found bad ebay t=%O c=%s, redirecting to %s : %s", tabInfo, JSON.stringify(changeInfo), host, articleId);
             });
+          }
+          // status == complete, then inject content script, request info and update table
+          if (changeInfo.status === 'complete') {
+            console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tabInfo=%s',
+              tabId, JSON.stringify(changeInfo), JSON.stringify(tabInfo));
+            if (!tabInfo.hasOwnProperty('url')) {
+              throw new Error("Tab Info is missing URL - permission issue?!");
+            }
+            Article.getInfoFromTab(tabInfo)
+              .then(articleInfo => {
+                if (articleInfo.hasOwnProperty('detail')) {
+                  // if same article, then update it, else remove old, add new
+                  this.addOrUpdateArticle(articleInfo.detail, tabInfo);
+                } else {
+                  // new URL is not for an article (or couldnt be parsed) - remove the old article
+                  this.removeArticleIfBoring(tabInfo.id);
+                }
+              })
+              .catch(e => {
+                console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
+              });
+          }
         }
       } catch (e) {
         console.warn("Biet-O-Matic: tabs.onUpdated() internal error: %s", e.message);
@@ -2284,7 +2342,7 @@ class ArticlesTable {
       if (area === 'sync') {
         if (changes.hasOwnProperty('SETTINGS')) {
           if(AutoBid.checkChangeIsRelevant(changes.SETTINGS)) {
-            console.log("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing AutoBid.");
+            console.info("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing AutoBid.");
             AutoBid.renderState();
           }
         }
