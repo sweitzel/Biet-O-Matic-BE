@@ -1039,7 +1039,7 @@ class Article {
     console.log("Biet-O-Matic: Article.openTab(%s) Opening Article Tab (tabOpenedForBidding=%s)",
       this.articleId, tabOpenedForBidding);
     // orig_cvip will go directly to the original bidding page
-    let tab = browser.tabs.create({
+    let tab = await browser.tabs.create({
       url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + this.articleId + '&orig_cvip=true',
       active: false,
       openerTabId: this.popup.tabId
@@ -1340,9 +1340,8 @@ class ArticlesTable {
             .catch(e => console.warn(`Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state! ${e.message}`));
           if (groupAutoBid === true) {
             let shouldOpenTab = true;
-            console.log("XXX article=%s articleInfo=%s", article.articleId, article.toString());
-            if (article.tabOpenedForBidding && article.hasOwnProperty('tabId') && article.tabId != null) {
-              // already open and refreshed
+            // skip if tab already opened
+            if (article.tabOpenedForBidding) {
               console.debug("Biet-O-Matic: openArticleTabsForBidding() Skipping, article %s is already open", article.articleId);
               return;
             }
@@ -1370,16 +1369,18 @@ class ArticlesTable {
                 console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - Opening tab via wakeUp timer: %sms",
                   article.articleId, wakeUpInMs);
                 setTimeout(() => {
-                  article.openTab(true).catch(e => {
-                    console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
-                  });
+                  article.openTab(true)
+                    .catch(e => {
+                      console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
+                    });
                 }, wakeUpInMs, true);
               } else {
                 console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s Opening tab now",
                   article.articleId, wakeUpInMs);
-                article.openTab(true).catch(e => {
-                  console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
-                });
+                await article.openTab(true)
+                  .catch(e => {
+                    console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
+                  });
               }
             } else {
               console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - should not open tab (already open=%d)",
