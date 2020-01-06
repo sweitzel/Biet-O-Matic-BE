@@ -96,25 +96,27 @@ class Group {
    * requires a bit waiting, because the function will be called before the actual elements will be added
    */
   static renderState(id, name) {
-    Group.waitFor(`#${id}[name="${name}"]`, 500).then(spanGroupAutoBid => {
-      if (spanGroupAutoBid == null || spanGroupAutoBid.length !== 1) {
-        console.warn("Biet-O-Matic: Group.renderState, could not find group span");
-        return;
-      }
-      Group.getState(name).then(autoBid => {
-        if (autoBid) {
-          spanGroupAutoBid.addClass('groupAutoBidEnabled');
-          spanGroupAutoBid.removeClass('groupAutoBidDisabled');
-        } else {
-          spanGroupAutoBid.addClass('groupAutoBidDisabled');
-          spanGroupAutoBid.removeClass('groupAutoBidEnabled');
+    Group.waitFor(`#${id}[name="${name}"]`, 500)
+      .then(spanGroupAutoBid => {
+        if (spanGroupAutoBid == null || spanGroupAutoBid.length !== 1) {
+          console.warn("Biet-O-Matic: Group.renderState, could not find group span");
+          return;
         }
-      }).catch(e => {
-        console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
+        Group.getState(name).then(autoBid => {
+          if (autoBid) {
+            spanGroupAutoBid.addClass('groupAutoBidEnabled');
+            spanGroupAutoBid.removeClass('groupAutoBidDisabled');
+          } else {
+            spanGroupAutoBid.addClass('groupAutoBidDisabled');
+            spanGroupAutoBid.removeClass('groupAutoBidEnabled');
+          }
+        }).catch(e => {
+          console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
+        });
+      })
+      .catch(e => {
+        console.warn("Biet-O-Matic: Group.renderState(%s) failed (Probably not found): %s", name, e.message);
       });
-    }).catch(e => {
-      console.warn("Biet-O-Matic: Group.renderState(%s) failed: %s", name, e.message);
-    });
   }
 
   // promisified setTimeout - simply wait for a defined time
@@ -146,6 +148,18 @@ class Group {
           }, time);
         }
       }
+    });
+  }
+
+  /*
+   * Update group state from given GROUP info
+   * this is typically called when the storage changed event was generated, i.e. triggered by a remote instance
+   */
+  static updateFromChanges(changes) {
+    if (!changes.hasOwnProperty('newValue'))
+      return;
+    Object.keys(changes.newValue).forEach(groupName => {
+      Group.renderState('spanGroupAutoBid', groupName);
     });
   }
 }
@@ -1064,10 +1078,10 @@ class Article {
       this.addLog({
         component: "Bietvorgang",
         level: "Status",
-        message: Article.stateToText(info.auctionEndState),
+        message: Article.stateToText(info.auctionEndState)
       });
     } catch (e) {
-      console.log("Biet-O-Matic: Article.handleAuctionEnded(%s) failed: %s, info=%s", JSON.stringify(info), e.message)
+      console.log("Biet-O-Matic: Article.handleAuctionEnded(%s) failed: %s, info=%s", JSON.stringify(info), e.message);
     }
     // close tab in 10 seconds if its still inactive (if the user activates the tab, it will stay open)
     setTimeout(() => {
@@ -1080,11 +1094,11 @@ class Article {
     if (state === 0)
       return "Auktion nicht erfolgreich - Das Gebot konnte vermutlich nicht rechtzeitig abgegeben werden!";
     else if (state === 1)
-      return "Auktion erfolgreich, der Artikel wurde gekauft."
+      return "Auktion erfolgreich, der Artikel wurde gekauft.";
     else if (state === 2)
-      return "Auktion nicht erfolgreich, sie wurden überboten."
+      return "Auktion nicht erfolgreich, sie wurden überboten.";
     else
-      return "Der finale Status ist noch nicht bekannt."
+      return "Der finale Status ist noch nicht bekannt.";
   }
 
   toString () {
@@ -2086,7 +2100,7 @@ class ArticlesTable {
    */
   registerEvents() {
     // listen to global events (received from other Browser window or background script)
-    browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    browser.runtime.onMessage.addListener((request, sender) => {
       //console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
       switch (request.action) {
         case 'ebayArticleUpdated':
@@ -2121,6 +2135,7 @@ class ArticlesTable {
               } else {
                 console.warn(`Biet-O-Matic: Browser Event ebayArticleMaxBidUpdate for tab ${sender.tab.id} failed, article ${request.articleId} could not be determined`);
               }
+              return Promise.resolve(true);
             }
           } catch (e) {
             console.warn("Biet-O-Matic: Event.ebayArticleMaxBidUpdated internal error: %s", e.message);
@@ -2138,7 +2153,7 @@ class ArticlesTable {
                 const article = row.data();
                 if (typeof article === 'undefined') {
                   console.log("Biet-O-Matic: Event ebayArticleRefresh() aborted: article not found in table row=%O, article=%O", row, article);
-                  return;
+                  return Promise.reject(`Specified article ${request.articleId} not found in table`);
                 }
                 if (article.tabId !== sender.tab.id) {
                   console.log("Biet-O-Matic: ebayArticleRefresh() Article %s - Found tabId mismatch %s -> %s", request.articleId);
@@ -2146,6 +2161,7 @@ class ArticlesTable {
                 article.tabRefreshed = Date.now();
                 ArticlesTable.redrawArticleDate(request.articleId);
               }
+              return Promise.resolve(true);
             }
           } catch (e) {
             console.warn("Biet-O-Matic: Event.ebayArticleRefresh internal error: %s", e.message);
@@ -2165,6 +2181,8 @@ class ArticlesTable {
                   data: Article.getInfoForTab(article),
                   tabId: sender.tab.id
                 });
+              } else {
+                return Promise.reject("ArticleId missing in request data.");
               }
             }
           } catch (e) {
@@ -2179,6 +2197,8 @@ class ArticlesTable {
                 sender.tab.id, request.articleId);
               if (request.hasOwnProperty('articleId')) {
                 return Promise.resolve(browser.storage.sync.get(request.articleId));
+              } else {
+                return Promise.reject("ArticleId missing in request data.");
               }
             }
           } catch (e) {
@@ -2217,6 +2237,7 @@ class ArticlesTable {
               }
               if (article != null)
                 article.addLog(request.detail.message);
+              return Promise.resolve(true);
             }
           } catch (e) {
             console.warn("Biet-O-Matic: Event.addArticleLog internal error: %s", e.message);
@@ -2235,13 +2256,19 @@ class ArticlesTable {
               const article = row.data();
               console.debug("Biet-O-Matic: Browser Event ebayArticleSetAuctionEndState received: sender=%O, state=%s",
                 sender, request.detail.auctionEndState);
-              await article.handleAuctionEnded(request.detail);
-              this.updateArticle(request.detail, null, sender.tab.id);
-              return Promise.resolve(true);
+              article.handleAuctionEnded(request.detail)
+                .then(() => {
+                  this.updateArticle(request.detail, null, sender.tab.id);
+                  return Promise.resolve(true);
+                })
+                .catch(e => {
+                  console.log("Biet-O-Matic: Event ebayArticleSetAuctionEndState failed due to handleAuctionEnded: %s", e.message);
+                  return Promise.reject(`Popup handleAuctionEnded failed: ${e.message}`);
+                });
             }
           } catch (e) {
             console.warn(`Biet-O-Matic: Event.ebayArticleSetAuctionEndState failed: ${e.message}`);
-            return Promise.reject(`Popup Event.ebayArticleSetAuctionEndState failed: ${e.message}`)
+            throw new Error(e.message);
           }
           break;
         /*
@@ -2263,6 +2290,7 @@ class ArticlesTable {
             }
           } catch (e) {
             console.log("Biet-O-Matic: Event.ebayArticleGetAdjustedBidTime failed: %s", e.message);
+            throw new Error(e.message);
           }
           break;
       }
@@ -2335,30 +2363,26 @@ class ArticlesTable {
 
     // listen for changes to browser storage area (settings, article info)
     browser.storage.onChanged.addListener((changes, area) => {
-      //console.debug("Biet-O-Matic: Event.StorageChanged(%s) changed: s", area, JSON.stringify(changes));
+      console.debug("Biet-O-Matic: Event.StorageChanged(%s) changed: s", area, JSON.stringify(changes));
       // {"SETTINGS":{
       // "newValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:1166"}},
       // "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138"}}}}
       if (area === 'sync') {
         if (changes.hasOwnProperty('SETTINGS')) {
-          if(AutoBid.checkChangeIsRelevant(changes.SETTINGS)) {
+          if (AutoBid.checkChangeIsRelevant(changes.SETTINGS)) {
             console.info("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing AutoBid.");
             AutoBid.renderState();
           }
         }
-      }
-    });
-
-    // listener for extension updates
-    browser.runtime.onInstalled.addListener(function (details) {
-      if (details.reason === "install") {
-        console.info("Biet-O-Matic: Extension freshly installed.");
-      } else if (details.reason === "update") {
-        let thisVersion = browser.runtime.getManifest().version;
-        if (details.previousVersion !== thisVersion) {
-          console.info('Updated from version %s to %s!', details.previousVersion, thisVersion);
+        // {"GROUPS":{
+        // "newValue":{"Briefmarken":{"autoBid":true},"Keine Gruppe":{"autoBid":false},"Test":{"autoBid":true},"Tischdecken":{"autoBid":true}},
+        // "oldValue":{"Briefmarken":{"autoBid":false},"Keine Gruppe":{"autoBid":false},"Test":{"autoBid":true},"Tischdecken":{"autoBid":true}}}}
+        if (changes.hasOwnProperty('GROUPS')) {
+          console.info("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing Groups.");
+          Group.updateFromChanges(changes.GROUPS);
         }
       }
+      // check if a new article has been added, or has been updated by another instance of BE
     });
 
     /*
