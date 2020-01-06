@@ -1629,6 +1629,8 @@ class ArticlesTable {
     if (tab != null && rowByArticleId.length !== 0 && typeof rowByArticleId !== 'undefined') {
       if (rowByArticleId.data().tabId != null && rowByArticleId.data().tabId !== tabId) {
         throw new Error(`Article ${articleId} is already open in another tab (${rowByArticleId.data().tabId})!`);
+      } else if (rowByArticleId.data().tabId == null) {
+        rowByArticleId.data().tabId = tab.id;
       }
     }
     if (rowByArticleId.length === 0) {
@@ -2372,6 +2374,7 @@ class ArticlesTable {
      * tab reloaded or URL changed
      * The following cases should be handled:
      * - Same page, but maybe updated info
+     * - undo close article tab
      * - An existing tab is used to show a different article
      *   -> get updated info and update table
      * - An existing article tab navigated away from ebay -> remove from table
