@@ -46,7 +46,7 @@ class Group {
   static async getState(name) {
     // name=null -> name=Keine Gruppe
     if (name == null || typeof name === 'undefined')
-      name = 'Keine Gruppe';
+      name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
     let result = await browser.storage.sync.get('GROUPS');
     if (Object.keys(result).length === 1) {
       const groupInfo = result.GROUPS;
@@ -66,7 +66,7 @@ class Group {
   static async setState(name, autoBid = false) {
     // name=null -> name=Keine Gruppe
     if (name == null || typeof name === 'undefined')
-      name = 'Keine Gruppe';
+      name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
     let result = await browser.storage.sync.get('GROUPS');
     const groupInfo = {};
     if (Object.keys(result).length === 1)
@@ -916,7 +916,7 @@ class Article {
 
   // returns the autoBid state for window and article group
   async getAutoBidState() {
-    let groupName = 'Keine Gruppe';
+    let groupName = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
     if (this.hasOwnProperty('articleGroup') && this.articleGroup != null && typeof this.articleGroup !== 'undefined' )
       groupName = this.articleGroup;
     const info = {
@@ -1162,7 +1162,7 @@ class ArticlesTable {
     this.currentWindowId = popup.whoIAm.currentWindow.id;
     if ($(selector).length === 0)
       throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
-    //$.fn.DataTable.RowGroup.defaults.emptyDataGroup = "Keine Gruppe";
+    $.fn.DataTable.RowGroup.defaults.emptyDataGroup = "Keine Gruppe";
     this.DataTable = ArticlesTable.init(selector);
     this.addSearchFields();
     this.registerEvents();
@@ -1175,6 +1175,27 @@ class ArticlesTable {
 
   // setup articles table
   static init(selector) {
+    $.extend(
+      $.fn.dataTable.ext.type.order, {
+        'natural-asc': function (a, b) {
+          try {
+            return ArticlesTable.naturalSort(a, b, true);
+          } catch (e) {
+            console.log("Biet-O-Matic: Natural Sorting (asc) failed: %s", e.message);
+            return 0;
+          }
+        }
+      },
+      $.fn.dataTable.ext.type.order, {
+        'natural-desc': function (a, b) {
+          try {
+            return ArticlesTable.naturalSort(a, b, true) * -1;
+          } catch (e) {
+            console.log("Biet-O-Matic: Natural Sorting (desc) failed: %s", e.message);
+            return 0;
+          }
+        }
+      });
     return $(selector).DataTable({
       columns: [
         {
@@ -1258,7 +1279,7 @@ class ArticlesTable {
           width: '80px',
           searchable: true,
           orderable: true,
-          defaultContent: 'Keine Gruppe',
+          defaultContent: $.fn.DataTable.RowGroup.defaults.emptyDataGroup,
           render: ArticlesTable.renderArticleGroup
         },
         {
@@ -1284,7 +1305,8 @@ class ArticlesTable {
         {className: "dt-body-center dt-body-nowrap", targets: [0, 1, 7, 8, 9]},
         {width: "100px", targets: [4, 5, 8]},
         {width: "220px", targets: [3]},
-        {width: "300px", targets: [2, 6]}
+        {width: "300px", targets: [2, 6]},
+        {type: "natural", targets: 7 }
       ],
       searchDelay: 400,
       rowId: 'articleId',
@@ -1299,7 +1321,7 @@ class ArticlesTable {
       rowGroup: {
         className: 'row-group',
         dataSrc: 'articleGroup',
-        emptyDataGroup: 'Keine Gruppe',
+        emptyDataGroup: $.fn.DataTable.RowGroup.defaults.emptyDataGroup,
         startRender: ArticlesTable.renderGroups,
         endRender: null
       },
@@ -2633,7 +2655,75 @@ class ArticlesTable {
       });
     });
   }
-}
+
+  //region Custom sorter for DataTable
+  /*
+   * Natural Sort algorithm for Javascript - Version 0.7 - Released under MIT license
+  * Author: Jim Palmer (based on chunking idea from Dave Koelle)
+  * Contributors: Mike Grier (mgrier.com), Clint Priest, Kyle Adams, guillermo
+  * See: http://js-naturalsort.googlecode.com/svn/trunk/naturalSort.js
+  */
+  static naturalSort (a, b, sortEmptyGroupLast = false) {
+    const re = /(^-?[0-9]+(\.?[0-9]*)[df]?e?[0-9]?%?$|^0x[0-9a-f]+$|[0-9]+)/gi;
+    const sre = /(^[ ]*|[ ]*$)/g;
+    const dre = /(^([\w ]+,?[\w ]+)?[\w ]+,?[\w ]+\d+:\d+(:\d+)?[\w ]?|^\d{1,4}[\/\-]\d{1,4}[\/\-]\d{1,4}|^\w+, \w+ \d+, \d{4})/;
+    const hre = /^0x[0-9a-f]+$/i;
+    const ore = /^0/;
+
+    // empty group (Keine Gruppe) should be sorted last
+    if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
+      return 1;
+    if (sortEmptyGroupLast && b === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
+      return -1;
+
+    // convert all to strings and trim()
+    const x = a.toString().replace(sre, '') || '';
+    const y = b.toString().replace(sre, '') || '';
+
+    // chunk/tokenize
+    const xN = x.replace(re, '\0$1\0').replace(/\0$/,'').replace(/^\0/,'').split('\0');
+    const yN = y.replace(re, '\0$1\0').replace(/\0$/,'').replace(/^\0/,'').split('\0');
+    // numeric, hex or date detection
+    const xD = Number.parseInt(x.match(hre), 10) || (xN.length !== 1 && x.match(dre) && Date.parse(x));
+    const yD = Number.parseInt(y.match(hre), 10) || xD && y.match(dre) && Date.parse(y) || null;
+
+    // first try and sort Hex codes or Dates
+    if (yD) {
+      if ( xD < yD ) {
+        return -1;
+      }
+      else if ( xD > yD ) {
+        return 1;
+      }
+    }
+
+    // natural sorting through split numeric strings and default strings
+    for(let cLoc=0, numS=Math.max(xN.length, yN.length); cLoc < numS; cLoc++) {
+      // find floats not starting with '0', string or 0 if not defined (Clint Priest)
+      let oFxNcL = !(xN[cLoc] || '').match(ore) && parseFloat(xN[cLoc], 10) || xN[cLoc] || 0;
+      let oFyNcL = !(yN[cLoc] || '').match(ore) && parseFloat(yN[cLoc], 10) || yN[cLoc] || 0;
+      // handle numeric vs string comparison - number < string - (Kyle Adams)
+      if (isNaN(oFxNcL) !== isNaN(oFyNcL)) {
+        return (isNaN(oFxNcL)) ? 1 : -1;
+      }
+      // rely on string comparison if different types - i.e. '02' < 2 != '02' < '2'
+      else if (typeof oFxNcL !== typeof oFyNcL) {
+        oFxNcL += '';
+        oFyNcL += '';
+      }
+      if (oFxNcL < oFyNcL) {
+        return -1;
+      }
+      if (oFxNcL > oFyNcL) {
+        return 1;
+      }
+    }
+    return 0;
+  }
+
+  //endregion
+
+} // end of ArticlesTable class
 
 class Popup {
   constructor(version = 'v0.0.0') {
