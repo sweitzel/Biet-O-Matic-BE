@@ -45,19 +45,21 @@ führt (Ein Forum ist ja kein Problem/Ticket Management System)
 Der QuellCode steht unter der [Apache Lizenz](https://github.com/sweitzel/Biet-O-Matic-BE/blob/master/LICENSE)
 
 ## Spenden
-B-O-M BE entstand als Freizeit Projekt in relativ kurzer Zeit. Um längerfristig die ordnungsgemäße Funktion
-bzw. auch die Umsetzung neuer Funktionen zu ermöglichen, wird die "Spenden-Funktion" als Möglichkeit Finanzierung angeboten.
-Ebenfalls kann eine Spende auch als kleine Aufmerksamkeit oder ein Dankeschön betrachtet werden, über das ich mich natürlich sehr freue.
+B-O-M BE entstand als Freizeit Projekt und in relativ kurzer Zeit. Um jedoch längerfristig die ordnungsgemäße Funktion
+bzw. auch die Umsetzung neuer Funktionen zu ermöglichen, wird die "Spenden-Funktion" als Möglichkeit der Finanzierung angeboten.
+Ebenfalls kann eine Spende auch als kleine Aufmerksamkeit oder ein Dankeschön betrachtet werden, über die ich mich natürlich sehr freue.
+
+### Paypal
+Eine schnelle und unkomplizierte Spende ist über mein {{% fontawesome paypal %}} [PayPal Profil](https://paypal.me/weitzels?locale.x=de_DE) möglich.
 
 ### GitHub
 Spenden (Sponsoring) über GitHub ist eine relativ neue Möglichkeit, um Open Source Projekte über eine Community zu finanzieren und
-über kalkulierbare Einnahmen zu generieren.
-Hier ist nun also der {{% fontawesome github-alt %}} [GitHub Link um zu spenden](https://github.com/sponsors/sweitzel).
+über kalkulierbare Einnahmen zu generieren. Es ist zwar für den "Sponsor" komplizierter, generiert aber bewsser
+kalkulierbare Einnahmen, welche nötig sind um solch ein Projekt langfristig am Leben zu erhalten.
+Hier ist der {{% fontawesome github-alt %}} [GitHub Link um zu spenden](https://github.com/sponsors/sweitzel).
 
 * setzt eine Anmeldung bei GitHub vorraus (die ist gratis)
+* GitHub ist eine Englischsprachige Plattform
 * Spenden geht nur als wiederkehrende Zahlung. Es wird also monatlich der gewählte Betrag abgebucht
-(dies kann jedoch monatlich widerrufen werden)
-* Als großer Vorteil: GitHub verdoppelt die Spenden (bis 5.000€) und erhebt keine Gebühren.
-
-### Paypal
-Eine Spende ist ebenfalls über mein {{% fontawesome paypal %}} [PayPal Profil](https://paypal.me/weitzels?locale.x=de_DE) möglich.
+(dies kann jedoch auch monatlich widerrufen werden)
+* Als großer Vorteil: GitHub verdoppelt die Spenden (bis 5.000€) und erhebt keine Gebühren (bis Ende 2020).
