@@ -1278,7 +1278,7 @@ class ArticlesTable {
           data: 'articleGroup',
           width: '80px',
           searchable: true,
-          orderable: true,
+          orderable: false,
           defaultContent: $.fn.DataTable.RowGroup.defaults.emptyDataGroup,
           render: ArticlesTable.renderArticleGroup
         },
@@ -1737,7 +1737,7 @@ class ArticlesTable {
     inpMaxBid.type = 'number';
     inpMaxBid.min = '0';
     inpMaxBid.step = '0.01';
-    inpMaxBid.defaultValue = maxBid.toString(10);
+    inpMaxBid.defaultValue = Number.isNaN(maxBid) ? '' : maxBid.toString(10);
     inpMaxBid.style.width = "60px";
     const labelAutoBid = document.createElement('label');
     const chkAutoBid = document.createElement('input');

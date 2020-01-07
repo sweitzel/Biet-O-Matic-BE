@@ -248,12 +248,8 @@ class EbayArticle {
         const maxBidInputNew = document.getElementById('MaxBidId');
         const bomAutoBidNew = document.getElementById('BomAutoBid');
         if (maxBidInputNew != null) {
-          //updateMaxBidInput(maxBidInputNew.value);
           // replace , with .
-          let maxBidInputValue = maxBidInputNew.value.replace(/,/, '.');
-          maxBidInputValue = Number.parseFloat(maxBidInputValue);
-          if (Number.isNaN(maxBidInputValue))
-            maxBidInputValue = '0';
+          let maxBidInputValue = Number.parseFloat(maxBidInputNew.value.replace(/,/, '.'));
           this.articleMaxBid = maxBidInputValue;
           // update minimum bid
           let minBidValue = null;
