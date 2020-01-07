@@ -42,6 +42,15 @@ import "../css/popup.css";
  * Group information is stored in browser sync storage under key GROUPS: { 'name': { autoBid: false }, ...]
  */
 class Group {
+  // returns the groups from sync.storage
+  static async getAll() {
+    let result = await browser.storage.sync.get('GROUPS');
+    if (Object.keys(result).length === 1)
+      return result.GROUPS;
+    else
+      return {};
+  }
+
   // returns the state of group autoBid: true|false
   static async getState(name) {
     // name=null -> name=Keine Gruppe
@@ -1278,7 +1287,7 @@ class ArticlesTable {
           data: 'articleGroup',
           width: '80px',
           searchable: true,
-          orderable: false,
+          orderable: false, // this should ideally be false, but then the ordering is messed up
           defaultContent: $.fn.DataTable.RowGroup.defaults.emptyDataGroup,
           render: ArticlesTable.renderArticleGroup
         },
@@ -1306,7 +1315,7 @@ class ArticlesTable {
         {width: "100px", targets: [4, 5, 8]},
         {width: "220px", targets: [3]},
         {width: "300px", targets: [2, 6]},
-        {type: "natural", targets: 7 }
+        {type: "natural", targets: [7] }
       ],
       searchDelay: 400,
       rowId: 'articleId',
@@ -1827,16 +1836,27 @@ class ArticlesTable {
     }
     //console.debug("Biet-O-Matic: renderArticleGroup(%s) data=%s, type=%O, row=%O", row.articleId, data, type, row);
     let div = document.createElement('div');
+
     const inpGroup = document.createElement('input');
     inpGroup.id = 'inpGroup_' + row.articleId;
     inpGroup.type = 'text';
+    inpGroup.setAttribute('list', 'groups');
     inpGroup.setAttribute('maxlength', '32');
     inpGroup.multiple = false;
     inpGroup.style.width = "60px";
     inpGroup.placeholder = 'Gruppe';
     if (data != null && typeof data !== 'undefined')
       inpGroup.defaultValue = data;
+
+    const listGroup = document.createElement('datalist');
+    listGroup.id = 'groups';
+    Object.keys(Popup.cachedGroups).forEach(group => {
+      const option = document.createElement('option');
+      option.value = group;
+      listGroup.appendChild(option);
+    });
     div.appendChild(inpGroup);
+    div.appendChild(listGroup);
     return div.outerHTML;
   }
 
@@ -1977,7 +1997,7 @@ class ArticlesTable {
 
   static renderArticleEndTime(data, type, row) {
     if (type !== 'display') {
-      //console.log("renderArticleEndTime returning data=%s (type=%s)", data, type);
+      console.log("renderArticleEndTime returning data=%s (type=%s)", data, type);
       return data;
     }
     let span = document.createElement('span');
@@ -2562,10 +2582,11 @@ class ArticlesTable {
         article.articleAutoBid = e.target.checked;
       } else if (e.target.id.startsWith('inpGroup_')) {
         // group has been updated
-        if (e.target.value === '')
+        if (e.target.value === '' || e.target.value === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
           article.articleGroup = undefined;
         else
           article.articleGroup = e.target.value;
+        this.lastFocusedInput = null;
       }
 
       // redraw the row
@@ -2674,9 +2695,11 @@ class ArticlesTable {
     const ore = /^0/;
 
     // empty group (Keine Gruppe) should be sorted last
-    if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
+    if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup && a === b)
+      return 0;
+    else if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
       return 1;
-    if (sortEmptyGroupLast && b === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
+    else if (sortEmptyGroupLast && b === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
       return -1;
 
     // convert all to strings and trim()
@@ -2808,6 +2831,7 @@ class Popup {
   async init() {
     this.whoIAm = await Popup.detectWhoIAm();
     this.tabId = await Popup.getOwnTabId();
+    Popup.cachedGroups = await Group.getAll();
     this.registerEvents();
 
     this.table = new ArticlesTable(this, '#articles');
