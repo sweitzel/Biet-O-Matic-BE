@@ -2548,10 +2548,13 @@ class ArticlesTable {
         // maxBid was entered
         // normally with input type=number this should not be necessary - but there was a problem reported...
         article.articleMaxBid = Number.parseFloat(e.target.value.replace(/,/, '.'));
+        if (Number.isNaN(article.articleMaxBid))
+          article.articleMaxBid = 0;
         // check if maxBid > buyPrice (sofortkauf), then adjust it to the buyprice - 1 cent
         if (article.hasOwnProperty('articleBuyPrice') && article.articleMaxBid >= article.articleBuyPrice) {
           article.articleMaxBid = article.articleBuyPrice - 0.01;
-        } else if (article.hasOwnProperty('articleMinimumBid') && article.articleMaxBid < article.articleMinimumBid) {
+        } else if (article.hasOwnProperty('articleMinimumBid') && article.articleMaxBid > 0 &&
+          article.articleMaxBid < article.articleMinimumBid) {
           article.articleMaxBid = article.articleMinimumBid;
         }
       } else if (e.target.id.startsWith('chkAutoBid_')) {

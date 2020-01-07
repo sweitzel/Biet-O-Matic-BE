@@ -250,6 +250,8 @@ class EbayArticle {
         if (maxBidInputNew != null) {
           // replace , with .
           let maxBidInputValue = Number.parseFloat(maxBidInputNew.value.replace(/,/, '.'));
+          if (Number.isNaN(maxBidInputValue))
+            maxBidInputValue = 0;
           this.articleMaxBid = maxBidInputValue;
           // update minimum bid
           let minBidValue = null;
@@ -269,7 +271,8 @@ class EbayArticle {
             maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE',
               {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
             this.articleMaxBid = maxBidInputValue;
-          } else if (this.hasOwnProperty('articleMinimumBid') && maxBidInputValue < this.articleMinimumBid) {
+          } else if (this.hasOwnProperty('articleMinimumBid') && maxBidInputValue > 0 &&
+            maxBidInputValue < this.articleMinimumBid) {
             console.log("Biet-O-Matic: monitorChanges() updated maxBid %s to %s (minimum bid price)",
               maxBidInputValue, this.articleMinimumBid);
             maxBidInputValue = Number.parseFloat(this.articleMinimumBid.toString());
@@ -277,8 +280,10 @@ class EbayArticle {
               {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
             this.articleMaxBid = maxBidInputValue;
           } else {
-            maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE',
-              {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (!Number.isNaN(maxBidInputValue)) {
+              maxBidInputNew.value = maxBidInputValue.toLocaleString('de-DE',
+                {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
           }
           this.activateAutoBidButton(maxBidInputValue, minBidValue);
           // inform popup about the local change
