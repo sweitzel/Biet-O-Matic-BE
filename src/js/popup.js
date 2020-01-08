@@ -1997,7 +1997,7 @@ class ArticlesTable {
 
   static renderArticleEndTime(data, type, row) {
     if (type !== 'display') {
-      console.log("renderArticleEndTime returning data=%s (type=%s)", data, type);
+      //console.log("renderArticleEndTime returning data=%s (type=%s)", data, type);
       return data;
     }
     let span = document.createElement('span');
@@ -2695,12 +2695,9 @@ class ArticlesTable {
     const ore = /^0/;
 
     // empty group (Keine Gruppe) should be sorted last
-    if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup && a === b)
-      return 0;
-    else if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
-      return 1;
-    else if (sortEmptyGroupLast && b === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
-      return -1;
+    if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup && a === b) return 0;
+    else if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup) return 1;
+    else if (sortEmptyGroupLast && b === $.fn.DataTable.RowGroup.defaults.emptyDataGroup) return -1;
 
     // convert all to strings and trim()
     const x = a.toString().replace(sre, '') || '';
@@ -2715,19 +2712,16 @@ class ArticlesTable {
 
     // first try and sort Hex codes or Dates
     if (yD) {
-      if ( xD < yD ) {
-        return -1;
-      }
-      else if ( xD > yD ) {
-        return 1;
-      }
+      if ( xD < yD ) return -1;
+      else if ( xD > yD ) return 1;
+      else return 0;
     }
 
     // natural sorting through split numeric strings and default strings
     for(let cLoc=0, numS=Math.max(xN.length, yN.length); cLoc < numS; cLoc++) {
       // find floats not starting with '0', string or 0 if not defined (Clint Priest)
-      let oFxNcL = !(xN[cLoc] || '').match(ore) && parseFloat(xN[cLoc], 10) || xN[cLoc] || 0;
-      let oFyNcL = !(yN[cLoc] || '').match(ore) && parseFloat(yN[cLoc], 10) || yN[cLoc] || 0;
+      let oFxNcL = !(xN[cLoc] || '').match(ore) && Number.parseFloat(xN[cLoc]) || xN[cLoc] || 0;
+      let oFyNcL = !(yN[cLoc] || '').match(ore) && Number.parseFloat(yN[cLoc]) || yN[cLoc] || 0;
       // handle numeric vs string comparison - number < string - (Kyle Adams)
       if (isNaN(oFxNcL) !== isNaN(oFyNcL)) {
         return (isNaN(oFxNcL)) ? 1 : -1;
@@ -2737,12 +2731,8 @@ class ArticlesTable {
         oFxNcL += '';
         oFyNcL += '';
       }
-      if (oFxNcL < oFyNcL) {
-        return -1;
-      }
-      if (oFxNcL > oFyNcL) {
-        return 1;
-      }
+      if (oFxNcL < oFyNcL) return -1;
+      else if (oFxNcL > oFyNcL) return 1;
     }
     return 0;
   }
