@@ -39,11 +39,27 @@ Hervozuheben sind besonders folgende Änderungen:
 * Verknüpfung zur Spenden Seite
     * Um zu sicher zu stellen, dass B-O-M BE auch in Zukunft gepflegt und erweitert wird, ist nun die Spendenmöglichkeit
     integriert. Aktuell ist dies durch die GitHub-Plattform möglich, wo verschiedene Spendenhöhen möglich sind.
-     
-### Biet-O-Matic BE Version 0.2.1
+
+### Biet-O-Matic BE Version 0.2.3
+{{< hint info>}}
+Erschienen am Montag, XX.01.2020 
+{{< /hint >}}
+Hinzugefügt: 
+* Gruppen Auswahl in Übersichtstabelle
+* Unbenutzte Gruppen werden nach 7 Tagen automatisch gelöscht
+* BE Übersichtsseite öffnet sich nach einem Update automatisch, aber nur wenn Automatikmodus für das Fenster aktiv war.
+  Dies stellt sicher, das in Abwesenheit weiterhin automatisch geboten werden kann nachdem ein BE Update statt fand.
+
+Behoben:
+* Maximal Gebot kann nun gelöscht werden und wird auf 0 gesetzt anstatt immer auf das Minimalgebot zu springen.
+* Problem behoben wenn ein Artikel Tab geschlossen wurde, und dann wieder hergestellt.
+
+### Biet-O-Matic BE Version 0.2.2
 {{< hint info>}}
 Erschienen am Montag, 06.01.2020 
 {{< /hint >}} 
+* Erste stabile 0.2 Version
+
 
 ## Biet-O-Matic BE Version 0.1
 Hierbei handelt es sich um die ersten Prototyp Versionen, welche im Dezember 2019 erschienen sind. Diese Versionen
