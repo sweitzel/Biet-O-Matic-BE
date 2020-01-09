@@ -110,7 +110,7 @@ class Group {
    * requires a bit waiting, because the function will be called before the actual elements will be added
    */
   static renderState(id, name) {
-    Group.waitFor(`#${id}[name="${name}"]`, 500)
+    Group.waitFor(`#${id}[name="${name}"]`, 1000)
       .then(spanGroupAutoBid => {
         if (spanGroupAutoBid == null || spanGroupAutoBid.length !== 1) {
           console.warn("Biet-O-Matic: Group.renderState, could not find group span");
@@ -130,7 +130,7 @@ class Group {
       })
       .catch(e => {
         // its expected to fail, e.g. due to table pagination
-        //console.log("Biet-O-Matic: Group.renderState(%s) failed (Probably not found): %s", name, e.message);
+        console.debug("Biet-O-Matic: Group.renderState(%s) failed (Probably not found): %s", name, e.message);
       });
   }
 
@@ -1844,7 +1844,9 @@ class ArticlesTable {
     return divArticleMaxBid.outerHTML;
   }
 
-  // render row groups
+  /*
+   * Render row groups
+   */
   static renderGroups(rows, groupName) {
     let td = document.createElement('td');
     td.colSpan = rows.columns()[0].length;
@@ -1866,8 +1868,8 @@ class ArticlesTable {
     spanGroupAutoBid.setAttribute('name', groupName);
     spanGroupAutoBid.textContent = "Automatikmodus";
     spanGroupAutoBid.style.float = 'right';
-    // renderState can take up to 500ms
-    Group.renderState('spanGroupAutoBid', groupName);
+    // renderState will asynchronously add a class toggling enabled/disabled state
+    Group.renderState(spanGroupAutoBid.id, groupName);
     td.appendChild(spanGroupAutoBid);
     // append data-name to tr
     return $('<tr/>')
