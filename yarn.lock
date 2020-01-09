@@ -32,9 +32,9 @@
   integrity sha512-tHq6qdbT9U1IRSGf14CL0pUlULksvY9OZ+5eEgl1N7t+OA3tGvNpxJCzuKQlsNgCVwbAs670L1vcVQi8j9HjnA==
 
 "@types/node@*":
-  version "13.1.4"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-13.1.4.tgz#4cfd90175a200ee9b02bd6b1cd19bc349741607e"
-  integrity sha512-Lue/mlp2egZJoHXZr4LndxDAd7i/7SQYhV0EjWfb/a4/OZ6tuVwMCVPiwkU5nsEipxEf7hmkSU7Em5VQ8P5NGA==
+  version "13.1.6"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-13.1.6.tgz#076028d0b0400be8105b89a0a55550c86684ffec"
+  integrity sha512-Jg1F+bmxcpENHP23sVKkNuU3uaxPnsBMW0cLjleiikFKomJQbsn0Cqk2yDvQArqzZN6ABfBkZ0To7pQ8sLdWDg==
 
 "@types/source-list-map@*":
   version "0.1.2"
@@ -63,9 +63,9 @@
     source-map "^0.6.1"
 
 "@types/webpack@^4.4.31":
-  version "4.41.1"
-  resolved "https://registry.yarnpkg.com/@types/webpack/-/webpack-4.41.1.tgz#571f0e137ce698710dd2637f7d222811eb83e274"
-  integrity sha512-n9fP8UrMxOi1wiM3oM+vMZHMJJ7WoQohqd63C20cmKOFkNEy9Q8hyZyDR6PWdvSYt3V3A7cwDq/kWxHlRYYZEg==
+  version "4.41.2"
+  resolved "https://registry.yarnpkg.com/@types/webpack/-/webpack-4.41.2.tgz#c6faf0111de27afdffe1158dac559e447c273516"
+  integrity sha512-DNMQOfEvwzWRRyp6Wy9QVCgJ3gkelZsuBE2KUD318dg95s9DKGiT5CszmmV58hq8jk89I9NClre48AEy1MWAJA==
   dependencies:
     "@types/anymatch" "*"
     "@types/node" "*"
@@ -1113,9 +1113,9 @@ datatables.net@1.10.20, datatables.net@^1.10.15, datatables.net@^1.10.20:
     jquery ">=1.7"
 
 date-fns@^2.8.1:
-  version "2.8.1"
-  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.8.1.tgz#2109362ccb6c87c3ca011e9e31f702bc09e4123b"
-  integrity sha512-EL/C8IHvYRwAHYgFRse4MGAPSqlJVlOrhVYZ75iQBKrnv+ZedmYsgwH3t+BCDuZDXpoo07+q9j4qgSSOa7irJg==
+  version "2.9.0"
+  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.9.0.tgz#d0b175a5c37ed5f17b97e2272bbc1fa5aec677d2"
+  integrity sha512-khbFLu/MlzLjEzy9Gh8oY1hNt/Dvxw3J6Rbc28cVoYWQaC1S3YI4xwkF9ZWcjDLscbZlY9hISMr66RFzZagLsA==
 
 debug@2.6.9, debug@^2.2.0, debug@^2.3.3:
   version "2.6.9"
@@ -1507,9 +1507,9 @@ eventemitter3@^4.0.0:
   integrity sha512-qerSRB0p+UDEssxTtm6EDKcE7W4OaoisfIMl4CngyEhjpYglocpNg6UEqCvemdGhosAsg4sO2dXJOdyBifPGCg==
 
 events@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/events/-/events-3.0.0.tgz#9a0a0dfaf62893d92b875b8f2698ca4114973e88"
-  integrity sha512-Dc381HFWJzEOhQ+d8pkNon++bk9h6cdAoAj4iE6Q4y6xgTzySWXlKn05/TVNpjnfRqi/X0EpJEJohPjNI3zpVA==
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/events/-/events-3.1.0.tgz#84279af1b34cb75aa88bf5ff291f6d0bd9b31a59"
+  integrity sha512-Rv+u8MLHNOdMjTAFeT3nCjHn2aGlx435FP/sDHNaRhDEMwyI/aB22Kj2qIN8R0cw3z28psEQLYwxVKLsKrMgWg==
 
 eventsource@^1.0.7:
   version "1.0.7"
@@ -4240,9 +4240,9 @@ terser-webpack-plugin@^1.4.3:
     worker-farm "^1.7.0"
 
 terser@^4.1.2:
-  version "4.6.1"
-  resolved "https://registry.yarnpkg.com/terser/-/terser-4.6.1.tgz#913e35e0d38a75285a7913ba01d753c4089ebdbd"
-  integrity sha512-w0f2OWFD7ka3zwetgVAhNMeyzEbj39ht2Tb0qKflw9PmW9Qbo5tjTh01QJLkhO9t9RDDQYvk+WXqpECI2C6i2A==
+  version "4.6.2"
+  resolved "https://registry.yarnpkg.com/terser/-/terser-4.6.2.tgz#cb1cf055e7f70caa5863f00ba3e67dc3c97b5150"
+  integrity sha512-6FUjJdY2i3WZAtYBtnV06OOcOfzl+4hSKYE9wgac8rkLRBToPDDrBB2AcHwQD/OKDxbnvhVy2YgOPWO2SsKWqg==
   dependencies:
     commander "^2.20.0"
     source-map "~0.6.1"
