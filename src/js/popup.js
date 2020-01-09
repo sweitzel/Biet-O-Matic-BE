@@ -72,6 +72,10 @@ class Group {
     }
   }
 
+  /*
+   * Set group autoBid state
+   * Also creates the group if its not existing yet
+   */
   static async setState(name, autoBid = false) {
     // name=null -> name=Keine Gruppe
     if (name == null || typeof name === 'undefined')
@@ -85,7 +89,8 @@ class Group {
     if (groupInfo.hasOwnProperty(name) && groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === autoBid)
       return;
 
-    groupInfo[name] = { autoBid: autoBid };
+    groupInfo[name] = { autoBid: autoBid, timestamp: Date.now() };
+    Popup.cachedGroups[name] = groupInfo[name];
     //console.log("group.setState %s", JSON.stringify(groupInfo));
 
     // store the info back to the storage
@@ -124,9 +129,49 @@ class Group {
         });
       })
       .catch(e => {
-        console.log("Biet-O-Matic: Group.renderState(%s) failed (Probably not found): %s", name, e.message);
+        // its expected to fail, e.g. due to table pagination
+        //console.log("Biet-O-Matic: Group.renderState(%s) failed (Probably not found): %s", name, e.message);
       });
   }
+
+  // remove unused groups
+  static async removeAllUnused() {
+    try {
+      // first iterate through all articles and determine which groups are used
+      let storedInfo = await browser.storage.sync.get(null);
+      const usedGroups = {};
+      Object.keys(storedInfo).forEach(articleId => {
+        if (!/^[0-9]+$/.test(articleId)) return;
+        if (!storedInfo[articleId].hasOwnProperty('articleGroup')) return;
+        const articleGroup = storedInfo[articleId].articleGroup;
+        if (!usedGroups.hasOwnProperty(articleGroup))
+          usedGroups[articleGroup] = {};
+      });
+
+      // iterate through all groups and remove unused
+      const groups = await Group.getAll();
+      Object.keys(groups).forEach(groupName => {
+        // check article is used from previous determined info
+        if (usedGroups.hasOwnProperty(groupName)) return;
+        // remove if group has no timestamp or timestamp is older 5 days
+        if (!groups[groupName].hasOwnProperty('timestamp') || (Date.now() - groups[groupName].timestamp) / 1000 > 60*60*24*5) {
+          console.debug("Biet-O-Matic: Group.removeAllUnused() Removing group: %s", groupName);
+          Group.remove(groupName);
+        }
+      });
+    } catch(e) {
+      console.log("Biet-O-Matic: Group.removeAllUnused() Error: %s", e.message);
+    }
+  }
+
+  static async remove(name) {
+    let result = await browser.storage.sync.get('GROUPS');
+    if (Object.keys(result).length !== 1) return;
+    if (!result.GROUPS.hasOwnProperty(name)) return;
+    delete result.GROUPS[name];
+    await browser.storage.sync.set(result);
+  }
+
 
   // promisified setTimeout - simply wait for a defined time
   static wait(ms) {
@@ -2824,9 +2869,15 @@ class Popup {
     Popup.cachedGroups = await Group.getAll();
     this.registerEvents();
 
+    await Group.removeAllUnused()
+      .catch(e => {
+        console.log("Biet-O-Matic: Group.removeAllUnused() failed: %s", e.message);
+      });
+
     this.table = new ArticlesTable(this, '#articles');
     await this.table.addArticlesFromTabs();
     await this.table.addArticlesFromStorage();
+
     // restore settings from session storage (autoBidEnabled, bidAllEnabled)
     this.restoreSettings();
     await Popup.checkBrowserStorage();
