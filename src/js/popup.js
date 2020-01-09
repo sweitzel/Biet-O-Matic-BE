@@ -2858,7 +2858,7 @@ class Popup {
       if (this.whoIAm.currentWindow.id === tab.windowId) {
         console.debug('Biet-O-Matic: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
         // only toggle favicon for ebay tabs
-        if (tab.url.startsWith(browser.runtime.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/)) {
+        if (tab.url.startsWith(browser.runtime.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/i)) {
           AutoBid.toggleState().catch(e => {
             console.log("Biet-O-Matic: Browser Action clicked, AutoBid.toggleState failed: %s", e.message);
           });
