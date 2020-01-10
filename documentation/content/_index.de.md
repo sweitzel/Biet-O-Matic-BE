@@ -29,12 +29,12 @@ Eine kurze Recherche über Alternativen führte zu keinen zufriedenstellenden Re
     * Unklare Lage bezüglich Auswertung der Transaktionsdaten (Auktionen)
 
 ## Biet-O-Matic Forum
-Falls sie Fragen zum Programm - seien es Probleme, Vorschläge oder sonstiges - kann dies 
+Falls sie Fragen zum Programm stellen wollen - sei es zu einem Problem, Vorschlag oder sonstigem - kann dies 
 im [B-O-M Forum](https://www.bid-o-matic.org/forum/index.php?c=6) erfolgen. 
 
 Bitte beachten Sie:
-* Für Anfragen bitte erst kurz prüfen ob es bereits diese oder ähnliche Anfrage gab
-* Neue Anfragen immer in separate "Topics" und in der richtigen Kategorie stellen 
+* Für Anfragen bitte erst kurz prüfen ob es bereits diese oder eine ähnliche Anfrage gab
+* Neue Anfragen bitte immer in separate "Topics" und in der richtigen Kategorie stellen 
 
 ## QuellCode
 Der QuellCode von B-O-M BE ist auf www.github.com/sweitzel/Biet-O-Matic-BE erhältlich.
@@ -54,12 +54,12 @@ Eine schnelle und unkomplizierte Spende ist über mein {{% fontawesome paypal %}
 
 ### GitHub
 Spenden (Sponsoring) über GitHub ist eine relativ neue Möglichkeit, um Open Source Projekte über eine Community zu finanzieren und
-über kalkulierbare Einnahmen zu generieren. Es ist zwar für den "Sponsor" komplizierter, generiert aber bewsser
+über kalkulierbare Einnahmen zu generieren. Es ist zwar für den "Sponsor" komplizierter, generiert aber besser
 kalkulierbare Einnahmen, welche nötig sind um solch ein Projekt langfristig am Leben zu erhalten.
 Hier ist der {{% fontawesome github-alt %}} [GitHub Link um zu spenden](https://github.com/sponsors/sweitzel).
 
 * setzt eine Anmeldung bei GitHub vorraus (die ist gratis)
 * GitHub ist eine Englischsprachige Plattform
 * Spenden geht nur als wiederkehrende Zahlung. Es wird also monatlich der gewählte Betrag abgebucht
-(dies kann jedoch auch monatlich widerrufen werden)
+  (dies kann jedoch auch monatlich widerrufen werden)
 * Als großer Vorteil: GitHub verdoppelt die Spenden (bis 5.000€) und erhebt keine Gebühren (bis Ende 2020).

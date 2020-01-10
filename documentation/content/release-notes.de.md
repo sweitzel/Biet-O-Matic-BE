@@ -44,11 +44,12 @@ Hervozuheben sind besonders folgende Änderungen:
 {{< hint info>}}
 Erschienen am Montag, XX.01.2020 
 {{< /hint >}}
+
 Hinzugefügt: 
-* Gruppen Auswahl in Übersichtstabelle
-* Unbenutzte Gruppen werden nach 7 Tagen automatisch gelöscht
+* Artikel Gruppen Feld erlaubt jetzt Auswahl aus bereits existierenden Gruppen
+* Unbenutzte Artikel Gruppen werden nach 7 Tagen automatisch gelöscht
 * BE Übersichtsseite öffnet sich nach einem Update automatisch, aber nur wenn Automatikmodus für das Fenster aktiv war.
-  Dies stellt sicher, das in Abwesenheit weiterhin automatisch geboten werden kann nachdem ein BE Update statt fand.
+  Dies stellt sicher, das in Abwesenheit weiterhin automatisch geboten werden kann, nachdem ein BE Update statt fand.
 
 Behoben:
 * Maximal Gebot kann nun gelöscht werden und wird auf 0 gesetzt anstatt immer auf das Minimalgebot zu springen.
