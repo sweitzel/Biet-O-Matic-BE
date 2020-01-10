@@ -361,6 +361,8 @@ class AutoBid {
 
   static renderState() {
     console.debug("Biet-O-Matic: AutoBid.renderState() called.");
+    const lblAutoBid = $('#lblAutoBid');
+    const autoBidMessage = $("#autoBidMessage");
     AutoBid.getState().then(info => {
       AutoBid.jq.prop('checked', info.autoBidEnabled);
       let state = '';
@@ -372,21 +374,21 @@ class AutoBid {
       }
       if (info.autoBidEnabled) {
         state += Popup.getTranslation('generic_active', '.active');
-        $('#lblAutoBid').addClass('autoBidEnabled');
-        $('#lblAutoBid').removeClass('autoBidDisabled');
+        lblAutoBid.addClass('autoBidEnabled');
+        lblAutoBid.removeClass('autoBidDisabled');
       } else {
         state += Popup.getTranslation('generic_inactive', '.inactive');
-        $('#lblAutoBid').addClass('autoBidDisabled');
-        $('#lblAutoBid').removeClass('autoBidEnabled');
+        lblAutoBid.addClass('autoBidDisabled');
+        lblAutoBid.removeClass('autoBidEnabled');
       }
       // do not set sync state if simulation is on
-      $("#lblAutoBid").attr('data-i18n-after', state);
-      $("#autoBidMessage").empty();
+      lblAutoBid.attr('data-i18n-after', state);
+      autoBidMessage.empty();
       // show info about other instances and their autoBid state
       if (info.hasOwnProperty('message'))
-        $("#autoBidMessage").text(info.message);
+        autoBidMessage.text(info.message);
       else if (info.hasOwnProperty('messageHtml')) {
-        $("#autoBidMessage").append(info.messageHtml);
+        autoBidMessage.append(info.messageHtml);
       }
       Popup.updateFavicon(info.autoBidEnabled, null, info.simulation);
     }).catch(e => {
@@ -410,7 +412,7 @@ class AutoBid {
           console.log("Biet-O-Matic: Cannot activate specified window %s: %s", windowId, e.message);
         });
       } else {
-        console.warn("Biet-O-Matic: getDisableMessage() Cannot activate specified window, id is not a number: %s", windowId);
+        console.warn(`Biet-O-Matic: getDisableMessage() Cannot activate specified window, id is not a number: ${windowId}`);
       }
       window.location.hash = '';
       return false;
@@ -422,17 +424,17 @@ class AutoBid {
     const link = document.createElement('a');
     const spanPost = document.createElement('span');
     if (simulation || autoBidEnabled === false) {
-      spanPre.textContent = 'Automatikmodus ist in einem ';
+      spanPre.textContent = Popup.getTranslation('popup_autoBidActive1', '.AutoBid is active in');
       link.href = `#${otherId}`;
       link.id = 'windowLink';
-      link.textContent = 'anderen Fenster';
-      spanPost.textContent = ' aktiv.';
+      link.textContent = Popup.getTranslation('popup_autoBidActive2', '.another browser window');
+      spanPost.textContent = Popup.getTranslation('popup_autoBidActive3', '..');
     } else {
-      spanPre.textContent = 'Automatikmodus deaktiviert. Er wurde in einem ';
+      spanPre.textContent = Popup.getTranslation('popup_autoBidDeactivated1', '.Auto-Bid deactivated. It was activated in ');
       link.href = `#${otherId}`;
       link.id = 'windowLink';
-      link.textContent = 'anderen Fenster';
-      spanPost.textContent = ' aktiviert.';
+      link.textContent = Popup.getTranslation('popup_autoBidDeactivated2', '.another Browser Window');
+      spanPost.textContent = Popup.getTranslation('popup_autoBidDeactivated3', '..');
     }
 
 
@@ -1787,7 +1789,7 @@ class ArticlesTable {
     if (type !== 'display' && type !== 'filter') return data;
     //console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
     if (!row.hasOwnProperty('articleBidPrice') && data == null)
-      return 'Sofortkauf';
+      return Popup.getTranslation('generic_buyNow', '.Buy It Now');
     let autoBid = false;
     let closedArticle = false;
     if (row.hasOwnProperty('articleAutoBid')) {
@@ -1809,7 +1811,6 @@ class ArticlesTable {
     const labelAutoBid = document.createElement('label');
     const chkAutoBid = document.createElement('input');
     chkAutoBid.id = 'chkAutoBid_' + row.articleId;
-    chkAutoBid.title = 'Aktiviert Automatisches Bieten für diesen Artikel';
     chkAutoBid.classList.add('ui-button');
     chkAutoBid.type = 'checkbox';
     chkAutoBid.defaultChecked = autoBid;
@@ -1818,7 +1819,13 @@ class ArticlesTable {
     chkAutoBid.style.verticalAlign = 'middle';
     labelAutoBid.appendChild(chkAutoBid);
     const spanAutoBid = document.createElement('span');
-    spanAutoBid.textContent = 'Aktiv';
+    if (autoBid) {
+      spanAutoBid.textContent = Popup.getTranslation('generic_active');
+      chkAutoBid.title = Popup.getTranslation('popup_deactivateArticleAutoBid', '.Deactivates Article Auto-Bid');
+    } else {
+      spanAutoBid.textContent = Popup.getTranslation('generic_inactive');
+      chkAutoBid.title = Popup.getTranslation('popup_activateArticleAutoBid', '.Activates Article Auto-Bid');
+    }
     labelAutoBid.appendChild(spanAutoBid);
 
     if (closedArticle === true) {
@@ -1837,10 +1844,10 @@ class ArticlesTable {
       // if the maxBid is < minimum bidding price or current Price, add highlight color
       if ((row.articleEndTime - Date.now() > 0) && chkAutoBid.disabled) {
         inpMaxBid.classList.add('bomHighlightBorder');
-        inpMaxBid.title = `Geben sie minimal ${row.articleMinimumBid} ein`;
+        inpMaxBid.title = Popup.getTranslation('popup_enterMinAmount', '.Enter at least $AMOUNT$',  row.articleMinimumBid);
       } else {
         inpMaxBid.classList.remove('bomHighlightBorder');
-        inpMaxBid.title = "Minimale Erhöhung erreicht";
+        inpMaxBid.title = Popup.getTranslation('popup_minIncreaseReached', ".Required increase reached");
       }
 
       // disable maxBid/autoBid if article ended
@@ -1879,7 +1886,7 @@ class ArticlesTable {
     spanGroupAutoBid.id = 'spanGroupAutoBid';
     spanGroupAutoBid.classList.add('ui-button', 'translate');
     spanGroupAutoBid.setAttribute('name', groupName);
-    spanGroupAutoBid.textContent = Popup.getTranslation("generic_autoBid", ".Auto-Bid") + " ";
+    spanGroupAutoBid.textContent = Popup.getTranslation('generic_group_autoBid', ".Group Auto-Bid ");
     spanGroupAutoBid.style.float = 'right';
     td.appendChild(spanGroupAutoBid);
     // renderState will asynchronously add a class toggling enabled/disabled state
@@ -1904,7 +1911,7 @@ class ArticlesTable {
     inpGroup.setAttribute('maxlength', '32');
     inpGroup.multiple = false;
     inpGroup.style.width = "60px";
-    inpGroup.placeholder = 'Gruppe';
+    inpGroup.placeholder = Popup.getTranslation('generic_group', '.Group');
     if (data != null && typeof data !== 'undefined')
       inpGroup.defaultValue = data;
 
@@ -2048,10 +2055,10 @@ class ArticlesTable {
       span.classList.add('button-zoom', 'fas');
       if (row.articleDetailsShown) {
         span.classList.add('fa-minus');
-        span.title = 'Verbirgt Artikel Ereignisse';
+        span.title = Popup.getTranslation('popup_hide_articleEvents', '.Hide article events');
       } else {
         span.classList.add('fa-plus');
-        span.title = 'Zeigt Artikel Ereignisse an';
+        span.title = Popup.getTranslation('popup_show_articleEvents', '.Show article events');
       }
       return span.outerHTML;
     } else
@@ -2072,15 +2079,15 @@ class ArticlesTable {
       if (data - Date.now() < 0) {
         // ended
         span.classList.add('auctionEnded');
-        span.title = 'Artikel Auktion bereits beendet';
+        span.title = Popup.getTranslation('popup_articleAuctionEnded', '.Article Auction already ended');
       } else if (data - Date.now() < 60*1000) {
         // ends within 1 minute
         span.classList.add('auctionEndsVerySoon');
-        span.title = 'Artikel Auktion endet in weniger als einer Minute';
+        span.title = Popup.getTranslation('popup_articleAuctionEndsVerySoon', '.Article Auction ends in less then a minute.');
       } else if (data - Date.now() < 600*1000) {
         // ends within 10 minutes
         span.classList.add('auctionEndsSoon');
-        span.title = 'Artikel Auktion endet bald';
+        span.title = Popup.getTranslation('popup_articleAuctionEndsSoon', '.Article Auction ends soon.');
       }
     }
     return span.outerHTML;
@@ -2699,6 +2706,7 @@ class ArticlesTable {
           // This row is already open - close it
           span.classList.remove('fa-minus');
           span.classList.add('fa-plus');
+          span.title = Popup.getTranslation('popup_show_articleEvents', '.Show article events');
           // hide and remove data (save memory)
           row.child(false);
           row.data().articleDetailsShown = false;
@@ -2706,6 +2714,7 @@ class ArticlesTable {
           // Open this row
           span.classList.remove('fa-plus');
           span.classList.add('fa-minus');
+          span.title = Popup.getTranslation('popup_hide_articleEvents', '.Hide article events');
           row.child(ArticlesTable.renderArticleLog(row.data())).show();
           row.data().articleDetailsShown = true;
         }
@@ -3053,8 +3062,8 @@ class Popup {
 
 
   //region i18n
-  static getTranslation(i18nKey, defaultText = "") {
-    let translatedText = browser.i18n.getMessage(i18nKey);
+  static getTranslation(i18nKey, defaultText = "", params = null) {
+    let translatedText = browser.i18n.getMessage(i18nKey, params);
     // use provided default text, if specified
     if (translatedText === "") {
       if (defaultText !== "") {
@@ -3146,7 +3155,7 @@ document.addEventListener('DOMContentLoaded', function () {
   popup.init()
     .then(() => {
       console.info("Biet-O-Matic: Initialization for window with id = %d completed (lang=%s, window=%O).",
-        popup.whoIAm.currentWindow.id, popup.lang, popup.whoIAm.currentWindow);
+        popup.whoIAm.currentWindow.id, Popup.lang, popup.whoIAm.currentWindow);
     })
     .catch(e => {
       console.log("Biet-O-Matic: Popup initialization failed: %s", e.message);

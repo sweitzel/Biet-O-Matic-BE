@@ -14,8 +14,14 @@
   "generic_search": {
     "message": "Search"
   },
+  "generic_group": {
+    "message": "Group"
+  },
   "generic_autoBid": {
     "message": "Auto-Bid"
+  },
+  "generic_group_autoBid": {
+    "message": "Group Auto-Bid "
   },
   "generic_inactive": {
     "message": "inactive"
@@ -25,5 +31,53 @@
   },
   "generic_noGroup": {
     "message": "Other Auctions"
+  },
+  "generic_buyNow": {
+    "message": "Buy It Now"
+  },
+  "popup_autoBidActive1": {
+    "message": "Auto-Bid is active in another "
+  },
+  "popup_autoBidActive2": {
+    "message": "Browser Window"
+  },
+  "popup_autoBidActive3": {
+    "message": "."
+  },
+  "popup_autoBidDeactivated1": {
+    "message": "Auto-Bid deactivated. It was activated in another "
+  },
+  "popup_autoBidDeactivated2": {
+    "message": "Browser Window"
+  },
+  "popup_autoBidDeactivated3": {
+    "message": "."
+  },
+  "popup_hide_articleEvents": {
+    "message": "Hide article events"
+  },
+  "popup_show_articleEvents": {
+    "message": "Show article events"
+  },
+  "popup_articleAuctionEnded": {
+    "message": "Article auction has already ended"
+  },
+  "popup_articleAuctionEndsSoon": {
+    "message": "Article auction ends soon"
+  },
+  "popup_articleAuctionEndsVerySoon": {
+    "message": "Article auction ends in less then a minute"
+  },
+  "popup_minIncreaseReached": {
+    "message": "Required minimum price increase reached"
+  },
+  "popup_activateArticleAutoBid": {
+    "message": "Activates Article Auto-Bid"
+  },
+  "popup_deactivateArticleAutoBid": {
+    "message": "Deactivates Article Auto-Bid"
+  },
+  "popup_enterMinAmount": {
+    "message": "Enter at least $1"
   }
 }

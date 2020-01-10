@@ -14,8 +14,14 @@
   "generic_search": {
     "message": "Suche"
   },
+  "generic_group": {
+    "message": "Gruppe"
+  },
   "generic_autoBid": {
     "message": "Automatikmodus"
+  },
+  "generic_group_autoBid": {
+    "message": "Gruppen Automatikmodus "
   },
   "generic_inactive": {
     "message": "inaktiv"
@@ -25,5 +31,44 @@
   },
   "generic_noGroup": {
     "message": "Sonstige Auktionen"
+  },
+  "generic_buyNow": {
+    "message": "Sofortkauf"
+  },
+  "popup_autoBidActive1": {
+    "message": "Automatikmodus ist in einem anderen "
+  },
+  "popup_autoBidActive2": {
+    "message": "Browser Fenster"
+  },
+  "popup_autoBidActive3": {
+    "message": " aktiv"
+  },
+  "popup_autoBidDeactivated1": {
+    "message": "Automatikmodus deaktiviert. Er wurde in einem anderen "
+  },
+  "popup_autoBidDeactivated2": {
+    "message": "Browser Fenster"
+  },
+  "popup_articleAuctionEnded": {
+    "message": "Artikel Auktion hat bereits geendet"
+  },
+  "popup_articleAuctionEndsSoon": {
+    "message": "Artikel Auktion endet bald"
+  },
+  "popup_articleAuctionEndsVerySoon": {
+    "message": "Artikel Auktion endet in weniger als einer Minute"
+  },
+  "popup_minIncreaseReached": {
+    "message": "Notwendige minimale Preiserhöhung wurde erreicht"
+  },
+  "popup_activateArticleAutoBid": {
+    "message": "Aktiviert den Automatikmodus für diesen Artikel"
+  },
+  "popup_deactivateArticleAutoBid": {
+    "message": "Deaktiviert den Automatikmodus für diesen Artikel"
+  },
+  "popup_enterMinAmount": {
+    "message": "Geben Sie minimal $1 ein"
   }
 }
