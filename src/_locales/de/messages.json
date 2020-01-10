@@ -1,13 +1,29 @@
 {
   "appName": {
-    "message": "Biet-O-Matic BE",
-    "description": "Extension Name"
+    "message": "Biet-O-Matic BE"
   },
   "appDesc": {
-    "message": "Eine Browser Erweiterung um eBay Gebote abzugeben, auch wenn Du nicht am Rechner sitzt.",
-    "description": "Extension Short Description"
+    "message": "Eine Browser Erweiterung um eBay Gebote abzugeben, auch wenn Du nicht am Rechner sitzt."
   },
   "appOpen": {
     "message": "Öffne Biet-O-Matic BE"
+  },
+  "filePopup": {
+    "message": "popup.de.html"
+  },
+  "generic_search": {
+    "message": "Suche"
+  },
+  "generic_autoBid": {
+    "message": "Automatikmodus"
+  },
+  "generic_inactive": {
+    "message": "inaktiv"
+  },
+  "generic_active": {
+    "message": "aktiv"
+  },
+  "generic_noGroup": {
+    "message": "Sonstige Auktionen"
   }
 }

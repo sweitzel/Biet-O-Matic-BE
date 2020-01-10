@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <title>Biet-O-Matic BE</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui"/>
+</head>
+<body>
+
+<div id="mainContent">
+  <div style="margin-bottom: 2em;">
+    <fieldset>
+      <legend>Optionen</legend>
+      <label for="inpAutoBid" class="ui-button" style="display: inline-block;white-space: nowrap;margin-right: 30px"
+             title="Konfiguriert den Automatikmodus für das aktuelle Browser Fenster">
+        <input id="inpAutoBid" name="autoBid" type="checkbox" style="display: none"/>
+        <span id="lblAutoBid" class="translate">Automatikmodus </span>
+      </label>
+      <div id="autoBidMessage" style="display: inline;">Keine Info</div>
+    </fieldset>
+  </div>
+
+  <fieldset>
+    <legend>eBay Artikel</legend>
+    <table id="articles" class="hover responsive" style="width:100%">
+      <thead class="dt-head-nowrap">
+      <tr>
+        <th></th>
+        <th>Artikelnr.</th>
+        <th>Beschreibung</th>
+        <th>Auktions Ende</th>
+        <th>Preis (Gebote)</th>
+        <th>Versandkosten</th>
+        <th>Status</th>
+        <th>Gruppe</th>
+        <th>Ihr Maximalgebot</th>
+        <th></th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot></tfoot>
+    </table>
+  </fieldset>
+
+  <div id="internal" style="margin-top: 2em;" class="hidden">
+    <fieldset style="width: 1024px">
+      <legend>Speichernutzung</legend>
+      <p>Der Browser begrenzt die Menge an Einträgen im Speicher. Chrome beispielsweise auf 512 Einträge mit max 100kb
+        Größe</p>
+      <label for="inpStorageCount">
+        Elemente: <input id="inpStorageCount" name="Elemente" type="number" disabled readonly/>
+      </label>
+      <label for="inpStorageSize">
+        Größe in Byte: <input id="inpStorageSize" name="Größe" type="text" disabled readonly/>
+      </label>
+      <input id="inpStorageClearAll" type="button" title="Entfernt folgende Elemente: Maximalgebote, Aktiv-Flag"
+             value="Alle Einträge entfernen" style="margin-left: 20px"/>
+      <input id="inpRemoveOldArticles" type="button"
+             title="Entfernt abgelaufene Aktionen aus der Datenbank (Tabs bitte per Hand schließen)"
+             value="Abgelaufene Artikel entfernen" style="margin-left: 20px"/>
+    </fieldset>
+  </div>
+</div>
+<footer>
+  <div class="footer">
+    <div id="left">
+    </div>
+    <div id="center">
+      <p id="bomVersion">Biet-O-Matic BE v0.0.0</p>
+      <a href="/doc/de/index.html#Spenden" title="Spenden" target="_blank"
+         class="button-zoom fas fa-heart fa-lg fa-fw" aria-label="Spenden"></a>
+    </div>
+    <div id="right">
+      <a href="https://www.github.com/sweitzel/Biet-O-Matic-BE" title="Source Code" target="_blank"
+         class="button-zoom fab fa-github fa-lg fa-fw" aria-label="Source Code"></a>
+      <a href="/doc/de/index.html" title="Dokumentation" target="_blank"
+         class="button-zoom far fa-question-circle fa-lg fa-fw" aria-label="Dokumentation"></a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "appName": {
+    "message": "Biet-O-Matic BE"
+  },
+  "appDesc": {
+    "message": "A browser extension to perform automated bids for eBay articles, also when you are away from your computer"
+  },
+  "appOpen": {
+    "message": "Open Biet-O-Matic BE"
+  },
+  "filePopup": {
+    "message": "popup.en.html"
+  },
+  "generic_search": {
+    "message": "Search"
+  },
+  "generic_autoBid": {
+    "message": "Auto-Bid"
+  },
+  "generic_inactive": {
+    "message": "inactive"
+  },
+  "generic_active": {
+    "message": "active"
+  },
+  "generic_noGroup": {
+    "message": "Other Auctions"
+  }
+}

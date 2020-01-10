@@ -77,9 +77,14 @@ var options = {
       }
     }]),
     new HtmlWebpackPlugin({
-      template: path.join(__dirname, "src", "popup.html"),
-      filename: "popup.html",
-      chunks: ["popup"]
+      template: path.join(__dirname, "src", "popup.de.html"),
+      filename: "popup.de.html",
+      chunks: ['popup']
+    }),
+    new HtmlWebpackPlugin({
+      template: path.join(__dirname, "src", "popup.en.html"),
+      filename: "popup.en.html",
+      chunks: ['popup']
     }),
     new WriteFilePlugin(),
     // Ignore all locale files of moment.js

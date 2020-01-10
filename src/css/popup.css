@@ -151,7 +151,7 @@ tfoot input {
   margin-left: 10px;
 }
 .footer .fa-heart:after {
-  content: "Spenden";
+  content: "Sponsor";
   margin-left: 5px;
   color: #000;
   font-size: x-small;
@@ -205,21 +205,21 @@ tfoot input {
    cursor: pointer;
 }
 
-.groupAutoBidEnabled {
+.autoBidEnabled {
   color: #3f563f;
   text-shadow: 1px 1px 2px #9cfda7;
   user-select: none;
 }
-.groupAutoBidEnabled::after {
-  content: " aktiv";
-}
-.groupAutoBidDisabled {
+.autoBidDisabled {
   color: #820000;
   text-shadow: 1px 1px 2px #e88b88;
   user-select: none;
 }
-.groupAutoBidDisabled::after {
-  content: " inaktiv";
+.translate::before {
+  content: attr(data-i18n-before);
+}
+.translate::after {
+  content: attr(data-i18n-after);
 }
 
 /* raleway-regular - latin_latin-ext */

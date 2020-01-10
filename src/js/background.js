@@ -40,7 +40,7 @@ class BomBackground {
      // query tab for specified or current window with extension URL
     let tabs = await browser.tabs.query({
       windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
-      url: browser.runtime.getURL('popup.html')
+      url: browser.runtime.getURL('*')
     });
     for (let i = 0; i < tabs.length; i++) {
       if (i > 0) {
@@ -67,7 +67,7 @@ class BomBackground {
     // if no BOM tab is open, create one
     if (tabs.length === 0) {
       await browser.tabs.create({
-        url: browser.runtime.getURL('popup.html'),
+        url: browser.runtime.getURL(BomBackground.getPopupFileName()),
         windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
         pinned: true,
         index: 0
@@ -96,7 +96,7 @@ class BomBackground {
         // open the popup
         console.info("Biet-O-Matic: Opening Popup after update, autoBid was enabled before");
         await browser.tabs.create({
-          url: browser.runtime.getURL('popup.html'),
+          url: browser.runtime.getURL(BomBackground.getPopupFileName()),
           windowId: browser.windows.WINDOW_ID_CURRENT,
           pinned: true,
           index: 0
@@ -132,6 +132,14 @@ class BomBackground {
       }
     }
     return false;
+  }
+
+  static getPopupFileName() {
+    if (browser.i18n.getMessage('filePopup') !== "") {
+      return browser.i18n.getMessage('filePopup');
+    } else {
+      return "popup.en.html";
+    }
   }
 
 }

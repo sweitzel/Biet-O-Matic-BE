@@ -28,7 +28,7 @@ import 'datatables.net-rowgroup-jqui';
 
 // date-fns as alternative to moment
 import { format, formatDistanceToNow } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { de, en } from 'date-fns/locale';
 
 // FontAwesome
 import '@fortawesome/fontawesome-free/css/all.css';
@@ -118,11 +118,13 @@ class Group {
         }
         Group.getState(name).then(autoBid => {
           if (autoBid) {
-            spanGroupAutoBid.addClass('groupAutoBidEnabled');
-            spanGroupAutoBid.removeClass('groupAutoBidDisabled');
+            spanGroupAutoBid.addClass('autoBidEnabled');
+            spanGroupAutoBid.removeClass('autoBidDisabled');
+            $(spanGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_active', '.active'));
           } else {
-            spanGroupAutoBid.addClass('groupAutoBidDisabled');
-            spanGroupAutoBid.removeClass('groupAutoBidEnabled');
+            spanGroupAutoBid.addClass('autoBidDisabled');
+            spanGroupAutoBid.removeClass('autoBidEnabled');
+            $(spanGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_inactive', '.inactive'));
           }
         }).catch(e => {
           console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
@@ -361,14 +363,24 @@ class AutoBid {
     console.debug("Biet-O-Matic: AutoBid.renderState() called.");
     AutoBid.getState().then(info => {
       AutoBid.jq.prop('checked', info.autoBidEnabled);
-      // do not set sync state if simulation is on
-      if (info.simulation === false) {
-        $("#lblAutoBid").text('Automatikmodus');
-        $("#internal").addClass('hidden');
-      } else {
-        $("#lblAutoBid").text('Automatikmodus (Test)');
+      let state = '';
+      if (info.simulation) {
         $("#internal").removeClass('hidden');
+        state = '(Test) ';
+      } else {
+        $("#internal").addClass('hidden');
       }
+      if (info.autoBidEnabled) {
+        state += Popup.getTranslation('generic_active', '.active');
+        $('#lblAutoBid').addClass('autoBidEnabled');
+        $('#lblAutoBid').removeClass('autoBidDisabled');
+      } else {
+        state += Popup.getTranslation('generic_inactive', '.inactive');
+        $('#lblAutoBid').addClass('autoBidDisabled');
+        $('#lblAutoBid').removeClass('autoBidEnabled');
+      }
+      // do not set sync state if simulation is on
+      $("#lblAutoBid").attr('data-i18n-after', state);
       $("#autoBidMessage").empty();
       // show info about other instances and their autoBid state
       if (info.hasOwnProperty('message'))
@@ -619,6 +631,7 @@ class Article {
     if (!regex.test(tab.url)) {
       return Promise.resolve({});
     }
+    console.log("Injecting contentScript on tab=%s", tab.url);
     // inject content script in case its not loaded
     await browser.tabs.executeScript(tab.id, {file: 'contentScript.bundle.js'})
       .catch(e => {
@@ -1000,7 +1013,7 @@ class Article {
     else if (this.hasOwnProperty('articleBuyPrice'))
       price = this.articleBuyPrice;
     try {
-      return new Intl.NumberFormat('de-DE', {style: 'currency', currency: currency}).format(price);
+      return new Intl.NumberFormat('de', {style: 'currency', currency: currency}).format(price);
     } catch (e) {
       return price;
     }
@@ -1216,7 +1229,7 @@ class ArticlesTable {
     this.currentWindowId = popup.whoIAm.currentWindow.id;
     if ($(selector).length === 0)
       throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
-    $.fn.DataTable.RowGroup.defaults.emptyDataGroup = "Keine Gruppe";
+    $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation('generic_noGroup', ".No Group");
     this.DataTable = ArticlesTable.init(selector);
     this.addSearchFields();
     this.registerEvents();
@@ -1381,7 +1394,7 @@ class ArticlesTable {
       },
       dom: '<l<t>ip>',
       stateSave: false,
-      language: ArticlesTable.getDatatableTranslation('de_DE')
+      language: ArticlesTable.getDatatableTranslation(navigator.language.slice(0,2))
     });
   }
 
@@ -1564,7 +1577,7 @@ class ArticlesTable {
         const input = document.createElement('input');
         input.id = 'colsearch';
         input.type = 'text';
-        input.placeholder = `Suche ${title}`;
+        input.placeholder = `${Popup.getTranslation('generic_search', 'dSearch')} ${title}`;
         input.style.textAlign = 'center';
         th.appendChild(input);
       }
@@ -1864,13 +1877,13 @@ class ArticlesTable {
 
     let spanGroupAutoBid = document.createElement('span');
     spanGroupAutoBid.id = 'spanGroupAutoBid';
-    spanGroupAutoBid.classList.add('ui-button');
+    spanGroupAutoBid.classList.add('ui-button', 'translate');
     spanGroupAutoBid.setAttribute('name', groupName);
-    spanGroupAutoBid.textContent = "Automatikmodus";
+    spanGroupAutoBid.textContent = Popup.getTranslation("generic_autoBid", ".Auto-Bid") + " ";
     spanGroupAutoBid.style.float = 'right';
+    td.appendChild(spanGroupAutoBid);
     // renderState will asynchronously add a class toggling enabled/disabled state
     Group.renderState(spanGroupAutoBid.id, groupName);
-    td.appendChild(spanGroupAutoBid);
     // append data-name to tr
     return $('<tr/>')
       .append(td)
@@ -1917,6 +1930,7 @@ class ArticlesTable {
 
     let table = document.createElement('table');
     table.style.paddingLeft = '50px';
+    table.style.width = '80%';
     // get log entries
     let log = article.getLog();
     if (log == null) return "";
@@ -1926,15 +1940,16 @@ class ArticlesTable {
       let tr = document.createElement('tr');
       tr.style.width = '100%';
       let tdDate = document.createElement('td');
-      tdDate.style.width = '10%';
+      tdDate.style.width = '150px';
       // first column: date
       if (e.hasOwnProperty('timestamp'))
-        tdDate.textContent = format(e.timestamp, 'PPpp', {locale: de});
+        tdDate.textContent = format(e.timestamp, 'PPpp', {locale: Popup.locale});
       else
         tdDate.textContent = '?';
       tr.append(tdDate);
       // second column: component
       let tdComp = document.createElement('td');
+      tdComp.style.width = '100px';
       if (e.hasOwnProperty('component'))
         tdComp.textContent = e.component;
       else
@@ -1942,6 +1957,7 @@ class ArticlesTable {
       tr.append(tdComp);
       // third column: level
       let tdLevel = document.createElement('td');
+      tdLevel.style.width = '100px';
       if (e.hasOwnProperty('level'))
         tdLevel.textContent = e.level;
       else
@@ -2050,7 +2066,7 @@ class ArticlesTable {
     let span = document.createElement('span');
     span.textContent = 'unbegrenzt';
     if (typeof data !== 'undefined') {
-      const timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: de, addSuffix: true});
+      const timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: Popup.locale, addSuffix: true});
       const date = new Intl.DateTimeFormat('default', {'dateStyle': 'medium', 'timeStyle': 'medium'}).format(new Date(data));
       span.textContent = `${date} (${timeLeft})`;
       if (data - Date.now() < 0) {
@@ -2146,10 +2162,10 @@ class ArticlesTable {
   }
 
   // translation data for Datatable
-  static getDatatableTranslation(language = 'de_DE') {
+  static getDatatableTranslation(language = 'de') {
     //"url": "https://cdn.datatables.net/plug-ins/1.10.20/i18n/German.json"
     const languages = {};
-    languages.de_DE =
+    languages.de =
       {
         "sEmptyTable": "Keine Daten in der Tabelle vorhanden",
         "sInfo": "_START_ bis _END_ von _TOTAL_ Einträgen",
@@ -2196,7 +2212,10 @@ class ArticlesTable {
           "decimal": ","
         }
       };
-    return languages[language];
+    if (languages.hasOwnProperty(language))
+      return languages[language];
+    else
+      return null;
   }
 
   static checkTabIsOpen(tabId) {
@@ -2869,6 +2888,15 @@ class Popup {
     this.whoIAm = await Popup.detectWhoIAm();
     this.tabId = await Popup.getOwnTabId();
     Popup.cachedGroups = await Group.getAll();
+    Popup.lang = navigator.languages ? navigator.languages[0] : navigator.language;
+    // just store the first part (en-US -> en)
+    Popup.lang = Popup.lang.slice(0, 2);
+    // locale for date.fns
+    if (Popup.lang === 'de')
+      Popup.locale = de;
+    else
+      Popup.locale = en;
+
     this.registerEvents();
 
     await Group.removeAllUnused()
@@ -3022,6 +3050,24 @@ class Popup {
     Popup.rateLimit[name][key] = Date.now();
     return false;
   }
+
+
+  //region i18n
+  static getTranslation(i18nKey, defaultText = "") {
+    let translatedText = browser.i18n.getMessage(i18nKey);
+    // use provided default text, if specified
+    if (translatedText === "") {
+      if (defaultText !== "") {
+        return defaultText;
+      } else {
+        return i18nKey;
+      }
+    } else {
+      return translatedText;
+    }
+  }
+  //endregion
+
 }
 // static class-var declaration outside the class
 Popup.rateLimit = {};
@@ -3099,8 +3145,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const popup = new Popup(BOM_VERSION);
   popup.init()
     .then(() => {
-      console.info("Biet-O-Matic: Initialization for window with id = %d completed (%O).",
-        popup.whoIAm.currentWindow.id, popup.whoIAm.currentWindow);
+      console.info("Biet-O-Matic: Initialization for window with id = %d completed (lang=%s, window=%O).",
+        popup.whoIAm.currentWindow.id, popup.lang, popup.whoIAm.currentWindow);
     })
     .catch(e => {
       console.log("Biet-O-Matic: Popup initialization failed: %s", e.message);

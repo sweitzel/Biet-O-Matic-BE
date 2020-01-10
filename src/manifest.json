@@ -9,7 +9,7 @@
     ]
   },
   "browser_action": {
-    "default_title": "Öffne Biet-O-Matic BE"
+    "default_title": "__MSG_appOpen__"
   },
   "permissions": [
     "https://*.ebay.com/*",
