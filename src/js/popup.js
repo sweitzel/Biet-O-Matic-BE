@@ -2741,10 +2741,10 @@ class ArticlesTable {
     const hre = /^0x[0-9a-f]+$/i;
     const ore = /^0/;
 
-    // empty group (Keine Gruppe) should be sorted last
+    // empty group (Keine Gruppe) should be sorted first
     if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup && a === b) return 0;
-    else if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup) return 1;
-    else if (sortEmptyGroupLast && b === $.fn.DataTable.RowGroup.defaults.emptyDataGroup) return -1;
+    else if (sortEmptyGroupLast && a === $.fn.DataTable.RowGroup.defaults.emptyDataGroup) return -1;
+    else if (sortEmptyGroupLast && b === $.fn.DataTable.RowGroup.defaults.emptyDataGroup) return 1;
 
     // convert all to strings and trim()
     const x = a.toString().replace(sre, '') || '';
