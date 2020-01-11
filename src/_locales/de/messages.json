@@ -35,6 +35,9 @@
   "generic_buyNow": {
     "message": "Sofortkauf"
   },
+  "generic_unlimited": {
+    "message": "unbegrenzt"
+  },
   "popup_autoBidActive1": {
     "message": "Automatikmodus ist in einem anderen "
   },

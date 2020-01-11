@@ -35,6 +35,9 @@
   "generic_buyNow": {
     "message": "Buy It Now"
   },
+  "generic_unlimited": {
+    "message": "unlimited"
+  },
   "popup_autoBidActive1": {
     "message": "Auto-Bid is active in another "
   },

@@ -222,6 +222,22 @@ tfoot input {
   content: attr(data-i18n-after);
 }
 
+div.polaroid {
+  box-shadow: 5px 5px 5px -5px rgba(0,0,0,0.1);
+  border-radius: 5px;
+  text-align: center;
+  overflow: hidden;
+  position: relative;
+}
+div.container {
+  width: 100%;
+  padding: 2px;
+  position: absolute;
+  bottom: 0;
+  background: #ffffff;
+  opacity: 0.8;
+}
+
 /* raleway-regular - latin_latin-ext */
 /*
 @font-face {

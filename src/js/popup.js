@@ -557,7 +557,7 @@ class Article {
       'articleAuctionState', 'articleAuctionStateText', 'articleBidCount', 'articleBidPrice', 'articleCurrency',
       'articleBuyPrice', 'articleDescription', 'articleEndTime',
       'articleMinimumBid', 'articlePaymentMethods', 'articleShippingCost', 'articleShippingMethods',
-      'articleState', 'articlePlatform'
+      'articleState', 'articlePlatform', 'articleImage'
     ];
     elements.forEach(e => {
       if (info.hasOwnProperty(e))
@@ -1291,18 +1291,7 @@ class ArticlesTable {
           width: '100px',
           searchable: true,
           orderable: false,
-          render: function (data, type, row) {
-            if (type !== 'display') return data;
-            let div = document.createElement("div");
-            div.id = data;
-            let a = document.createElement('a');
-            a.href = row.getUrl();
-            a.id = row.getArticleLinkId();
-            a.text = data;
-            a.target = '_blank';
-            div.appendChild(a);
-            return div.outerHTML;
-          }
+          render: ArticlesTable.renderArticleId
         },
         {
           name: 'articleDescription',
@@ -1618,7 +1607,7 @@ class ArticlesTable {
 
   // add an article to the table and return the row or null if failed
   addArticle(article) {
-    console.log("Biet-O-Matic addArticle(%s) called.", article.articleId);
+    console.debug("Biet-O-Matic addArticle(%s) called. info=%O", article.articleId, article);
     if (article instanceof Article) {
       let row = this.DataTable.row.add(article);
       this.DataTable.draw(false);
@@ -1638,7 +1627,7 @@ class ArticlesTable {
       row = this.getRow(`#${articleInfo.articleId}`);
     if (row == null || row.length !== 1) return;
     const article = row.data();
-    console.debug("Biet-O-Matic: updateArticle(%s) info=%O", articleInfo.articleId, articleInfo);
+    console.debug("Biet-O-Matic: updateArticle(%s) called. info=%O", articleInfo.articleId, articleInfo);
     // sanity check if the info + row match
     if (article.articleId !== articleInfo.articleId) {
       throw new Error("updateArticle() ArticleInfo and Row do not match!");
@@ -1786,6 +1775,43 @@ class ArticlesTable {
           rowFresh.remove().draw(false);
         }
       });
+  }
+
+  /*
+   * Render articleId
+   * - generate link to existing or new article tab
+   * - include article image if present
+   */
+  static renderArticleId (data, type, row) {
+    if (type !== 'display') return data;
+    let div = document.createElement("div");
+    div.id = data;
+    div.classList.add('polaroid');
+    div.style.width = '90px';
+    div.style.minHeight = '25px';
+    div.style.maxHeight = '90px';
+
+    if (row.hasOwnProperty('articleImage')) {
+      let img = document.createElement("img");
+      img.src = row.articleImage;
+      img.alt = row.articleId;
+      img.style.width = '100%';
+      img.style.userSelect = 'none';
+      div.appendChild(img);
+    }
+
+    let divContainer = document.createElement('div');
+    divContainer.classList.add('container');
+
+    let a = document.createElement('a');
+    a.href = row.getUrl();
+    a.id = row.getArticleLinkId();
+    a.text = data;
+    a.target = '_blank';
+
+    divContainer.appendChild(a);
+    div.appendChild(divContainer);
+    return div.outerHTML;
   }
 
   /*
@@ -2080,8 +2106,8 @@ class ArticlesTable {
       return data;
     }
     let span = document.createElement('span');
-    span.textContent = 'unbegrenzt';
-    if (typeof data !== 'undefined') {
+    span.textContent = Popup.getTranslation('generic_unlimited', '.unlimited');
+    if (data != null && typeof data !== 'undefined') {
       const timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: Popup.locale, addSuffix: true});
       const date = new Intl.DateTimeFormat('default', {'dateStyle': 'medium', 'timeStyle': 'medium'}).format(new Date(data));
       span.textContent = `${date} (${timeLeft})`;
@@ -2525,7 +2551,6 @@ class ArticlesTable {
             console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tabInfo=%s',
               tabId, JSON.stringify(changeInfo), JSON.stringify(tabInfo));
             if (tabInfo.hasOwnProperty('url')) {
-              console.log("Biet-O-Matic: tabs.onUpdated(): Tab Info is missing URL - permission issue or not an supported ebay page.");
               Article.getInfoFromTab(tabInfo)
                 .then(articleInfo => {
                   if (articleInfo.hasOwnProperty('detail')) {
@@ -2539,6 +2564,8 @@ class ArticlesTable {
                 .catch(e => {
                   console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
                 });
+            } else {
+              console.log("Biet-O-Matic: tabs.onUpdated(%d): Tab Info is missing URL - permission issue or not an supported ebay page.", tabInfo.id);
             }
           }
         }
