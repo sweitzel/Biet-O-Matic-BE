@@ -21,7 +21,7 @@
     "message": "Automatikmodus"
   },
   "generic_group_autoBid": {
-    "message": "Gruppen Automatikmodus "
+    "message": "Gruppen Automatikmodus"
   },
   "generic_inactive": {
     "message": "inaktiv"
@@ -70,5 +70,14 @@
   },
   "popup_enterMinAmount": {
     "message": "Geben Sie minimal $1 ein"
+  },
+  "popup_openArticleInTab": {
+    "message": "Öffnet den Artikel in einem neuen Tab"
+  },
+  "popup_closeArticleTab": {
+    "message": "Schließt den Artikel Tab"
+  },
+  "popup_articleRemove": {
+    "message": "Entfernt alle Ereignisse und Einstellungen für diesen Artikel"
   }
 }

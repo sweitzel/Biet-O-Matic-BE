@@ -21,7 +21,7 @@
     "message": "Auto-Bid"
   },
   "generic_group_autoBid": {
-    "message": "Group Auto-Bid "
+    "message": "Group Auto-Bid"
   },
   "generic_inactive": {
     "message": "inactive"
@@ -79,5 +79,14 @@
   },
   "popup_enterMinAmount": {
     "message": "Enter at least $1"
+  },
+  "popup_openArticleInTab": {
+    "message": "Opens the article in a new tab"
+  },
+  "popup_closeArticleTab": {
+    "message": "Closes the articles tab"
+  },
+  "popup_articleRemove": {
+    "message": "Removes all events and configuration for this article"
   }
 }

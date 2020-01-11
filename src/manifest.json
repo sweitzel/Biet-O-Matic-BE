@@ -14,7 +14,7 @@
   "permissions": [
     "https://*.ebay.com/*",
     "https://*.ebay.de/*",
-    "tabs",
+    "activeTab",
     "storage"
   ],
   "icons": {

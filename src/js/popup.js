@@ -556,7 +556,7 @@ class Article {
       'articleAuctionState', 'articleAuctionStateText', 'articleBidCount', 'articleBidPrice', 'articleCurrency',
       'articleBuyPrice', 'articleDescription', 'articleEndTime',
       'articleMinimumBid', 'articlePaymentMethods', 'articleShippingCost', 'articleShippingMethods',
-      'articleState'
+      'articleState', 'articlePlatform'
     ];
     elements.forEach(e => {
       if (info.hasOwnProperty(e))
@@ -633,7 +633,7 @@ class Article {
     if (!regex.test(tab.url)) {
       return Promise.resolve({});
     }
-    console.log("Injecting contentScript on tab=%s", tab.url);
+    console.debug("Biet-O-Matic: Injecting contentScript on tab %d = %s", tab.id, tab.url);
     // inject content script in case its not loaded
     await browser.tabs.executeScript(tab.id, {file: 'contentScript.bundle.js'})
       .catch(e => {
@@ -983,6 +983,14 @@ class Article {
       return 'tabid-' + this.tabId;
   }
 
+  // return the link for that article
+  getUrl() {
+    if (this.hasOwnProperty('articlePlatform'))
+      return `https://cgi.${this.articlePlatform}/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&orig_cvip=true`;
+    else
+      return `https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&orig_cvip=true`;
+  }
+
   // returns the autoBid state for window and article group
   async getAutoBidState() {
     let groupName = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
@@ -1287,7 +1295,7 @@ class ArticlesTable {
             let div = document.createElement("div");
             div.id = data;
             let a = document.createElement('a');
-            a.href = 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + row.articleId  + '&orig_cvip=true';
+            a.href = row.getUrl();
             a.id = row.getArticleLinkId();
             a.text = data;
             a.target = '_blank';
@@ -1886,7 +1894,7 @@ class ArticlesTable {
     spanGroupAutoBid.id = 'spanGroupAutoBid';
     spanGroupAutoBid.classList.add('ui-button', 'translate');
     spanGroupAutoBid.setAttribute('name', groupName);
-    spanGroupAutoBid.textContent = Popup.getTranslation('generic_group_autoBid', ".Group Auto-Bid ");
+    spanGroupAutoBid.textContent = Popup.getTranslation('generic_group_autoBid', ".Group Auto-Bid ") + ' ';
     spanGroupAutoBid.style.float = 'right';
     td.appendChild(spanGroupAutoBid);
     // renderState will asynchronously add a class toggling enabled/disabled state
@@ -2016,16 +2024,16 @@ class ArticlesTable {
     spanTabStatus.style.opacity = '0.6';
     if (row.tabId == null) {
       spanTabStatus.classList.add('fa-folder');
-      spanTabStatus.title = 'Öffnet den Artikel in Neuem Tab';
+      spanTabStatus.title = Popup.getTranslation('popup_openArticleInTab', '.Opens this article in a new tab');
     } else {
       spanTabStatus.classList.add('fa-folder-open');
-      spanTabStatus.title = 'Schließt den Artikel Tab';
+      spanTabStatus.title = Popup.getTranslation('popup_closeArticleTab', '.Closes this articles tab');
     }
 
     // article remove
     let spanArticleRemove = document.createElement('span');
     spanArticleRemove.id = 'articleRemove';
-    spanArticleRemove.title = 'Entfernt Artikel Ereignisse und Einstellungen';
+    spanArticleRemove.title = Popup.getTranslation('popup_articleRemove', '.Removes all Article events and configuration');
     spanArticleRemove.classList.add('button-zoom', 'warning-hover', 'far', 'fa-trash-alt', 'fa-lg');
     spanArticleRemove.style.marginLeft = '20px';
     spanArticleRemove.style.opacity = '0.6';

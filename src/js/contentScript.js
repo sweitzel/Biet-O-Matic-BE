@@ -55,8 +55,18 @@ class EbayArticle {
       throw new Error("Biet-O-Mat: skipping on this page; bidding already performed.");
     }
 
+    // save platform
+    const regex = /www\.(ebay\..*?)\//i;
+    const platform = window.location.href;
+    if (regex.test(platform)) {
+      this.articlePlatform = platform.match(regex)[1];
+    } else {
+      console.log("Biet-O-Matic: Platform could not be determined from URL: %s", platform);
+      this.articlePlatform = 'ebay.de';
+    }
+
     // parse article information
-    let info = EbayArticle.parsePage();
+    const info = EbayArticle.parsePage();
 
     // check if the same article is already handled by another tab
     const result = await browser.runtime.sendMessage({
@@ -111,7 +121,10 @@ class EbayArticle {
     if (buttonDiv != null) buttonDiv.remove();
     buttonDiv = document.createElement("div");
     buttonDiv.id = "BomAutoBidDiv";
-    buttonDiv.style.width = '280px';
+    if (this.articlePlatform === 'ebay.com')
+      buttonDiv.style.width = '8.7rem';
+    else
+      buttonDiv.style.width = '280px';
     buttonDiv.style.height = '18px';
     buttonDiv.style.align = 'center';
     buttonDiv.style.marginTop = '10px';
@@ -123,8 +136,12 @@ class EbayArticle {
     buttonDiv.appendChild(buttonInput);
     let buttonLabel = document.createElement("label");
     buttonLabel.classList.add('tgl-btn');
-    buttonLabel.setAttribute('data-tg-off', "B-O-M: Automatisch bieten aus");
-    buttonLabel.setAttribute('data-tg-on', "B-O-M: Automatisch bieten an");
+    let offText = EbayArticle.getTranslation('generic_autoBid', '.Auto-Bid') + ' ' +
+      EbayArticle.getTranslation('generic_inactive', '.inactive');
+    let onText = EbayArticle.getTranslation('generic_autoBid', '.Auto-Bid') + ' ' +
+      EbayArticle.getTranslation('generic_active', '.active');
+    buttonLabel.setAttribute('data-tg-off', offText);
+    buttonLabel.setAttribute('data-tg-on', onText);
     buttonLabel.setAttribute('for', 'BomAutoBid');
     buttonDiv.appendChild(buttonLabel);
 
@@ -1195,6 +1212,22 @@ class EbayArticle {
     }
     return ebayArticleInfo;
   }
+
+  //region i18n
+  static getTranslation(i18nKey, defaultText = "", params = null) {
+    let translatedText = browser.i18n.getMessage(i18nKey, params);
+    // use provided default text, if specified
+    if (translatedText === "") {
+      if (defaultText !== "") {
+        return defaultText;
+      } else {
+        return i18nKey;
+      }
+    } else {
+      return translatedText;
+    }
+  }
+  //endregion
 
   toString () {
     let str = '';
