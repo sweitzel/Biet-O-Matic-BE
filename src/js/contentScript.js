@@ -22,6 +22,32 @@ const auctionEndStates = {
   unknown: null
 };
 
+// auction states as communicated to the overview page
+const auctionEndStates2 = {
+  ended: {
+    id: 0,
+    strings: {
+      de: "Dieses Angebot wurde beendet",
+      en: "Bidding has ended on this item"
+    },
+  },
+  purchased: {
+    id: 1,
+    strings: {
+      de: "Sie waren der Höchstbietende",
+      en: "You won this auction"
+    }
+  },
+  overbid: {
+    id: 2,
+    strings: {
+      de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht"],
+      en: [""]
+    }
+  },
+  unknown: { id: null }
+};
+
 class EbayArticle {
   constructor() {
     this.articleId = null;
@@ -416,7 +442,8 @@ class EbayArticle {
       ['articleShippingMethods', ['#fShippingSvc']],
       ['articleAuctionState', ['#msgPanel']],
       ['articleBidCount', ['#qty-test']],
-      ['articleMinimumBid', ['#MaxBidId']]
+      ['articleMinimumBid', ['#MaxBidId']],
+      ['articleImage', ['#icImg']]
     ]);
     for (let item of parseInfoArray) {
       let info = EbayArticle.parseInfoEntry(item[0], item[1]);
@@ -564,8 +591,11 @@ class EbayArticle {
           result.articleAuctionStateText = $(value)[0].textContent.trim()
             .replace(/\n/g, '')
             .replace(/\s+/g, ' ')
-            .replace(/[\s\|]+$/g, '');
-        } else {
+            .replace(/[\s\|-]+$/g, '');
+        } else if (key === 'articleImage') {
+          // store primary Image URL
+          value = domEntry.src;
+        }  else {
           value = domEntry.textContent.trim();
           // replace newline and multiple spaces
           value = value.replace(/\n/g, "");
@@ -671,10 +701,9 @@ class EbayArticle {
     try {
       html = html.replace(/(\r\n|\n|\r)/gm, '');
       html = html.replace(/\t+/gm, '');
-      let jqHtml = $(html);
+      const jqHtml = $(html);
       $(jqHtml).removeComments();
       EbayArticle.clearUnsupportedTagsAndAttributes($(jqHtml), tagsAllowed, attributesAllowed);
-      //console.log("After2: %s", $(jqHtml)[0].outerHTML);
       return $(jqHtml)[0].outerHTML;
     } catch(e) {
       console.warn("Biet-O-Matic: Failed to cleanup status: %s", e.message);
@@ -706,6 +735,11 @@ class EbayArticle {
           else {
             let attrs = el.get(0).attributes;
             for (let i = 0; i < attrs.length; i++) {
+              if (tag === 'span' && attrs[i].name.toLocaleLowerCase() === 'class') {
+                if (attrs[i].textContent === 'statusRightContent') {
+                  el.remove();
+                }
+              }
               try {
                 if (attributesAllowed[tag] == null ||
                   attributesAllowed[tag].indexOf("|" + attrs[i].name.toLowerCase() + "|") < 0) {
@@ -924,7 +958,6 @@ class EbayArticle {
         action: 'ebayArticleGetAdjustedBidTime',
         articleId: this.articleId,
       });
-      console.log("XXX result = %O", ebayArticleGetAdjustedBidTimeResult);
       // result format {"articleEndTime":1578180835000,"adjustmentReason":"Bietzeit um 6s angepasst, da Gefahr der Überschneidung mit Artikel 223821015319."}
       if (ebayArticleGetAdjustedBidTimeResult == null || !ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('articleEndTime')) {
         console.log("Biet-O-Matic: Unable to get ebayArticleGetAdjustedBidTime result!");

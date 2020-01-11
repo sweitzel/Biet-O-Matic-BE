@@ -552,6 +552,7 @@ class Article {
     this.articleMaxBid = null;
     this.articleAutoBid = false;
     // normal article, from open tab
+    // Note: if the contentScript adds new attributes, they should be added here
     const elements = [
       'articleAuctionState', 'articleAuctionStateText', 'articleBidCount', 'articleBidPrice', 'articleCurrency',
       'articleBuyPrice', 'articleDescription', 'articleEndTime',
@@ -2523,22 +2524,22 @@ class ArticlesTable {
           if (changeInfo.status === 'complete') {
             console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tabInfo=%s',
               tabId, JSON.stringify(changeInfo), JSON.stringify(tabInfo));
-            if (!tabInfo.hasOwnProperty('url')) {
-              throw new Error("Tab Info is missing URL - permission issue?!");
+            if (tabInfo.hasOwnProperty('url')) {
+              console.log("Biet-O-Matic: tabs.onUpdated(): Tab Info is missing URL - permission issue or not an supported ebay page.");
+              Article.getInfoFromTab(tabInfo)
+                .then(articleInfo => {
+                  if (articleInfo.hasOwnProperty('detail')) {
+                    // if same article, then update it, else remove old, add new
+                    this.addOrUpdateArticle(articleInfo.detail, tabInfo);
+                  } else {
+                    // new URL is not for an article (or couldnt be parsed) - remove the old article
+                    this.removeArticleIfBoring(tabInfo.id);
+                  }
+                })
+                .catch(e => {
+                  console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
+                });
             }
-            Article.getInfoFromTab(tabInfo)
-              .then(articleInfo => {
-                if (articleInfo.hasOwnProperty('detail')) {
-                  // if same article, then update it, else remove old, add new
-                  this.addOrUpdateArticle(articleInfo.detail, tabInfo);
-                } else {
-                  // new URL is not for an article (or couldnt be parsed) - remove the old article
-                  this.removeArticleIfBoring(tabInfo.id);
-                }
-              })
-              .catch(e => {
-                console.warn(`Biet-O-Matic: Failed to get Article Info from Tab ${tabInfo.id}: ${e.message}`);
-              });
           }
         }
       } catch (e) {
