@@ -12,11 +12,22 @@
   <div style="margin-bottom: 2em;">
     <fieldset>
       <legend>Options</legend>
-      <label for="inpAutoBid" class="ui-button" style="display: inline-block;white-space: nowrap;margin-right: 30px"
-             title="Define if automatic bidding is active for this browser window.">
-        <input id="inpAutoBid" name="autoBid" type="checkbox" style="display: none"/>
-        <span id="lblAutoBid" class="translate">Auto-Bid </span>
-      </label>
+      <div style="position: relative;">
+        <div>
+          <label for="inpAutoBid" class="ui-button" style="display: inline-block;white-space: nowrap;margin-right: 30px;"
+                 title="Define if automatic bidding is active for this browser window.">
+            <input id="inpAutoBid" name="autoBid" type="checkbox" style="display: none"/>
+            <span id="lblAutoBid" class="translate">Auto-Bid </span>
+          </label>
+        </div>
+        <div style="position: absolute;right: 0;top: 0;">
+          <label for="inpCompact" class="ui-button" style="display: inline-block;white-space: nowrap;"
+                 title="Switches between compact and verbose article information.">
+            <input id="inpCompact" name="autoBid" type="checkbox" style="display: none"/>
+            <span id="lblCompact" class="translate">Compact View </span>
+          </label>
+        </div>
+      </div>
       <div id="autoBidMessage" style="display: inline;">No Information</div>
     </fieldset>
   </div>

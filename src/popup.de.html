@@ -12,12 +12,23 @@
   <div style="margin-bottom: 2em;">
     <fieldset>
       <legend>Optionen</legend>
-      <label for="inpAutoBid" class="ui-button" style="display: inline-block;white-space: nowrap;margin-right: 30px"
-             title="Konfiguriert den Automatikmodus für das aktuelle Browser Fenster">
-        <input id="inpAutoBid" name="autoBid" type="checkbox" style="display: none"/>
-        <span id="lblAutoBid" class="translate">Automatikmodus </span>
-      </label>
-      <div id="autoBidMessage" style="display: inline;">Keine Info</div>
+      <div style="position: relative;">
+        <div>
+          <label for="inpAutoBid" class="ui-button" style="display: inline-block;white-space: nowrap;margin-right: 30px;"
+                 title="Konfiguriert den Automatikmodus für das aktuelle Browser Fenster.">
+            <input id="inpAutoBid" name="autoBid" type="checkbox" style="display: none"/>
+            <span id="lblAutoBid" class="translate">Automatikmodus </span>
+          </label>
+        </div>
+        <div style="position: absolute;right: 0;top: 0;">
+          <label for="inpCompact" class="ui-button" style="display: inline-block;white-space: nowrap;"
+                 title="Wechselt zwischen normaler und kompakter Ansicht.">
+            <input id="inpCompact" name="autoBid" type="checkbox" style="display: none"/>
+            <span id="lblCompact" class="translate">Kompakte Ansicht </span>
+          </label>
+        </div>
+      </div>
+      <div id="autoBidMessage" style="display: inline;">Keine Information</div>
     </fieldset>
   </div>
 

@@ -356,7 +356,6 @@ class AutoBid {
   static async toggleState() {
     const state = await AutoBid.getState();
     AutoBid.setState(!state.autoBidEnabled, state.simulation);
-    return !state;
   }
 
   static renderState() {
@@ -537,6 +536,63 @@ class AutoBid {
 }
 // static class vars
 AutoBid.beWindowId = null;
+
+class OptionCompactView {
+  static getState() {
+    const info = {enabled: false};
+    let result = JSON.parse(window.sessionStorage.getItem('settings'));
+    if (result != null) {
+      Object.assign(info, result);
+    }
+    return info;
+  }
+
+  static setState(compactViewEnabled) {
+    Popup.updateSetting('enabled', compactViewEnabled);
+    // local cache which should be used to check the option state
+    OptionCompactView.enabled = compactViewEnabled;
+    OptionCompactView.renderState();
+  }
+
+  static toggleState() {
+    const state = OptionCompactView.getState();
+    OptionCompactView.setState(!state.enabled);
+  }
+
+  static renderState() {
+    const lblCompact = $('#lblCompact');
+    const info = OptionCompactView.getState();
+    OptionCompactView.jq.prop('checked', info.enabled);
+    // local cache which should be used to check the option state
+    OptionCompactView.enabled = info.enabled;
+    let state = '';
+    if (info.enabled) {
+      state += Popup.getTranslation('generic_active', '.active');
+    } else {
+      state += Popup.getTranslation('generic_inactive', '.inactive');
+    }
+    lblCompact.attr('data-i18n-after', state);
+  }
+
+  static registerEvents() {
+    // window inpCompact checkbox
+    OptionCompactView.jq.on('click', e => {
+      e.stopPropagation();
+      OptionCompactView.setState(OptionCompactView.jq.is(':checked'));
+      ArticlesTable.setCompact(OptionCompactView.enabled);
+    });
+  }
+
+  // should be called once
+  static init() {
+    OptionCompactView.jq = $('#inpCompact');
+    if (OptionCompactView.jq.length === 0)
+      console.warn("Biet-O-Matic: OptionCompactView cannot be initialized: inpCompact not found, inpCompact=%O", OptionCompactView.jq);
+    OptionCompactView.renderState();
+    OptionCompactView.registerEvents();
+  }
+}
+
 
 /*
  * All functions related to an eBay Article
@@ -856,6 +912,11 @@ class Article {
     // autoBid (do not log or count as modified as the storage is already up-to-date)
     if (info.hasOwnProperty('articleAutoBid')) {
       this.articleAutoBid = info.articleAutoBid;
+      modifiedForDisplay++;
+    }
+    // articleImage (do not log or count as modified as the storage is already up-to-date)
+    if (info.hasOwnProperty('articleImage')) {
+      this.articleImage = info.articleImage;
       modifiedForDisplay++;
     }
     // maxBid (do not log or count as modified as the storage is already up-to-date)
@@ -1236,11 +1297,11 @@ class ArticlesTable {
   // selector = '#articles'
   constructor(popup, selector) {
     this.popup = popup;
-    this.selector = selector;
     this.currentWindowId = popup.whoIAm.currentWindow.id;
     if ($(selector).length === 0)
       throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
     $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation('generic_noGroup', ".No Group");
+    ArticlesTable.setCompact(OptionCompactView.enabled);
     this.DataTable = ArticlesTable.init(selector);
     this.addSearchFields();
     this.registerEvents();
@@ -1786,22 +1847,6 @@ class ArticlesTable {
     if (type !== 'display') return data;
     let div = document.createElement("div");
     div.id = data;
-    div.classList.add('polaroid');
-    div.style.width = '90px';
-    div.style.minHeight = '25px';
-    div.style.maxHeight = '90px';
-
-    if (row.hasOwnProperty('articleImage')) {
-      let img = document.createElement("img");
-      img.src = row.articleImage;
-      img.alt = row.articleId;
-      img.style.width = '100%';
-      img.style.userSelect = 'none';
-      div.appendChild(img);
-    }
-
-    let divContainer = document.createElement('div');
-    divContainer.classList.add('container');
 
     let a = document.createElement('a');
     a.href = row.getUrl();
@@ -1809,8 +1854,29 @@ class ArticlesTable {
     a.text = data;
     a.target = '_blank';
 
-    divContainer.appendChild(a);
-    div.appendChild(divContainer);
+    if (OptionCompactView.enabled) {
+      div.appendChild(a);
+    } else {
+      div.classList.add('polaroid');
+      div.style.width = '90px';
+      div.style.minHeight = '25px';
+      div.style.maxHeight = '90px';
+
+      if (row.hasOwnProperty('articleImage')) {
+        let img = document.createElement("img");
+        img.src = row.articleImage;
+        img.alt = row.articleId;
+        img.style.width = '100%';
+        img.style.userSelect = 'none';
+        div.appendChild(img);
+      }
+
+      let divContainer = document.createElement('div');
+      divContainer.classList.add('container');
+      divContainer.appendChild(a);
+      div.appendChild(divContainer);
+    }
+
     return div.outerHTML;
   }
 
@@ -2200,6 +2266,19 @@ class ArticlesTable {
         article.tabId = null;
         row.invalidate('data').draw(false);
       });
+    }
+  }
+
+  // switch datatable compact mode
+  static setCompact(compact) {
+    if (compact) {
+      $('#articles').addClass('compact');
+    } else {
+      $('#articles').removeClass('compact');
+    }
+    // redraw table if it is initialized
+    if ( $.fn.dataTable.isDataTable( '#articles' ) ) {
+      $('#articles').DataTable().rows().invalidate('data').draw(false);
     }
   }
 
@@ -2943,6 +3022,8 @@ class Popup {
       Popup.locale = en;
 
     this.registerEvents();
+    // restore settings from session storage (autoBidEnabled, bidAllEnabled, compactView)
+    this.restoreSettings();
 
     await Group.removeAllUnused()
       .catch(e => {
@@ -2953,8 +3034,6 @@ class Popup {
     await this.table.addArticlesFromTabs();
     await this.table.addArticlesFromStorage();
 
-    // restore settings from session storage (autoBidEnabled, bidAllEnabled)
-    this.restoreSettings();
     await Popup.checkBrowserStorage();
   }
 
@@ -3000,6 +3079,7 @@ class Popup {
    */
   restoreSettings() {
     AutoBid.init();
+    OptionCompactView.init();
 
     let result = JSON.parse(window.sessionStorage.getItem('settings'));
     if (result != null) {
