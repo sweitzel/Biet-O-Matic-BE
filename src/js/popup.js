@@ -35,6 +35,7 @@ import '@fortawesome/fontawesome-free/css/all.css';
 //import '@fortawesome/fontawesome-free/js/fontawesome';
 //import '@fortawesome/fontawesome-free/js/regular';
 
+import EbayParser from "./EbayParser.js";
 import "../css/popup.css";
 
 /*
@@ -988,6 +989,25 @@ class Article {
       console.warn(`getDiffMessage(${description}) failed: ${e.message}`);
       return `${description}: Kann die Unterschiede nicht anzeigen!`;
     }
+  }
+
+  /*
+   * Refresh article information from manual HTTP request
+   * - perform HTTP request to ebay for the article
+   * - parse the returned HTML, but only relevant information
+   *   articleDescription, articleEndTime, articleBidCount, articleMinimumBid, articlBidPrice
+   */
+  async getRefreshedInfo() {
+    const response = await fetch(this.getUrl());
+    if (!response.ok)
+      throw new Error(`Failed to fetch information for article ${this.articleId}: HTTP ${response.status} - ${response.statusText}`);
+    const text = await response.text();
+    //console.log("Fetch result: %s", text);
+    const parser = new EbayParser(this.getUrl(), text);
+    await parser.init().catch(e => {
+      console.log("Parser Init failed: %s", e.message);
+      });
+    console.log("Article Info: %O", parser);
   }
 
   // add log message for article
@@ -2269,6 +2289,23 @@ class ArticlesTable {
     }
   }
 
+  /*
+   * Refresh Article information
+   * this should be called only by the Window with Auto-Bid enabled, e.g. every 5 minutes
+   */
+  refreshArticle(rowNode) {
+    if (typeof rowNode === 'undefined' || rowNode.length !== 1)
+      return;
+    const row = this.DataTable.row(rowNode);
+    if (typeof row === 'undefined' || row.length !== 1)
+      return;
+    const article = row.data();
+    console.debug("Biet-O-Matic: refreshArticle(%s) Refreshing", article.articleId);
+    article.getRefreshedInfo().catch(e => {
+      console.log("Biet-O-Matic: refreshArticle() Failed to refresh: %s", e.message);
+    });
+  }
+
   // switch datatable compact mode
   static setCompact(compact) {
     if (compact) {
@@ -2805,6 +2842,7 @@ class ArticlesTable {
       let tr = $(e.target).closest('tr');
       if (e.target.id === 'tabStatus') {
         this.toggleArticleTab(tr);
+        //this.refreshArticle(tr);
       } else if (e.target.id === 'articleRemove') {
         this.removeArticle(tr);
       }
