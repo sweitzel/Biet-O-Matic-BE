@@ -839,58 +839,68 @@ class Article {
    * - group, maxBid and autoBid are only needed for browser sync feature
    */
   updateInfo(info) {
-    let modifiedForStorage = 0;
-    let modifiedForDisplay = 0;
+    const result = {
+      modifiedForStorage: 0,
+      modifiedForDisplay: 0,
+      modified: []
+    };
     let messages = [];
     // tabId should not be handled here, because its window specific
     // articleDescription
     if (info.hasOwnProperty('articleDescription') && info.articleDescription !== this.articleDescription) {
       messages.push(Article.getDiffMessage('Beschreibung', this.articleDescription, info.articleDescription));
       this.articleDescription = info.articleDescription;
-      modifiedForStorage++;
+      result.modifiedForStorage++;
+      result.modified.push('articleDescription');
       // todo: optionally deactivate autoBid for this article?
     }
     // articleBidPrice
     if (info.hasOwnProperty('articleBidPrice') && info.articleBidPrice !== this.articleBidPrice) {
       messages.push(Article.getDiffMessage('Auktionspreis', this.articleBidPrice, info.articleBidPrice));
       this.articleBidPrice = info.articleBidPrice;
-      modifiedForStorage++;
+      result.modified.push('articleBidPrice');
+      result.modifiedForStorage++;
     }
     // articleBidCount
     if (info.hasOwnProperty('articleBidCount') && info.articleBidCount !== this.articleBidCount) {
       messages.push(Article.getDiffMessage('Anzahl Gebote', this.articleBidCount, info.articleBidCount));
       this.articleBidCount = info.articleBidCount;
-      modifiedForStorage++;
+      result.modified.push('articleBidCount');
+      result.modifiedForStorage++;
     }
     // articleBidPrice
     if (info.hasOwnProperty('articleBuyPrice') && info.articleBuyPrice !== this.articleBuyPrice) {
       messages.push(Article.getDiffMessage('Kaufpreis', this.articleBuyPrice, info.articleBuyPrice));
       this.articleBuyPrice = info.articleBuyPrice;
-      modifiedForStorage++;
+      result.modified.push('articleBuyPrice');
+      result.modifiedForStorage++;
     }
     // articleShippingCost
     if (info.hasOwnProperty('articleShippingCost') && info.articleShippingCost !== this.articleShippingCost) {
       messages.push(Article.getDiffMessage('Lieferkosten', this.articleShippingCost, info.articleShippingCost));
       this.articleShippingCost = info.articleShippingCost;
-      modifiedForStorage++;
+      result.modified.push('articleShippingCost');
+      result.modifiedForStorage++;
     }
     // articleShippingMethods
     if (info.hasOwnProperty('articleShippingMethods') && info.articleShippingMethods !== this.articleShippingMethods) {
       messages.push(Article.getDiffMessage('Liefermethoden', this.articleShippingMethods, info.articleShippingMethods));
       this.articleShippingMethods = info.articleShippingMethods;
-      modifiedForStorage++;
+      result.modifiedForStorage++;
     }
     // articleMinimumBid
     if (info.hasOwnProperty('articleMinimumBid') && info.articleMinimumBid !== this.articleMinimumBid) {
       messages.push(Article.getDiffMessage('Minimal Gebot', this.articleMinimumBid, info.articleMinimumBid));
       this.articleMinimumBid = info.articleMinimumBid;
-      modifiedForStorage++;
+      result.modified.push('articleMinimumBid');
+      result.modifiedForStorage++;
     }
     // articleEndTime
     if (info.hasOwnProperty('articleEndTime') && info.articleEndTime !== this.articleEndTime) {
       messages.push(Article.getDiffMessage('Auktionsende', this.articleEndTime, info.articleEndTime));
       this.articleEndTime = info.articleEndTime;
-      modifiedForStorage++;
+      result.modified.push('articleEndTime');
+      result.modifiedForStorage++;
     }
     // articleAuctionState
     if (info.hasOwnProperty('articleAuctionState') && info.articleAuctionState !== this.articleAuctionState) {
@@ -900,40 +910,37 @@ class Article {
         this.articleAuctionStateText = info.articleAuctionStateText;
       else
         this.articleAuctionStateText = "Text fehlt";
-      modifiedForStorage++;
+      result.modifiedForStorage++;
+    }
+    // articleImage
+    if (info.hasOwnProperty('articleImage') && info.articleImage !== this.articleImage) {
+      messages.push(Article.getDiffMessage('Artikelbild', this.articleImage, info.articleImage));
+      this.articleImage = info.articleImage;
+      result.modifiedForStorage++;
     }
     // autoBid (do not log or count as modified as the storage is already up-to-date)
     if (info.hasOwnProperty('articleAutoBid')) {
       this.articleAutoBid = info.articleAutoBid;
-      modifiedForDisplay++;
-    }
-    // articleImage (do not log or count as modified as the storage is already up-to-date)
-    if (info.hasOwnProperty('articleImage')) {
-      this.articleImage = info.articleImage;
-      modifiedForDisplay++;
+      result.modifiedForDisplay++;
     }
     // maxBid (do not log or count as modified as the storage is already up-to-date)
     if (info.hasOwnProperty('articleMaxBid')) {
       this.articleMaxBid = info.articleMaxBid;
-      modifiedForDisplay++;
+      result.modifiedForDisplay++;
     }
     // articleGroup (do not log or count as modified as the storage is already up-to-date)
     if (info.hasOwnProperty('articleGroup')) {
       this.articleGroup = info.articleGroup;
-      modifiedForDisplay++;
+      result.modifiedForDisplay++;
     }
-
-    if (modifiedForStorage > 0) {
+    if (result.modifiedForStorage > 0) {
       this.addLog({
         component: "Artikel",
         level: "Aktualisierung",
         message: messages.join('; '),
       });
     }
-    return {
-      modifiedForStorage: modifiedForStorage,
-      modifiedForDisplay: modifiedForDisplay
-    };
+    return result;
   }
 
   static getDiffMessage(description, oldVal, newVal) {
@@ -1718,6 +1725,9 @@ class ArticlesTable {
             console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
           });
       }
+      modifiedInfo.modified.forEach(key => {
+        this.markCellUpdated(row, key);
+      });
     }
     //this.highlightArticleIfExpired(row);
   }
@@ -2373,9 +2383,14 @@ class ArticlesTable {
       return null;
   }
 
-  static checkTabIsOpen(tabId) {
-
+  // mark the specified cell
+  markCellUpdated(row, key) {
+    const cell = this.DataTable.cell("#" + row.data().articleId, key + ':name');
+    if (cell.length === 1) {
+      cell.node().classList.add('updated');
+    }
   }
+
 
   /* reload a tab
    * check if a reload has been recently performed and only reload if > 60 seconds ago

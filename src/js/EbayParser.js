@@ -140,7 +140,7 @@ class EbayParser {
     // EUR 123,00
     const regex = /([A-Z]{2,3}(?:\s[$]?))([0-9,]+)(?:.|,)([0-9]{2})/;
     let result = [];
-    if (price.match(regex)) {
+    if (regex.test(price)) {
       result = price.match(regex);
       let p1 = result[2].replace(/,/, '');
       let p2 = result[3];
@@ -148,11 +148,13 @@ class EbayParser {
       currency = result[1].trim();
       if (currency === "US $")
         currency = "USD";
+      return {
+        price: Number.parseFloat(price.toString()),
+        currency: currency
+      };
+    } else {
+      return null;
     }
-    return {
-      price: Number.parseFloat(price.toString()),
-      currency: currency
-    };
   }
 
   /*
@@ -168,20 +170,18 @@ class EbayParser {
         if (key === "articleEndTime") {
           value = EbayParser.parseEndTime(domEntry);
         } else if (key === "articleBidPrice") {
-          // attempt to get price lazily from the content attribute
-          let price = domEntry.getAttribute("content");
+          /*
+           * It would be easy to just take the price from the content attribute
+           *   however when the price gets updated on the page, the content attribute does not.
+           */
+          //const priceFromContent = domEntry.getAttribute("content");
+          const priceFromText = EbayParser.parsePriceString(domEntry.textContent.trim());
           let currency = null;
-          if (price != null && typeof price !== 'undefined') {
-            // this is the normal method for articles
-            value = parseFloat(price);
-          } else {
-            let p = EbayParser.parsePriceString(domEntry.textContent.trim());
-            if (p != null) {
-              currency = p.currency;
-              value = p.price;
-            }
+          if (priceFromText != null) {
+            currency = priceFromText.currency;
+            value = priceFromText.price;
           }
-          // get currency from itemprop=priceCurrency
+          // fallback, get currency from itemprop=priceCurrency
           if (currency == null) {
             currency = this.data.querySelectorAll('[itemprop="priceCurrency"]');
             if (currency.length >= 1) {

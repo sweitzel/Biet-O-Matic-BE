@@ -239,6 +239,22 @@ div.container {
   opacity: 0.8;
 }
 
+
+@-o-keyframes fadeIt {
+  0%   { background-color: #FFFFFF; }
+  100% { background-color: #eefd00; }
+}
+@keyframes fadeIt {
+  0%   { background-color: #FFFFFF; }
+  100% { background-color: #eefd00; }
+}
+.updated{
+  background-image:none !important;
+  -o-animation: fadeIt 5s ease-in-out;
+  animation: fadeIt 5s ease-in-out;
+  animation-fill-mode: forwards;
+}
+
 /* raleway-regular - latin_latin-ext */
 /*
 @font-face {
