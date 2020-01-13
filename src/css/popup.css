@@ -228,6 +228,7 @@ div.polaroid {
   text-align: center;
   overflow: hidden;
   position: relative;
+  margin: auto;
 }
 div.container {
   width: 100%;

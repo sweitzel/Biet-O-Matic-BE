@@ -681,8 +681,11 @@ class Article {
     return converted;
   }
 
-  // Request article info from specific tab
-  static async getInfoFromTab(tab) {
+  /*
+   * Request article info from specific tab
+   */
+  static async getInfoFromTab(tab, calledFrom) {
+    console.debug("Biet-O-Matic: getInfoFromTab(%d) called from %s", tab.id, calledFrom);
     /*
      * Check if the tab is for an supported eBay article before we attempt to parse info from it
      * e.g. https://www.ebay.de/itm/*
@@ -692,40 +695,29 @@ class Article {
       return Promise.resolve({});
     }
     console.debug("Biet-O-Matic: Injecting contentScript on tab %d = %s", tab.id, tab.url);
-    // inject content script in case its not loaded
+    // inject content script, it will only inject itself if not already loaded
     await browser.tabs.executeScript(tab.id, {file: 'contentScript.bundle.js'})
       .catch(e => {
         throw new Error(`getInfoFromTab(${tab.id}) executeScript failed: ${e.message}`);
       });
 
-    /*
-     * The remote tab needs some time to initialize, so we have to retry the messages a few times
-     * https://stackoverflow.com/a/55270741
-     */
-    const withRetries = ({ attempt, maxRetries }) => async (...args) => {
-      const slotTime = 500;
-      let retryCount = 0;
-      do {
-        try {
-          console.log('Biet-O-Matic: getInfoFromTab(%d) Attempting... retriesLeft=%d', tab.id, maxRetries);
-          return await attempt(...args);
-        } catch (error) {
-          const isLastAttempt = retryCount === maxRetries;
-          if (isLastAttempt) {
-            // Stack Overflow console doesn't show unhandled
-            // promise rejections so lets log the error.
-            //console.error(error);
-            return Promise.reject(error);
-          }
+    let result;
+    const slotTime = 500;
+    let retryCount = 0;
+    do {
+      try {
+        result = await browser.tabs.sendMessage(tab.id, {action: "GetArticleInfo"});
+      } catch (error) {
+        if (retryCount >= 3) {
+          // all retries failed
+          result = Promise.reject(error);
+        } else {
+          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
         }
-        const randomTime = Math.floor(Math.random() * slotTime);
-        const delay = 2 ** retryCount * slotTime + randomTime;
-        // Wait for the exponentially increasing delay period before retrying again.
-        await new Promise(resolve => setTimeout(resolve, delay));
-      } while (retryCount++ < maxRetries);
-    };
-    const getArticleInfo = withRetries({ attempt: browser.tabs.sendMessage, maxRetries: 3 });
-    return await getArticleInfo(tab.id, {action: 'GetArticleInfo'});
+        await setTimeout(() => {}, 1000);
+      }
+    } while (retryCount++ < 3);
+    return result;
   }
 
   /*
@@ -1004,10 +996,8 @@ class Article {
     const text = await response.text();
     //console.log("Fetch result: %s", text);
     const parser = new EbayParser(this.getUrl(), text);
-    await parser.init().catch(e => {
-      console.log("Parser Init failed: %s", e.message);
-      });
-    console.log("Article Info: %O", parser);
+    parser.init();
+    let info = parser.parsePage();
   }
 
   // add log message for article
@@ -1582,42 +1572,47 @@ class ArticlesTable {
   }
 
   // add open article tabs to the table
-  async addArticlesFromTabs() {
+  addArticlesFromTabs() {
     // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
-    let tabs = await browser.tabs.query({
-      currentWindow: true,
-      url: ['*://*.ebay.de/itm/*', '*://*.ebay.com/itm/*']
-    }).catch(e => {
+    browser.tabs.query({currentWindow: true,url: ['*://*.ebay.de/itm/*', '*://*.ebay.com/itm/*']})
+      .then(tabs => {
+        for (const tab of tabs) {
+          const myTab = tab;
+          const at = ArticlesTable;
+          const a = Article;
+          Article.getInfoFromTab(myTab, "addArticlesFromTabs")
+            .then(articleInfo => {
+              if (typeof articleInfo !== 'undefined' && articleInfo.hasOwnProperty('detail')) {
+                let article = new a(this.popup, articleInfo.detail, myTab);
+                article.init()
+                  .then(article => {
+                    this.addOrUpdateArticle(article, myTab, false);
+                  });
+              } else {
+                console.warn("Biet-O-Matic: addArticlesFromTabs() Failed to add articleInfo for tab %d, " +
+                  "received info missing or incomplete", myTab.id);
+              }
+            })
+            .catch(e => {
+              console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${myTab.id}: ${e.message}`);
+              /*
+               * The script injection failed, this can have multiple reasons:
+               * - the contentScript threw an error because the page is not a article
+               * - the contentScript threw an error because the article is a duplicate tab
+               * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
+               * Therefore we perform a tab reload once, which should recover the latter case
+               */
+              at.reloadTab(myTab.id).then(() => {
+                console.debug("Biet-O-Matic: Tab %d reloaded to attempt repairing contentScript", myTab.id);
+              }).catch(e => {
+                console.log("Biet-O-Matic: addArticlesFromTabs() reloadTab(%s) failed:%s", myTab.id, e.message);
+              });
+            });
+        }
+      })
+      .catch(e => {
       console.warn("Biet-O-Matic: Failed to add articles from tabs: %s", e.message);
     });
-    for (let tab of tabs) {
-      const myTab = tab;
-      const at = ArticlesTable;
-      let articleInfo = await Article.getInfoFromTab(myTab).catch(e => {
-        console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${myTab.id}: ${e.message}`);
-        /*
-         * The script injection failed, this can have multiple reasons:
-         * - the contentScript threw an error because the page is not a article
-         * - the contentScript threw an error because the article is a duplicate tab
-         * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
-         * Therefore we perform a tab reload once, which should recover the latter case
-         */
-        at.reloadTab(myTab.id).then(() => {
-          console.debug("Biet-O-Matic: Tab %d reloaded to attempt repairing contentScript", myTab.id);
-        }).catch(e => {
-          console.log("Biet-O-Matic: addArticlesFromTabs() reloadTab(%s) failed:%s", myTab.id, e.message);
-        });
-      });
-      if (typeof articleInfo !== 'undefined' && articleInfo.hasOwnProperty('detail')) {
-        let article = new Article(this.popup, articleInfo.detail, myTab);
-        article.init().then(a => {
-          this.addArticle(a);
-        });
-      } else {
-        console.warn("Biet-O-Matic: addArticlesFromTabs() Failed to add articleInfo for tab %d, " +
-          "received info missing or incomplete", myTab.id);
-      }
-    }
   }
 
   // add articles which are in storage
@@ -1716,7 +1711,7 @@ class ArticlesTable {
     const modifiedInfo = article.updateInfo(articleInfo);
     if (modifiedInfo.modifiedForStorage > 0 || modifiedInfo.modifiedForDisplay > 0) {
       row.invalidate('data').draw(false);
-      // update info in storage, if there is any, do not inform the articleTab
+      // update info in storage, if there is any. Do not inform the articleTab.
       if (modifiedInfo.modifiedForStorage > 0) {
         article.updateInfoInStorage(articleInfo, null, true)
           .catch(e => {
@@ -1778,6 +1773,8 @@ class ArticlesTable {
     - if articleId not in table, add it
     - if in table, update the entry
     - also check if same tab has been reused
+    - if tab is specified:
+    - if updatedFromRemote will inform the open tab about the changes
   */
   addOrUpdateArticle(articleInfo, tab = null, updatedFromRemote = false) {
     if (!articleInfo.hasOwnProperty('articleId'))
@@ -2491,7 +2488,9 @@ class ArticlesTable {
                 const row = this.getRow(`#${request.articleId}`);
                 const article = row.data();
                 if (typeof article === 'undefined') {
-                  console.log("Biet-O-Matic: Event ebayArticleRefresh() aborted: article not found in table row=%O, article=%O", row, article);
+                  // Note: this can happen if the contentScript was just inserted and the row has not yet been added
+                  console.log("Biet-O-Matic: Event ebayArticleRefresh(%s) aborted: article not found in table row=%O, article=%O",
+                    request.articleId, row, article);
                   return Promise.reject(`Specified article ${request.articleId} not found in table`);
                 }
                 if (article.tabId !== sender.tab.id) {
@@ -2667,7 +2666,7 @@ class ArticlesTable {
             console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tabInfo=%s',
               tabId, JSON.stringify(changeInfo), JSON.stringify(tabInfo));
             if (tabInfo.hasOwnProperty('url')) {
-              Article.getInfoFromTab(tabInfo)
+              Article.getInfoFromTab(tabInfo, "browser.tabs.onUpdated")
                 .then(articleInfo => {
                   if (articleInfo.hasOwnProperty('detail')) {
                     // if same article, then update it, else remove old, add new
@@ -3069,9 +3068,9 @@ class Popup {
       });
 
     this.table = new ArticlesTable(this, '#articles');
-    await this.table.addArticlesFromTabs();
-    await this.table.addArticlesFromStorage();
 
+    await this.table.addArticlesFromStorage();
+    this.table.addArticlesFromTabs();
     await Popup.checkBrowserStorage();
   }
 
@@ -3312,6 +3311,6 @@ document.addEventListener('DOMContentLoaded', function () {
         popup.whoIAm.currentWindow.id, Popup.lang, popup.whoIAm.currentWindow);
     })
     .catch(e => {
-      console.log("Biet-O-Matic: Popup initialization failed: %s", e.message);
+      console.log("Biet-O-Matic: Popup initialization failed: %s", e);
     });
 });

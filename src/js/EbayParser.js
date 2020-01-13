@@ -30,7 +30,7 @@ class EbayParser {
    * Initialize the EbayArticle object
    * - check if the page is in expected format
    */
-  async init(oldInfo) {
+  init(oldInfo) {
     // first we check if the page is a expected Article Page
     const body = this.data.getElementById("Body");
     if (body == null) {

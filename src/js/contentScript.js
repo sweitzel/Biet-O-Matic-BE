@@ -56,6 +56,16 @@ class EbayArticle {
     this.perfInfo = [];
   }
 
+  // return the information to be shared with the popup
+  get() {
+    const result = {};
+    Object.keys(this).sort().forEach(key => {
+      if (key === 'perfInfo' || key === 'ebayParser') return;
+      result[key] = this[key];
+    });
+    return result;
+  }
+
   /*
    * Initialize the EbayArticle object
    * - check if the page is in expected format
@@ -97,7 +107,7 @@ class EbayArticle {
       // return ebayArticleInfo back to Popup script
       if (request.action === "GetArticleInfo") {
         console.log("Biet-O-Matic: Event.GetArticleInfo received");
-        return Promise.resolve({detail: this});
+        return Promise.resolve({detail: this.get()});
       } else if (request.action === "UpdateArticleMaxBid") {
         // receive updated MaxBid info from Popup - update the document
         console.debug("Biet-O-Matic: onMessage(UpdateArticleMaxBid) request=%O, sender=%O", request, sender);
@@ -280,7 +290,7 @@ class EbayArticle {
             minBidValue = maxBidInputNew.getAttribute('aria-label')
               .replace(/\n/g, "")
               .replace(/\s+/g, " ");
-            minBidValue = EbayArticle.parsePriceString(minBidValue).price;
+            minBidValue = EbayParser.parsePriceString(minBidValue).price;
             this.articleMinimumBid = minBidValue;
           }
           // check if bid > buy-now price (sofortkauf), then we update the maxBid with buyPrice
@@ -903,9 +913,16 @@ class EbayArticle {
 
   toString () {
     let str = '';
+    String.prototype.trunc =
+      function(n){
+        return this.substr(0,n-1)+(this.length>n?'...':'');
+      };
     for (let p in this) {
       if (this.hasOwnProperty(p)) {
-        str += p + '::' + this[p] + '\n';
+        let v = null;
+        if (this[p] != null)
+          v  = (this[p] || '').toString().trunc(64);
+        str += `${p}=${v} (${typeof this[p]})\n`;
       }
     }
     return str;
@@ -933,13 +950,6 @@ class EbayArticle {
       .then(() => {
         try {
           console.debug("Biet-O-Matic: Initialized - Article Info: %s", ebayArticle.toString());
-          // send info to extension popup directly after initialization
-          browser.runtime.sendMessage({
-            action: 'ebayArticleUpdated',
-            detail: ebayArticle
-          }).catch(e => {
-            console.error(`Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: ${e.message}`);
-          });
           ebayArticle.extendPage();
           ebayArticle.monitorChanges().catch(e => {
             console.warn(`Biet-O-Matic: monitorChanges() failed: ${e.message}`);
