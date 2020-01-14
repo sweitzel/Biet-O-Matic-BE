@@ -3,8 +3,8 @@
 baseURL = 'http://localhost'
 theme = 'book'
 disableKinds = ['taxonomy', 'taxonomyTerm']
-#DefaultContentLanguage = 'de'
-#disableLanguages = ['en']
+DefaultContentLanguage = 'fr'
+#disableLanguages = ['fr']
 
 # Book configuration
 disablePathToLower = true
@@ -40,7 +40,7 @@ enableEmoji = true
 
   # (Optional, default docs) Specify section of content to render as menu
   # You can also set value to '*' to render all sections to menu
-  BookSection = '*'
+  BookSection = 'manual'
 
   # Set source repository location.
   # Used for 'Last Modified' and 'Edit this page' links.
@@ -66,11 +66,15 @@ enableEmoji = true
   BookSearchConfig = '{ cache: true }'
 
 [languages]
+  [languages.fr]
+    languageName = "French"
+    title = "Documentation"
+    weight = 1
   [languages.en]
     languageName = "English"
     title = "Documentation"
-    weight = 1
+    weight = 2
   [languages.de]
     languageName = "Deutsch"
     title = "Dokumentation"
-    weight = 2
+    weight = 3

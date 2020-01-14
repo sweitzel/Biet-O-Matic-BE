@@ -1,5 +1,5 @@
 ---
-title: "Handbuch"
+title: "Manual"
 bookToc: true
 weight: 1
 type: "docs"

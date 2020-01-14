@@ -1,5 +1,5 @@
 ---
-title: "Versions Übersicht"
+title: "Release Notes"
 bookToc: true
 weight: 2
 type: "docs"
