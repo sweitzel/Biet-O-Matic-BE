@@ -53,7 +53,7 @@ class EbayParser {
   }
 
   /*
-   * Parse information from Ebay Article page
+   * Parse information from Ebay Article page and return the result object
    */
   parsePage() {
     let result = {};

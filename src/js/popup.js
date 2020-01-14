@@ -1004,7 +1004,7 @@ class Article {
     //console.log("Fetch result: %s", text);
     const parser = new EbayParser(this.getUrl(), text);
     parser.init();
-    let info = parser.parsePage();
+    return parser.parsePage();
   }
 
   // add log message for article
@@ -1323,9 +1323,14 @@ class ArticlesTable {
     this.addSearchFields();
     this.registerEvents();
     this.registerTableEvents();
-    this.openArticleTabsForBidding().catch(e => {
-      console.error(`Biet-O-Matic: openArticleTabsForBidding() internal error: ${e.message}`);
-    });
+    this.regularOpenArticleForBidding()
+      .catch(e => {
+        console.error("Biet-O-Matic: openArticleTabsForBidding() internal error: " + e);
+      });
+    this.regularRefreshArticleInfo()
+      .catch(e => {
+        console.error("Biet-O-Matic: regularRefreshArticleInfo() internal error: " + e);
+      });
     this.collapsedGroups = {};
   }
 
@@ -1447,7 +1452,7 @@ class ArticlesTable {
       ],
       columnDefs: [
         {type: "num", targets: [1, 4]},
-        {className: "dt-body-center dt-body-nowrap", targets: [0, 1, 7, 8, 9]},
+        {className: "dt-body-center dt-body-nowrap", targets: [0, 1, 7, 9]},
         {width: "100px", targets: [4, 5, 8]},
         {width: "220px", targets: [3]},
         {width: "300px", targets: [2, 6]},
@@ -1474,108 +1479,6 @@ class ArticlesTable {
       stateSave: false,
       language: ArticlesTable.getDatatableTranslation(navigator.language.slice(0,2))
     });
-  }
-
-  /*
-   * Open Article Tabs for bidding:
-   * - abort if autoBid is disabled
-   * - for all tabs in the table
-   *   - skip if articleEndTime not defined (sofortkauf)
-   *   - skip if articleEndTime in past or after 60 seconds
-   *   - skip if group autoBid is disabled
-   *   - if tab is open just reload it
-   *   - open tab
-   * The function will schedule itself to be executed every 30s
-   */
-  async openArticleTabsForBidding() {
-    try {
-      // window autoBid enabled?
-      if (AutoBid.getLocalState().autoBidEnabled) {
-        //console.debug("Biet-O-Matic: openArticleTabsForBidding() called");
-        this.DataTable.rows().every(async function (rowIdx, tableLoop, rowLoop) {
-          const article = this.data();
-          // update date column for closed tab (open tabs will be handled by ebayArticleRefresh event)
-          ArticlesTable.redrawArticleDate(article.articleId);
-          if (!article.hasOwnProperty('articleEndTime')) {
-            console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, no endTime", article.articleId);
-            return;
-          }
-          const timeLeftSeconds = (article.articleEndTime - Date.now()) / 1000;
-
-          // skip if articleEndTime is in the past
-          if (timeLeftSeconds < 0 || timeLeftSeconds > 90) {
-            //console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, not ending within 90s: %ss",
-            //  article.articleId, timeLeftSeconds);
-            return;
-          }
-
-          // get group autoBid state
-          let groupAutoBid = await Group.getState(article.articleGroup)
-            .catch(e => console.warn(`Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state! ${e.message}`));
-          if (groupAutoBid === true) {
-            let shouldOpenTab = true;
-            // skip if tab already opened
-            if (article.tabOpenedForBidding) {
-              console.debug("Biet-O-Matic: openArticleTabsForBidding() Skipping, article %s is already open", article.articleId);
-              return;
-            }
-            // check and skip if tab has autoBid disabled
-            if (article.articleAutoBid === false) {
-              shouldOpenTab = false;
-            } else if (article.hasOwnProperty('tabId') && article.tabId != null && typeof article.tabId !== 'undefined') {
-              shouldOpenTab = false;
-              // reload a tab if auction ends within 30..90 seconds - the reloadTab will rateLimit it self to 1 per 60s
-              if (timeLeftSeconds > 30) {
-                const reloaded = await ArticlesTable.reloadTab(article.tabId).catch(e => {
-                  console.log("Biet-O-Matic: openArticleTabsForBidding() reloadTab failed: %s", e.message);
-                });
-                if (reloaded) {
-                  console.debug("Biet-O-Matic: openArticleTabsForBidding() Article %s tab %s has been reloaded for bidding.",
-                    article.articleId, article.tabId);
-                }
-              }
-            }
-            // schedule to open tab, if not already scheduled
-            if (shouldOpenTab) {
-              // set timer to open tab 60 seconds before auction ends
-              const wakeUpInMs = (article.articleEndTime - Date.now()) - 60000;
-              if (wakeUpInMs > 0) {
-                console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - Opening tab via wakeUp timer: %sms",
-                  article.articleId, wakeUpInMs);
-                setTimeout(() => {
-                  article.openTab(true)
-                    .catch(e => {
-                      console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
-                    });
-                }, wakeUpInMs, true);
-              } else {
-                console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s Opening tab now",
-                  article.articleId, wakeUpInMs);
-                await article.openTab(true)
-                  .catch(e => {
-                    console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
-                  });
-              }
-            } else {
-              console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - should not open tab (already open=%d)",
-                article.articleId, article.tabId);
-            }
-          } else {
-            // group autoBid is disabled, do not open tab
-            console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Group '%s' autoBid is disabled",
-              article.articleId, article.articleGroup);
-          }
-        });
-      } else {
-        //console.debug("Biet-O-Matic: openArticleTabsForBidding() skipping run - Window autoBid disabled.");
-      }
-    } catch (e) {
-      console.warn(`Biet-O-Matic: openArticleTabsForBidding() Internal Error: ${e.message}`);
-    } finally {
-      setTimeout(() => {
-        this.openArticleTabsForBidding();
-      }, 30000);
-    }
   }
 
   // add open article tabs to the table
@@ -1718,7 +1621,7 @@ class ArticlesTable {
     const modifiedInfo = article.updateInfo(articleInfo);
     if (modifiedInfo.modifiedForStorage > 0 || modifiedInfo.modifiedForDisplay > 0) {
       row.invalidate('data').draw(false);
-      // update info in storage, if there is any. Do not inform the articleTab.
+      // update info in storage, if there is any change. Do not inform the articleTab.
       if (modifiedInfo.modifiedForStorage > 0) {
         article.updateInfoInStorage(articleInfo, null, true)
           .catch(e => {
@@ -2177,7 +2080,9 @@ class ArticlesTable {
     if (type !== 'display' && type !== 'filter') return '';
     // check if there are logs, then show plus if the log view is closed, else minus
     if (row.getLog() != null) {
-      let span = document.createElement('span');
+      const div = document.createElement('div');
+      div.style.textAlign = 'center';
+      const span = document.createElement('span');
       span.setAttribute('aria-hidden', 'true');
       span.style.opacity = '0.6';
       span.classList.add('button-zoom', 'fas');
@@ -2188,7 +2093,8 @@ class ArticlesTable {
         span.classList.add('fa-plus');
         span.title = Popup.getTranslation('popup_show_articleEvents', '.Show article events');
       }
-      return span.outerHTML;
+      div.appendChild(span);
+      return div.outerHTML;
     } else
       return '';
   }
@@ -2300,16 +2206,26 @@ class ArticlesTable {
    * Refresh Article information
    * this should be called only by the Window with Auto-Bid enabled, e.g. every 5 minutes
    */
-  refreshArticle(rowNode) {
-    if (typeof rowNode === 'undefined' || rowNode.length !== 1)
-      return;
-    const row = this.DataTable.row(rowNode);
+  refreshArticle(row) {
     if (typeof row === 'undefined' || row.length !== 1)
       return;
     const article = row.data();
     console.debug("Biet-O-Matic: refreshArticle(%s) Refreshing", article.articleId);
-    article.getRefreshedInfo().catch(e => {
-      console.log("Biet-O-Matic: refreshArticle() Failed to refresh: %s", e.message);
+    // add class to indicate update to the user
+    const cell = this.DataTable.cell("#" + article.articleId, 'articleDetailsControl:name');
+    if (cell.length === 1) {
+      cell.node().classList.add('loading-spinner');
+    }
+    article.getRefreshedInfo()
+      .then(info => {
+        // apply the update info
+        this.updateArticle(info, row);
+        if (cell.length === 1) {
+          cell.node().classList.remove('loading-spinner');
+        }
+      })
+      .catch(e => {
+      console.log("Biet-O-Matic: refreshArticle() Failed to refresh: " +  e);
     });
   }
 
@@ -2432,6 +2348,137 @@ class ArticlesTable {
       dateCell.invalidate('data').draw(false);
     }
   }
+
+  /*
+ * Open Article Tabs for bidding:
+ * - abort if autoBid is disabled
+ * - for all tabs in the table
+ *   - skip if articleEndTime not defined (sofortkauf)
+ *   - skip if articleEndTime in past or after 60 seconds
+ *   - skip if group autoBid is disabled
+ *   - if tab is open just reload it
+ *   - open tab
+ * The function will schedule itself to be executed every 30s
+ */
+  async regularOpenArticleForBidding() {
+    try {
+      // window autoBid enabled?
+      if (AutoBid.getLocalState().autoBidEnabled) {
+        //console.debug("Biet-O-Matic: openArticleTabsForBidding() called");
+        this.DataTable.rows().every(async function (rowIdx, tableLoop, rowLoop) {
+          const article = this.data();
+          // update date column for closed tab (open tabs will be handled by ebayArticleRefresh event)
+          ArticlesTable.redrawArticleDate(article.articleId);
+          if (!article.hasOwnProperty('articleEndTime')) {
+            console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, no endTime", article.articleId);
+            return;
+          }
+          const timeLeftSeconds = (article.articleEndTime - Date.now()) / 1000;
+
+          // skip if articleEndTime is in the past
+          if (timeLeftSeconds < 0 || timeLeftSeconds > 90) {
+            //console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, not ending within 90s: %ss",
+            //  article.articleId, timeLeftSeconds);
+            return;
+          }
+
+          // get group autoBid state
+          let groupAutoBid = await Group.getState(article.articleGroup)
+            .catch(e => console.warn(`Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state! ${e.message}`));
+          if (groupAutoBid === true) {
+            let shouldOpenTab = true;
+            // skip if tab already opened
+            if (article.tabOpenedForBidding) {
+              console.debug("Biet-O-Matic: openArticleTabsForBidding() Skipping, article %s is already open", article.articleId);
+              return;
+            }
+            // check and skip if tab has autoBid disabled
+            if (article.articleAutoBid === false) {
+              shouldOpenTab = false;
+            } else if (article.hasOwnProperty('tabId') && article.tabId != null && typeof article.tabId !== 'undefined') {
+              shouldOpenTab = false;
+              // reload a tab if auction ends within 30..90 seconds - the reloadTab will rateLimit it self to 1 per 60s
+              if (timeLeftSeconds > 30) {
+                const reloaded = await ArticlesTable.reloadTab(article.tabId).catch(e => {
+                  console.log("Biet-O-Matic: openArticleTabsForBidding() reloadTab failed: %s", e.message);
+                });
+                if (reloaded) {
+                  console.debug("Biet-O-Matic: openArticleTabsForBidding() Article %s tab %s has been reloaded for bidding.",
+                    article.articleId, article.tabId);
+                }
+              }
+            }
+            // schedule to open tab, if not already scheduled
+            if (shouldOpenTab) {
+              // set timer to open tab 60 seconds before auction ends
+              const wakeUpInMs = (article.articleEndTime - Date.now()) - 60000;
+              if (wakeUpInMs > 0) {
+                console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - Opening tab via wakeUp timer: %sms",
+                  article.articleId, wakeUpInMs);
+                setTimeout(() => {
+                  article.openTab(true)
+                    .catch(e => {
+                      console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
+                    });
+                }, wakeUpInMs, true);
+              } else {
+                console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s Opening tab now",
+                  article.articleId, wakeUpInMs);
+                await article.openTab(true)
+                  .catch(e => {
+                    console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
+                  });
+              }
+            } else {
+              console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - should not open tab (already open=%d)",
+                article.articleId, article.tabId);
+            }
+          } else {
+            // group autoBid is disabled, do not open tab
+            console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Group '%s' autoBid is disabled",
+              article.articleId, article.articleGroup);
+          }
+        });
+      } else {
+        //console.debug("Biet-O-Matic: openArticleTabsForBidding() skipping run - Window autoBid disabled.");
+      }
+    } catch (e) {
+      console.warn(`Biet-O-Matic: openArticleTabsForBidding() Internal Error: ${e.message}`);
+    } finally {
+      setTimeout(() => {
+        this.regularOpenArticleForBidding();
+      }, 30000);
+    }
+  }
+
+  /*
+   * Refresh article information
+   * - skip if tab is open (article will update itself)
+   * - skip if autoBid is off for this window
+   */
+  async regularRefreshArticleInfo() {
+    try {
+      // check if autoBid is enabled
+      const localState = AutoBid.getLocalState()
+      if (!localState.autoBidEnabled) return;
+      console.debug("Biet-O-Matic: regularRefreshArticleInfo() will execute now.");
+      this.DataTable.rows().every(index => {
+        const row = this.DataTable.row(index);
+        const article = row.data();
+        // skip articles with open tab
+        if (article.hasOwnProperty('tabId') && article.tabId != null) return;
+        // skip articles which ended already (longer than 60 minutes ago)
+        if (article.articleEndTime < (Date.now() - 60*60*1000)) return;
+        this.refreshArticle(row);
+      });
+    } catch (e) {
+      console.warn("Biet-O-Matic: regularRefreshArticleInfo() Internal Error: " + e);
+    } finally {
+      setTimeout(() => {
+        this.regularRefreshArticleInfo();
+      }, 60000);
+    }
+}
 
   /*
    * Events for the Articles Table:

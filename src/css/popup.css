@@ -255,6 +255,18 @@ div.container {
   animation-fill-mode: forwards;
 }
 
+/*region simple rotation to indicate article update */
+.loading-spinner {
+  animation: rotate 1.5s linear infinite;
+}
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/*endregion*/
+
+
 /* raleway-regular - latin_latin-ext */
 /*
 @font-face {
