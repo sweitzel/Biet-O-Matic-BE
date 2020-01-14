@@ -125,36 +125,44 @@ class EbayParser {
   }
 
   /*
-   * Parse price from text
+   * Parse price from domValue
+   * - regular expression to parse price from text
+   * - uses priceCurrency for currency
    * returns {currency: "EUR", price: 0.01}
    */
-  static parsePriceString(price) {
-    let currency = null;
-    if (price == null) return null;
-    price = price
-      .replace(/\n/g, "")
-      .replace(/\s+/g, " ");
+  static parsePriceString(domEntry, currencySelector) {
+    const result = {
+      price: null,
+      currency: null
+    };
+    if (typeof currencySelector !== 'undefined' && currencySelector.length >= 1) {
+      result.currency = currencySelector[0].getAttribute("content");
+    }
+    let price;
+    if (domEntry.hasOwnProperty('textContent')) {
+      price = domEntry.textContent.trim()
+        .replace(/\n/g, "")
+        .replace(/\s+/g, " ");
+    } else {
+      // handed over domEntry is just a text
+      console.log("domEntry=%s", typeof domEntry);
+      price = domEntry;
+    }
     // use regular expression to parse info, e.g.
     // US $1,000.12
     // GBP 26.00
     // EUR 123,00
-    const regex = /([A-Z]{2,3}(?:\s[$]?))([0-9,]+)(?:.|,)([0-9]{2})/;
-    let result = [];
+    const regex = /.*([0-9,]+)(?:.|,)([0-9]{2})/;
     if (regex.test(price)) {
-      result = price.match(regex);
-      let p1 = result[2].replace(/,/, '');
-      let p2 = result[3];
-      price = parseFloat(`${p1}.${p2}`).toFixed(2);
-      currency = result[1].trim();
-      if (currency === "US $")
-        currency = "USD";
-      return {
-        price: Number.parseFloat(price.toString()),
-        currency: currency
-      };
+      const rexres = price.match(regex);
+      let p1 = rexres[1].replace(/,/, '');
+      let p2 = rexres[2];
+      result.price = Number.parseFloat(`${p1}.${p2}`).toFixed(2);
     } else {
-      return null;
+      // fallback get price from
+      result.price = Number.parseFloat(domEntry.getAttribute("content"));
     }
+    return result;
   }
 
   /*
@@ -169,43 +177,15 @@ class EbayParser {
         let value = null;
         if (key === "articleEndTime") {
           value = EbayParser.parseEndTime(domEntry);
-        } else if (key === "articleBidPrice") {
+        } else if (key === "articleBidPrice" || key === 'articleBuyPrice') {
           /*
            * It would be easy to just take the price from the content attribute
            *   however when the price gets updated on the page, the content attribute does not.
            */
-          //const priceFromContent = domEntry.getAttribute("content");
-          const priceFromText = EbayParser.parsePriceString(domEntry.textContent.trim());
-          let currency = null;
-          if (priceFromText != null) {
-            currency = priceFromText.currency;
-            value = priceFromText.price;
-          }
-          // fallback, get currency from itemprop=priceCurrency
-          if (currency == null) {
-            currency = this.data.querySelectorAll('[itemprop="priceCurrency"]');
-            if (currency.length >= 1) {
-              result.articleCurrency = currency[0].getAttribute("content");
-            }
-          } else {
-            // determined above
-            result.articleCurrency = currency;
-          }
-        } else if (key === "articleBuyPrice") {
-          // attempt to get price lazily from the content attribute
-          let price = domEntry.getAttribute("content");
-          if (price != null && typeof price !== 'undefined') {
-            value = parseFloat(price);
-          } else {
-            value = EbayParser.parsePriceString(domEntry.textContent.trim()).price;
-          }
-          // get currency from itemprop=priceCurrency if not already defined from bidPrice
-          if (!result.hasOwnProperty('articleCurrency')) {
-            let currency = this.data.querySelectorAll('[itemprop="priceCurrency"]');
-            if (currency.length >= 1) {
-              result.articleCurrency = currency[0].getAttribute("content");
-            }
-          }
+          const priceInfo = EbayParser.parsePriceString(domEntry, this.data.querySelectorAll('[itemprop="priceCurrency"]'));
+          value = priceInfo.price;
+          if (!result.hasOwnProperty('articleCurrency'))
+            result.articleCurrency = priceInfo.currency;
         } else if (key === "articleDescription") {
           // some articles have long description, separated by <wbr>, concat the strings
           value = "";

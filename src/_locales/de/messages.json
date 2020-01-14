@@ -38,6 +38,15 @@
   "generic_unlimited": {
     "message": "unbegrenzt"
   },
+  "generic_configuration": {
+    "message": "Einstellungen"
+  },
+  "generic_updated": {
+    "message": "Aktualisiert"
+  },
+  "generic_item": {
+    "message": "Artikel"
+  },
   "popup_autoBidActive1": {
     "message": "Automatikmodus ist in einem anderen "
   },

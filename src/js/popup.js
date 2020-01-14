@@ -804,12 +804,12 @@ class Article {
 
     // merge new info into existing settings
     let mergedStoredInfo = Object.assign({}, oldStoredInfo, newStoredInfo);
-    let diffText = Article.getDiffMessage('Aktualisiert', oldStoredInfo, newStoredInfo);
+    let diffText = Article.getDiffMessage(Popup.getTranslation('generic_updated', '.Updated'), oldStoredInfo, newStoredInfo);
     //console.log("oldInfo=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, newStoredInfo, mergedStoredInfo, diffText);
     if (diffText != null) {
       this.addLog({
-        component: "Artikel",
-        level: "Einstellungen",
+        component: Popup.getTranslation("generic_item", ".Item"),
+        level: Popup.getTranslation('generic_configuration', ".Configuration"),
         message: diffText
       });
       // store the info back to the storage
@@ -935,8 +935,8 @@ class Article {
     }
     if (result.modifiedForStorage > 0) {
       this.addLog({
-        component: "Artikel",
-        level: "Aktualisierung",
+        component: Popup.getTranslation('generic_item', '.Item'),
+        level: Popup.getTranslation('generic_updated', '.Updated'),
         message: messages.join('; '),
       });
     }
@@ -1941,7 +1941,7 @@ class ArticlesTable {
     inpGroup.setAttribute('list', 'groups');
     inpGroup.setAttribute('maxlength', '32');
     inpGroup.multiple = false;
-    inpGroup.style.width = "60px";
+    inpGroup.style.width = "94%";
     inpGroup.placeholder = Popup.getTranslation('generic_group', '.Group');
     if (data != null && typeof data !== 'undefined')
       inpGroup.defaultValue = data;

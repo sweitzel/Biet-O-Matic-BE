@@ -38,6 +38,15 @@
   "generic_unlimited": {
     "message": "unlimited"
   },
+  "generic_configuration": {
+    "message": "Config"
+  },
+  "generic_updated": {
+    "message": "Updated"
+  },
+  "generic_item": {
+    "message": "Item"
+  },
   "popup_autoBidActive1": {
     "message": "Auto-Bid is active in another "
   },

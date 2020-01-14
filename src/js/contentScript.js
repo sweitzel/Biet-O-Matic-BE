@@ -28,22 +28,22 @@ const auctionEndStates2 = {
   ended: {
     id: 0,
     strings: {
-      de: "Dieses Angebot wurde beendet",
-      en: "Bidding has ended on this item"
+      de: ["Dieses Angebot wurde beendet"],
+      en: ["Bidding has ended on this item"]
     },
   },
   purchased: {
     id: 1,
     strings: {
-      de: "Sie waren der Höchstbietende",
-      en: "You won this auction"
+      de: ["Sie waren der Höchstbietende"],
+      en: ["You won this auction"]
     }
   },
   overbid: {
     id: 2,
     strings: {
       de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht"],
-      en: [""]
+      en: ["TODO123XXXX"]
     }
   },
   unknown: { id: null }
