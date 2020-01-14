@@ -1,9 +1,9 @@
 {
-  "appName": {
-    "message": "Biet-O-Matic BE"
-  },
   "appDesc": {
     "message": "Eine Browser Erweiterung um eBay Gebote abzugeben, auch wenn Du nicht am Rechner sitzt."
+  },
+  "appName": {
+    "message": "Biet-O-Matic BE"
   },
   "appOpen": {
     "message": "Öffne Biet-O-Matic BE"
@@ -11,14 +11,23 @@
   "filePopup": {
     "message": "popup.de.html"
   },
-  "generic_search": {
-    "message": "Suche"
-  },
-  "generic_group": {
-    "message": "Gruppe"
+  "generic_active": {
+    "message": "aktiv"
   },
   "generic_autoBid": {
     "message": "Automatikmodus"
+  },
+  "generic_buyNow": {
+    "message": "Sofortkauf"
+  },
+  "generic_configuration": {
+    "message": "Einstellungen"
+  },
+  "generic_description": {
+    "message": "Beschreibung"
+  },
+  "generic_group": {
+    "message": "Gruppe"
   },
   "generic_group_autoBid": {
     "message": "Gruppen Automatikmodus"
@@ -26,26 +35,47 @@
   "generic_inactive": {
     "message": "inaktiv"
   },
-  "generic_active": {
-    "message": "aktiv"
+  "generic_item": {
+    "message": "Artikel"
   },
   "generic_noGroup": {
     "message": "Sonstige Auktionen"
   },
-  "generic_buyNow": {
-    "message": "Sofortkauf"
+  "generic_picture": {
+    "message": "Bild"
+  },
+  "generic_price": {
+    "message": "Artikel Preis"
+  },
+  "generic_search": {
+    "message": "Suche"
+  },
+  "generic_status": {
+    "message": "Status"
   },
   "generic_unlimited": {
     "message": "unbegrenzt"
   },
-  "generic_configuration": {
-    "message": "Einstellungen"
-  },
   "generic_updated": {
     "message": "Aktualisiert"
   },
-  "generic_item": {
-    "message": "Artikel"
+  "popup_activateArticleAutoBid": {
+    "message": "Aktiviert den Automatikmodus für diesen Artikel"
+  },
+  "popup_articleAuctionEnded": {
+    "message": "Artikel Auktion hat bereits geendet"
+  },
+  "popup_articleAuctionEndsSoon": {
+    "message": "Artikel Auktion endet bald"
+  },
+  "popup_articleAuctionEndsVerySoon": {
+    "message": "Artikel Auktion endet in weniger als einer Minute"
+  },
+  "popup_articleRemove": {
+    "message": "Entfernt alle Ereignisse und Einstellungen für diesen Artikel"
+  },
+  "popup_auctionendtime": {
+    "message": "Auktions Endzeitpunkt"
   },
   "popup_autoBidActive1": {
     "message": "Automatikmodus ist in einem anderen "
@@ -62,20 +92,11 @@
   "popup_autoBidDeactivated2": {
     "message": "Browser Fenster"
   },
-  "popup_articleAuctionEnded": {
-    "message": "Artikel Auktion hat bereits geendet"
+  "popup_buynowprice": {
+    "message": "Sofortkaufpreis"
   },
-  "popup_articleAuctionEndsSoon": {
-    "message": "Artikel Auktion endet bald"
-  },
-  "popup_articleAuctionEndsVerySoon": {
-    "message": "Artikel Auktion endet in weniger als einer Minute"
-  },
-  "popup_minIncreaseReached": {
-    "message": "Notwendige minimale Preiserhöhung wurde erreicht"
-  },
-  "popup_activateArticleAutoBid": {
-    "message": "Aktiviert den Automatikmodus für diesen Artikel"
+  "popup_closeArticleTab": {
+    "message": "Schließt den Artikel Tab"
   },
   "popup_deactivateArticleAutoBid": {
     "message": "Deaktiviert den Automatikmodus für diesen Artikel"
@@ -83,13 +104,25 @@
   "popup_enterMinAmount": {
     "message": "Geben Sie minimal $1 ein"
   },
+  "popup_minIncreaseReached": {
+    "message": "Notwendige minimale Preiserhöhung wurde erreicht"
+  },
+  "popup_minimumbid": {
+    "message": "Minimal Erhöhungspreis"
+  },
+  "popup_numberbids": {
+    "message": "Anzahl der Gebote"
+  },
   "popup_openArticleInTab": {
     "message": "Öffnet den Artikel in einem neuen Tab"
   },
-  "popup_closeArticleTab": {
-    "message": "Schließt den Artikel Tab"
+  "popup_paymentmethods": {
+    "message": "Zahlungsmethoden"
   },
-  "popup_articleRemove": {
-    "message": "Entfernt alle Ereignisse und Einstellungen für diesen Artikel"
+  "popup_shippingcosts": {
+    "message": "Leferkosten"
+  },
+  "popup_shippingmethods": {
+    "message": "Lieferarten"
   }
 }

@@ -1,9 +1,9 @@
 {
-  "appName": {
-    "message": "Biet-O-Matic BE"
-  },
   "appDesc": {
     "message": "A browser extension to perform automated bids for eBay articles, also when you are away from your computer"
+  },
+  "appName": {
+    "message": "Biet-O-Matic BE"
   },
   "appOpen": {
     "message": "Open Biet-O-Matic BE"
@@ -11,14 +11,23 @@
   "filePopup": {
     "message": "popup.en.html"
   },
-  "generic_search": {
-    "message": "Search"
-  },
-  "generic_group": {
-    "message": "Group"
+  "generic_active": {
+    "message": "active"
   },
   "generic_autoBid": {
     "message": "Auto-Bid"
+  },
+  "generic_buyNow": {
+    "message": "Buy It Now"
+  },
+  "generic_configuration": {
+    "message": "Config"
+  },
+  "generic_description": {
+    "message": "Description"
+  },
+  "generic_group": {
+    "message": "Group"
   },
   "generic_group_autoBid": {
     "message": "Group Auto-Bid"
@@ -26,26 +35,47 @@
   "generic_inactive": {
     "message": "inactive"
   },
-  "generic_active": {
-    "message": "active"
+  "generic_item": {
+    "message": "Item"
   },
   "generic_noGroup": {
     "message": "Other Auctions"
   },
-  "generic_buyNow": {
-    "message": "Buy It Now"
+  "generic_picture": {
+    "message": "Picture"
+  },
+  "generic_price": {
+    "message": "Price"
+  },
+  "generic_search": {
+    "message": "Search"
+  },
+  "generic_status": {
+    "message": "Status"
   },
   "generic_unlimited": {
     "message": "unlimited"
   },
-  "generic_configuration": {
-    "message": "Config"
-  },
   "generic_updated": {
     "message": "Updated"
   },
-  "generic_item": {
-    "message": "Item"
+  "popup_activateArticleAutoBid": {
+    "message": "Activates Article Auto-Bid"
+  },
+  "popup_articleAuctionEnded": {
+    "message": "Article auction has already ended"
+  },
+  "popup_articleAuctionEndsSoon": {
+    "message": "Article auction ends soon"
+  },
+  "popup_articleAuctionEndsVerySoon": {
+    "message": "Article auction ends in less then a minute"
+  },
+  "popup_articleRemove": {
+    "message": "Removes all events and configuration for this article"
+  },
+  "popup_auctionendtime": {
+    "message": "Auction End Time"
   },
   "popup_autoBidActive1": {
     "message": "Auto-Bid is active in another "
@@ -65,26 +95,11 @@
   "popup_autoBidDeactivated3": {
     "message": "."
   },
-  "popup_hide_articleEvents": {
-    "message": "Hide article events"
+  "popup_buynowprice": {
+    "message": "Buy-It-Now Price"
   },
-  "popup_show_articleEvents": {
-    "message": "Show article events"
-  },
-  "popup_articleAuctionEnded": {
-    "message": "Article auction has already ended"
-  },
-  "popup_articleAuctionEndsSoon": {
-    "message": "Article auction ends soon"
-  },
-  "popup_articleAuctionEndsVerySoon": {
-    "message": "Article auction ends in less then a minute"
-  },
-  "popup_minIncreaseReached": {
-    "message": "Required minimum price increase reached"
-  },
-  "popup_activateArticleAutoBid": {
-    "message": "Activates Article Auto-Bid"
+  "popup_closeArticleTab": {
+    "message": "Closes the articles tab"
   },
   "popup_deactivateArticleAutoBid": {
     "message": "Deactivates Article Auto-Bid"
@@ -92,13 +107,31 @@
   "popup_enterMinAmount": {
     "message": "Enter at least $1"
   },
+  "popup_hide_articleEvents": {
+    "message": "Hide article events"
+  },
+  "popup_minIncreaseReached": {
+    "message": "Required minimum price increase reached"
+  },
+  "popup_minimumbid": {
+    "message": "Minimum Bid"
+  },
+  "popup_numberbids": {
+    "message": "Number of Bids"
+  },
   "popup_openArticleInTab": {
     "message": "Opens the article in a new tab"
   },
-  "popup_closeArticleTab": {
-    "message": "Closes the articles tab"
+  "popup_paymentmethods": {
+    "message": "Payment Methods"
   },
-  "popup_articleRemove": {
-    "message": "Removes all events and configuration for this article"
+  "popup_shippingcosts": {
+    "message": "Shipping Cost"
+  },
+  "popup_shippingmethods": {
+    "message": "Shipping Methods"
+  },
+  "popup_show_articleEvents": {
+    "message": "Show article events"
   }
 }

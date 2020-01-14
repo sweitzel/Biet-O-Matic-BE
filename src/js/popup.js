@@ -848,7 +848,8 @@ class Article {
     // tabId should not be handled here, because its window specific
     // articleDescription
     if (info.hasOwnProperty('articleDescription') && info.articleDescription !== this.articleDescription) {
-      messages.push(Article.getDiffMessage('Beschreibung', this.articleDescription, info.articleDescription));
+      const msg = Popup.getTranslation('generic_description', '.Description');
+      messages.push(Article.getDiffMessage(msg, this.articleDescription, info.articleDescription));
       this.articleDescription = info.articleDescription;
       result.modifiedForStorage++;
       result.modified.push('articleDescription');
@@ -856,20 +857,23 @@ class Article {
     }
     // articleBidPrice
     if (info.hasOwnProperty('articleBidPrice') && info.articleBidPrice !== this.articleBidPrice) {
-      messages.push(Article.getDiffMessage('Auktionspreis', this.articleBidPrice, info.articleBidPrice));
+      const msg = Popup.getTranslation('generic_price', '.Price');
+      messages.push(Article.getDiffMessage(msg, this.articleBidPrice, info.articleBidPrice));
       this.articleBidPrice = info.articleBidPrice;
       result.modified.push('articleBidPrice');
       result.modifiedForStorage++;
     }
     // articleBidCount
     if (info.hasOwnProperty('articleBidCount') && info.articleBidCount !== this.articleBidCount) {
+      const msg = Popup.getTranslation('popup_numberbids', '.Number of Bids');
       messages.push(Article.getDiffMessage('Anzahl Gebote', this.articleBidCount, info.articleBidCount));
       this.articleBidCount = info.articleBidCount;
       result.modified.push('articleBidCount');
       result.modifiedForStorage++;
     }
-    // articleBidPrice
+    // articleBuyPrice
     if (info.hasOwnProperty('articleBuyPrice') && info.articleBuyPrice !== this.articleBuyPrice) {
+      const msg = Popup.getTranslation('popup_buynowprice', '.Buy-It-Now Price');
       messages.push(Article.getDiffMessage('Kaufpreis', this.articleBuyPrice, info.articleBuyPrice));
       this.articleBuyPrice = info.articleBuyPrice;
       result.modified.push('articleBuyPrice');
@@ -877,6 +881,7 @@ class Article {
     }
     // articleShippingCost
     if (info.hasOwnProperty('articleShippingCost') && info.articleShippingCost !== this.articleShippingCost) {
+      const msg = Popup.getTranslation('popup_shippingcosts', '.Shipping Costs');
       messages.push(Article.getDiffMessage('Lieferkosten', this.articleShippingCost, info.articleShippingCost));
       this.articleShippingCost = info.articleShippingCost;
       result.modified.push('articleShippingCost');
@@ -884,12 +889,21 @@ class Article {
     }
     // articleShippingMethods
     if (info.hasOwnProperty('articleShippingMethods') && info.articleShippingMethods !== this.articleShippingMethods) {
+      const msg = Popup.getTranslation('popup_shippingmethods', '.Shipping Methods');
       messages.push(Article.getDiffMessage('Liefermethoden', this.articleShippingMethods, info.articleShippingMethods));
       this.articleShippingMethods = info.articleShippingMethods;
       result.modifiedForStorage++;
     }
+    // articlePaymentMethods
+    if (info.hasOwnProperty('articlePaymentMethods') && info.articlePaymentMethods !== this.articlePaymentMethods) {
+      const msg = Popup.getTranslation('popup_paymentmethods', '.Payment Methods');
+      messages.push(Article.getDiffMessage('Zahlungsmethoden', this.articlePaymentMethods, info.articlePaymentMethods));
+      this.articlePaymentMethods = info.articlePaymentMethods;
+      result.modifiedForStorage++;
+    }
     // articleMinimumBid
     if (info.hasOwnProperty('articleMinimumBid') && info.articleMinimumBid !== this.articleMinimumBid) {
+      const msg = Popup.getTranslation('popup_minimumbid', '.Minimum Bid');
       messages.push(Article.getDiffMessage('Minimal Gebot', this.articleMinimumBid, info.articleMinimumBid));
       this.articleMinimumBid = info.articleMinimumBid;
       result.modified.push('articleMinimumBid');
@@ -897,6 +911,7 @@ class Article {
     }
     // articleEndTime
     if (info.hasOwnProperty('articleEndTime') && info.articleEndTime !== this.articleEndTime) {
+      const msg = Popup.getTranslation('popup_auctionendtime', '.Auction End Time');
       messages.push(Article.getDiffMessage('Auktionsende', this.articleEndTime, info.articleEndTime));
       this.articleEndTime = info.articleEndTime;
       result.modified.push('articleEndTime');
@@ -904,7 +919,8 @@ class Article {
     }
     // articleAuctionState
     if (info.hasOwnProperty('articleAuctionState') && info.articleAuctionState !== this.articleAuctionState) {
-      messages.push(Article.getDiffMessage('Status', this.articleAuctionStateText, info.articleAuctionStateText));
+      const msg = Popup.getTranslation('generic_status', '.Status');
+      messages.push(Article.getDiffMessage(msg, this.articleAuctionStateText, info.articleAuctionStateText));
       this.articleAuctionState = info.articleAuctionState;
       if (info.hasOwnProperty('articleAuctionStateText'))
         this.articleAuctionStateText = info.articleAuctionStateText;
@@ -914,7 +930,8 @@ class Article {
     }
     // articleImage
     if (info.hasOwnProperty('articleImage') && info.articleImage !== this.articleImage) {
-      messages.push(Article.getDiffMessage('Artikelbild', this.articleImage, info.articleImage));
+      const msg = Popup.getTranslation('generic_picture', '.Picture');
+      messages.push(Article.getDiffMessage(msg, this.articleImage, info.articleImage));
       this.articleImage = info.articleImage;
       result.modifiedForStorage++;
     }
@@ -2021,11 +2038,13 @@ class ArticlesTable {
    */
   static renderArticleBidPrice(data, type, row) {
     if (type !== 'display' && type !== 'filter') return data;
-    let price;
-    price = row.getPrettyBidPrice();
+    const span = document.createElement('span');
+    span.textContent = row.getPrettyBidPrice();
     if (row.hasOwnProperty('articleBidCount'))
-      price = `${price} (${row.articleBidCount})`;
-    return price;
+      span.textContent += "  (" + row.articleBidCount + ")";
+    if (row.hasOwnProperty('articlePaymentMethods'))
+      span.title = row.articlePaymentMethods;
+    return span.outerHTML;
   }
 
   /*

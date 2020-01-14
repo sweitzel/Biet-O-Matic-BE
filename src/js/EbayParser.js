@@ -139,13 +139,12 @@ class EbayParser {
       result.currency = currencySelector[0].getAttribute("content");
     }
     let price;
-    if (domEntry.hasOwnProperty('textContent')) {
+    if (typeof domEntry !== 'string') {
       price = domEntry.textContent.trim()
         .replace(/\n/g, "")
         .replace(/\s+/g, " ");
     } else {
       // handed over domEntry is just a text
-      console.log("domEntry=%s", typeof domEntry);
       price = domEntry;
     }
     // use regular expression to parse info, e.g.
@@ -157,9 +156,11 @@ class EbayParser {
       const rexres = price.match(regex);
       let p1 = rexres[1].replace(/,/, '');
       let p2 = rexres[2];
-      result.price = Number.parseFloat(`${p1}.${p2}`).toFixed(2);
+      console.log("Got value from regex attr, val=%s", price)
+      result.price = Number.parseFloat(`${p1}.${p2}`);
     } else {
       // fallback get price from
+      console.log("Got value from content attr, price=%s", price);
       result.price = Number.parseFloat(domEntry.getAttribute("content"));
     }
     return result;
@@ -220,6 +221,30 @@ class EbayParser {
         } else if (key === 'articleImage') {
           // store primary Image URL
           value = domEntry.src;
+        } else if (key === 'articlePaymentMethods') {
+          try {
+            const methods = [];
+            // get text and join with image alt attributes
+            const textMethod = domEntry.textContent.trim()
+              .replace(/\n/g, "")
+              .replace(/\s+/g, " ");
+            if (textMethod.trim().length > 0)
+              methods.push(textMethod.split(','));
+            // get images
+            let t = $(v + " > div");
+            if (typeof t !== 'undefined' && t.length === 1) {
+              let res =  $(t).find('img');
+              if (typeof res !== 'undefined' && res.length > 0) {
+                $(res).each((index, element) => {
+                  console.log("index=%s, element=%O", index, element);
+                  methods.push($(element).attr('alt').toString());
+                });
+              }
+            }
+            value = methods.join(', ');
+          } catch(e) {
+            console.log("Biet-O-Matic: Failed to parse articlePaymentMethods: " + e);
+          }
         } else {
           value = domEntry.textContent.trim();
           // replace newline and multiple spaces

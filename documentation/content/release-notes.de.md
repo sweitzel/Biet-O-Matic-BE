@@ -33,10 +33,12 @@ Erschienen am Montag, 20.01.2020
 {{< /hint >}}
 
 * Erste stabile 0.3 Version
-* "Keine Gruppe" umbenannt in "Sonstige Artikel"
-* "Keine Gruppe" wird vorne einsortiert
-* Maximal Gebot kann nun gelöscht werden und wird auf 0 gesetzt, anstatt immer auf das Minimalgebot zu springen.
-* Problem behoben wenn ein Artikel Tab geschlossen wurde, und dann wieder hergestellt.
+* Kleinere Anpassungen:
+    * Anzeige der Zahlungsmethoden auf der Übersichtsseite, wenn man mit der Maus über die Preisspalte geht
+    * "Keine Gruppe" umbenannt in "Sonstige Artikel"
+    * "Keine Gruppe" wird vorne einsortiert
+    * Maximal Gebot kann nun gelöscht werden und wird auf 0 gesetzt, anstatt immer auf das Minimalgebot zu springen.
+    * Problem behoben wenn ein Artikel Tab geschlossen wurde, und dann wieder hergestellt.
 
 ## Biet-O-Matic BE Version 0.2
 Dieser Versionszweig hat mit der vorhergehenden Version nicht mehr viel gemeinsam. Sowohl der Quellcode, als auch die
