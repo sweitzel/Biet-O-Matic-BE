@@ -8,6 +8,27 @@
   "appOpen": {
     "message": "Open Biet-O-Matic BE"
   },
+  "cs_auctionAlreadyEnded": {
+    "message": "Auction has already ended"
+  },
+  "cs_autobidDeactivatedBeforeBid": {
+    "message": "Global Auto-Bid was deactivated short before the bid confirmation"
+  },
+  "cs_autobidGroupDeactivatedBeforeBid": {
+    "message": "Group Auto-Bid was deactivated short before the bid confirmation"
+  },
+  "cs_autobidInactiveForArticle": {
+    "message": "Auto-bid is inactive for this article"
+  },
+  "cs_autobidInactiveForGroup": {
+    "message": "Auto-bid is inactive for group $1"
+  },
+  "cs_autobidInactiveForWindow": {
+    "message": "Global Auto-Bid is inactive"
+  },
+  "cs_bidFinished": {
+    "message": "Bid process has been completed $1 ms before the auction ended"
+  },
   "cs_bidding": {
     "message": "Bidding"
   },
@@ -17,11 +38,53 @@
   "cs_biddingOverbid": {
     "message": "Auction was not successful. You were overbid."
   },
+  "cs_biddingPrepare": {
+    "message": "Bidding process is being prepared..."
+  },
   "cs_biddingStatusUnknown": {
     "message": "Final auction end state is still unknown."
   },
   "cs_biddingSuccess": {
     "message": "Auction was successful. Item purchased."
+  },
+  "cs_couldNotCheckAutoBidEnabledOption": {
+    "message": "Could not check autoBidEnabled option"
+  },
+  "cs_errorCannotFindBidButton": {
+    "message": "Can not find the bid button on the item page!"
+  },
+  "cs_errorCannotFindConfirmButton": {
+    "message": "Element #confirm_body could not be found in the item page"
+  },
+  "cs_errorCannotFindModal": {
+    "message": "Element #MODAL_BODY could not be found in the item page"
+  },
+  "cs_errorCouldNotRecheckAutoBidEnableOption": {
+    "message": "Could not re-check autoBidEnabled option"
+  },
+  "cs_initialisation": {
+    "message": "Initialization"
+  },
+  "cs_phase1": {
+    "message": "Phase 1: Preparing the bidding process"
+  },
+  "cs_phase2": {
+    "message": "Phase 2: Submitting bid"
+  },
+  "cs_phase3": {
+    "message": "Phase 3: Waiting for bid-confirm time"
+  },
+  "cs_phase4": {
+    "message": "Phase 4: Bid has been submitted"
+  },
+  "cs_phase4test": {
+    "message": "Phase 4: Test bid ended"
+  },
+  "cs_problemWithBidding": {
+    "message": "Problem reported by ebay"
+  },
+  "cs_testBidFinished": {
+    "message": "Test bid process (till confirmation) has been completed $1 ms before the auction ended"
   },
   "filePopup": {
     "message": "popup.en.html"
@@ -29,11 +92,20 @@
   "generic_active": {
     "message": "active"
   },
+  "generic_articleAutoBid": {
+    "message": "Article Auto-Bid"
+  },
+  "generic_articleMaxBid": {
+    "message": "Article Maximum Bid"
+  },
   "generic_autoBid": {
     "message": "Auto-Bid"
   },
   "generic_buyNow": {
     "message": "Buy It Now"
+  },
+  "generic_cancel": {
+    "message": "Cancel"
   },
   "generic_configuration": {
     "message": "Config"
@@ -65,6 +137,9 @@
   "generic_overbid": {
     "message": "overbid"
   },
+  "generic_perfornmance": {
+    "message": "Performance"
+  },
   "generic_picture": {
     "message": "Picture"
   },
@@ -83,6 +158,9 @@
   "generic_stillUnknown": {
     "message": "still unknown"
   },
+  "generic_success": {
+    "message": "Success"
+  },
   "generic_unknown": {
     "message": "Unknown"
   },
@@ -95,6 +173,9 @@
   "popup_activateArticleAutoBid": {
     "message": "Activates Article Auto-Bid"
   },
+  "popup_adjustedBidtime": {
+    "message": "Adjusted bid-time by $1 s due to risk of colliding with item $2"
+  },
   "popup_articleAuctionEnded": {
     "message": "Article auction has already ended"
   },
@@ -106,6 +187,9 @@
   },
   "popup_articleRemove": {
     "message": "Removes all events and configuration for this article"
+  },
+  "popup_articleTabOpenedForBidding": {
+    "message": "Item tab has been opened for bidding (tab=$1)"
   },
   "popup_auctionendtime": {
     "message": "Auction End Time"

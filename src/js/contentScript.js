@@ -442,8 +442,8 @@ class EbayArticle {
     const message = {};
     message.timestamp = Date.now();
     message.message = JSON.stringify(messageObject);
-    message.component = "Unbekannt";
-    message.level = "Interner Fehler";
+    message.component = EbayArticle.getTranslation('generic_unknown', '.Unknown');
+    message.level = EbayArticle.getTranslation('generic_internalError', '.Internal Error');
     if (messageObject.hasOwnProperty('message'))
       message.message = messageObject.message;
     if (messageObject.hasOwnProperty('component'))
@@ -474,14 +474,14 @@ class EbayArticle {
     let simulate = false;
     let perfSnapshot = [];
     try {
-      this.storePerfInfo("Initialisierung");
+      this.storePerfInfo(EbayArticle.getTranslation('cs_initialisation', '.Initialization'));
       // if end time reached, abort directly
       if ((this.hasOwnProperty('auctionEnded') && this.auctionEnded) || this.endTime <= Date.now()) {
         let t = Date.now() - this.endTime;
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: `Auktion bereits beendet.`
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_auctionAlreadyEnded', '.Auction has already ended.')
         };
       }
       /*
@@ -503,36 +503,40 @@ class EbayArticle {
       let autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
       if (autoBidInfo == null || typeof autoBidInfo === 'undefined') {
         throw {
-          component: "Bietvorgang",
-          level: "Interner Fehler",
-          message: "Konnte autoBidEnabled Option nicht prüfen"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+          message: EbayArticle.getTranslation('cs_couldNotCheckAutoBidEnabledOption',
+            '.Could not check autoBidEnabled Option.')
         };
       }
       // ensure window autoBid is enabled
       if (autoBidInfo.autoBidEnabled === false) {
         console.debug("Biet-O-Matic: doBid() abort, Window autoBid is off");
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Automatisches bieten für Fenster inaktiv"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidInactiveForWindow',
+            '.Auto-bid is inactive for this window')
         };
       }
       // ensure Group autoBid is enabled
       if (autoBidInfo.groupAutoBid === false) {
         console.debug("Biet-O-Matic: doBid() abort, Group %s autoBid is off", autoBidInfo.groupName);
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: `Automatisches bieten für Gruppe ${autoBidInfo.groupName} inaktiv`
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidInactiveForGroup',
+            '.Auto-bid is inactive for group $1', autoBidInfo.groupName)
         };
       }
       // ensure article autoBid is checked
       if (autoBidInfo.articleAutoBid === false) {
         console.debug("Biet-O-Matic: doBid() abort, Article autoBid is off");
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Automatisches bieten für diesen Artikel inaktiv"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidInactiveForArticle',
+            '.Auto-bid is inactive for this article.')
         };
       }
       // enable test mode if specified by popup
@@ -551,21 +555,22 @@ class EbayArticle {
         window.sessionStorage.setItem(`bidInfo:${this.articleId}`, JSON.stringify(bidInfo));
       }
 
-      this.storePerfInfo("Phase1: Gebotsvorbereitung");
+      this.storePerfInfo(EbayArticle.getTranslation('cs_phase1', '.Phase 1: Bidding preparation.'));
       console.info("Biet-O-Matic: Performing bid for article %s", this.articleId);
       EbayArticle.sendArticleLog(this.articleId, {
-        component: "Bietvorgang",
+        component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
         level: "Info",
-        message: "Bietvorgang wird vorbereitet...",
+        message: EbayArticle.getTranslation('cs_biddingPrepare', '. Bidding is beeing prepared'),
       });
       // press bid button
       const bidButton = document.getElementById('bidBtn_btn');
       if (bidButton == null) {
         console.warn("Biet-O-Matic: Article %s - Unable to get Bid Button!", this.articleId);
         throw {
-          component: "Bietvorgang",
-          level: "Interner Fehler",
-          message: "Kann den Bieten-Knopf nicht auf der Artikel Seite finden!"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+          message: EbayArticle.getTranslation('cs_errorCannotFindBidButton',
+            '.Cannot find the bidding button on the article page!')
         };
       }
 
@@ -585,16 +590,16 @@ class EbayArticle {
       /*
        * Phase 2: Initiate the Bid
        */
-      this.storePerfInfo("Phase2: Gebot abgeben");
+      this.storePerfInfo(EbayArticle.getTranslation('cs_phase2', '.Phase 2: Submitting bid'));
       bidButton.click();
       // wait for modal to open: vilens-modal-wrapper
       const modalBody = await EbayArticle.waitFor('#MODAL_BODY', 5000)
         .catch((e) => {
           console.warn("Biet-O-Matic: Waiting for Bidding Modal timed out: %s", e.toString());
           throw {
-            component: "Bietvorgang",
-            level: "Interner Fehler",
-            message: "Element #MODAL_BODY konnte innerhalb von 5s nicht gefunden werden!"
+            component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+            level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+            message: EbayArticle.getTranslation('cs_errorCannotFindModal', '.Element #MODAL_BODY not found!')
           };
         });
       // modal close button
@@ -606,8 +611,8 @@ class EbayArticle {
       if (statusMsg != null) {
         console.log("Biet-O-Matic: Bidding failed: Error reported by eBay: %s", statusMsg.textContent);
         throw {
-          component: "Bietvorgang",
-          level: "Problem beim bieten",
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
           message: statusMsg.textContent
         };
       }
@@ -617,9 +622,10 @@ class EbayArticle {
         .catch((e) => {
           console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
           throw {
-            component: "Bietvorgang",
-            level: "Fehler beim bieten",
-            message: "Element #confirm_body konnte innerhalb von 2s nicht gefunden werden!"
+            component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+            level: EbayArticle.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
+            message: EbayArticle.getTranslation('cs_errorCannotFindConfirmButton',
+              'Element #confirm_body could not be found!')
           };
         });
 
@@ -642,14 +648,14 @@ class EbayArticle {
         if (ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('adjustmentReason')) {
           modifiedEndTime = ebayArticleGetAdjustedBidTimeResult.articleEndTime;
           EbayArticle.sendArticleLog(this.articleId, {
-            component: "Bietvorgang",
+            component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
             level: "Info",
             message: ebayArticleGetAdjustedBidTimeResult.adjustmentReason,
           });
         }
       }
 
-      this.storePerfInfo("Phase3: Warten auf Bietzeitpunkt");
+      this.storePerfInfo(EbayArticle.getTranslation('cs_phase3', '.Waiting for bid time'));
       const wakeUpInMs = (modifiedEndTime - Date.now()) - 2500;
       await EbayArticle.wait(wakeUpInMs);
 
@@ -657,25 +663,28 @@ class EbayArticle {
       autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
       if (autoBidInfo == null || typeof autoBidInfo === 'undefined' || !autoBidInfo.hasOwnProperty('autoBidEnabled')) {
         throw {
-          component: "Bietvorgang",
-          level: "Interner Fehler",
-          message: "Konnte autoBidEnabled Option nicht erneut prüfen"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+          message: EbayArticle.getTranslation('cs_errorCouldNotRecheckAutoBidEnableOption',
+            '.Could not recheck autoBidEnabled Option')
         };
       }
       if (autoBidInfo.hasOwnProperty('autoBidEnabled') && autoBidInfo.autoBidEnabled === false) {
         console.info("Biet-O-Matic: doBid() abort, Window autoBid is now off.");
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Automatisches bieten wurde kurz vor der Gebot Bestätigung deaktiviert."
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidDeactivatedBeforeBid',
+            '.Auto-Bid was deactivated before the bid was submitted.')
         };
       }
       if (autoBidInfo.hasOwnProperty('grouAutoBid') && autoBidInfo.groupAutoBid === false) {
         console.info("Biet-O-Matic: doBid() abort, Group autoBid is now off.");
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Automatisches bieten für die Artikel Gruppe wurde kurz vor der Gebot Bestätigung deaktiviert."
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidGroupDeactivatedBeforeBid',
+            '.Group Auto-Bid was deactivated before the bid was submitted.')
         };
       }
 
@@ -684,25 +693,27 @@ class EbayArticle {
         // close modal
         if (closeButton != null) closeButton.click();
         console.info("Biet-O-Matic: Test bid performed for Article %s", this.articleId);
-        this.storePerfInfo("Phase3: Testgebot beendet");
+        this.storePerfInfo(EbayArticle.getTranslation('cs_phase4test', '.Phase 4: Test bid ended.'));
         // send info to popup about (almost) successful bid
         let t = this.articleEndTime - Date.now();
         EbayArticle.sendArticleLog(this.articleId, {
-          component: "Bietvorgang",
-          level: "Erfolg",
-          message: `Test-Bietvorgang (bis zur Bestätigung) ${t}ms vor Ablauf der Auktion abgeschlossen.`,
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_success', '.Success'),
+          message: EbayArticle.getTranslation('cs_testBidFinished',
+            'Test bid ended $1 ms before auction has ended.', t.toString())
         });
       } else {
         // confirm the bid
         confirmButton.click();
         console.info("Biet-O-Matic: Bid submitted for Article %s", this.articleId);
-        this.storePerfInfo("Phase3: Gebot wurde abgegeben");
+        this.storePerfInfo(EbayArticle.getTranslation('cs_phase4', '.Phase 4: Bid submitted.'));
         // send info to popup
         const t = this.articleEndTime - Date.now();
         EbayArticle.sendArticleLog(this.articleId, {
-          component: "Bietvorgang",
-          level: "Erfolg",
-          message: `Bietvorgang ${t}ms vor Ablauf der Auktion abgeschlossen.`,
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_success', '.Success'),
+          message: EbayArticle.getTranslation('cs_bidFinished ',
+            'Bid performed $1 ms before auction has ended.', t.toString()),
         });
       }
       // finally also send performance info to popup
@@ -784,9 +795,9 @@ class EbayArticle {
     let timeLeft = this.articleEndTime - this.perfInfo[this.perfInfo.length - 1].date;
     result += `timeLeft = ${timeLeft}ms (${this.articleEndTime} - ${this.perfInfo[this.perfInfo.length - 2].date})`;
     EbayArticle.sendArticleLog(this.articleId, {
-      component: "Bietvorgang",
-      level: "Performance",
-      message: result,
+      component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+      level: EbayArticle.getTranslation('generic_perfornmance', '.Performance'),
+      message: result
     });
   }
 

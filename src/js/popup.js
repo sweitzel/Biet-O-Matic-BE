@@ -807,11 +807,12 @@ class Article {
     let diffText = Article.getDiffMessage(Popup.getTranslation('generic_updated', '.Updated'), oldStoredInfo, newStoredInfo);
     //console.log("oldInfo=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, newStoredInfo, mergedStoredInfo, diffText);
     if (diffText != null) {
-      this.addLog({
-        component: Popup.getTranslation("generic_item", ".Item"),
-        level: Popup.getTranslation('generic_configuration', ".Configuration"),
-        message: diffText
-      });
+      // probably not needed anymore as printed by updateInfo
+      // this.addLog({
+      //   component: Popup.getTranslation("generic_item", ".Item"),
+      //   level: Popup.getTranslation('generic_configuration', ".Configuration"),
+      //   message: diffText
+      // });
       // store the info back to the storage
       await browser.storage.sync.set({[this.articleId]: mergedStoredInfo});
       if (tabId != null) {
@@ -832,6 +833,7 @@ class Article {
     delete info.tabOpenedForBidding;
     delete info.articleDetailsShown;
     delete info.perfInfo;
+    delete info.ebayParser;
   }
 
   /*
@@ -841,115 +843,40 @@ class Article {
   updateInfo(info) {
     const result = {
       modifiedForStorage: 0,
-      modifiedForDisplay: 0,
       modified: []
     };
     let messages = [];
-    // tabId should not be handled here, because its window specific
-    // articleDescription
-    if (info.hasOwnProperty('articleDescription') && info.articleDescription !== this.articleDescription) {
-      const msg = Popup.getTranslation('generic_description', '.Description');
-      messages.push(Article.getDiffMessage(msg, this.articleDescription, info.articleDescription));
-      this.articleDescription = info.articleDescription;
-      result.modifiedForStorage++;
-      result.modified.push('articleDescription');
-      // todo: optionally deactivate autoBid for this article?
+    const checkList = {
+      articleDescription:       {i18nKey: 'generic_description', defaultText: '.Description'},
+      articleBidPrice:          {i18nKey: 'generic_price', defaultText: '.Price'},
+      articleBidCount:          {i18nKey: 'popup_numberbids', defaultText: '.Number of Bids'},
+      articleBuyPrice:          {i18nKey: 'popup_buynowprice', defaultText: '.Buy-It-Now Price'},
+      articleShippingCost:      {i18nKey: 'popup_shippingcosts', defaultText: '.Shipping Costs'},
+      articleShippingMethods:   {i18nKey: 'popup_shippingmethods', defaultText: '.Shipping Methods'},
+      articlePaymentMethods:    {i18nKey: 'popup_paymentmethods', defaultText: '.Payment Methods'},
+      articleMinimumBid:        {i18nKey: 'popup_minimumbid', defaultText: '.Minimum Bid'},
+      articleEndTime:           {i18nKey: 'popup_auctionendtime', defaultText: '.Auction End Time'},
+      articleAuctionStateText:  {i18nKey: 'generic_status', defaultText: '.Status'},
+      articleImage:             {i18nKey: 'generic_picture', defaultText: '.Picture'},
+      articleAutoBid:           {i18nKey: 'generic_articleAutoBid', defaultText: '.Article Auto-Bid'},
+      articleMaxBid:            {i18nKey: 'generic_articleMaxBid', defaultText: '.Article Maximum Bid'},
+      articleGroup:             {i18nKey: 'generic_group', defaultText: '.Article Group'}
     }
-    // articleBidPrice
-    if (info.hasOwnProperty('articleBidPrice') && info.articleBidPrice !== this.articleBidPrice) {
-      const msg = Popup.getTranslation('generic_price', '.Price');
-      messages.push(Article.getDiffMessage(msg, this.articleBidPrice, info.articleBidPrice));
-      this.articleBidPrice = info.articleBidPrice;
-      result.modified.push('articleBidPrice');
-      result.modifiedForStorage++;
+
+    for (const key in checkList) {
+      if (info.hasOwnProperty(key) && info[key] !== this[key]) {
+        const msg = Popup.getTranslation(checkList[key].i18nKey, checkList[key].defaultText);
+        messages.push(Article.getDiffMessage(msg, this[key], info[key]));
+        this[key] = info[key];
+        if (key === 'articleAuctionStateText') {
+          this.articleAuctionState = info.articleAuctionState;
+        }
+        result.modifiedForStorage++;
+        console.log("XXX modified: %s -> %s", key, this[key]);
+        result.modified.push(key);
+      }
     }
-    // articleBidCount
-    if (info.hasOwnProperty('articleBidCount') && info.articleBidCount !== this.articleBidCount) {
-      const msg = Popup.getTranslation('popup_numberbids', '.Number of Bids');
-      messages.push(Article.getDiffMessage(msg, this.articleBidCount, info.articleBidCount));
-      this.articleBidCount = info.articleBidCount;
-      result.modified.push('articleBidCount');
-      result.modifiedForStorage++;
-    }
-    // articleBuyPrice
-    if (info.hasOwnProperty('articleBuyPrice') && info.articleBuyPrice !== this.articleBuyPrice) {
-      const msg = Popup.getTranslation('popup_buynowprice', '.Buy-It-Now Price');
-      messages.push(Article.getDiffMessage(msg, this.articleBuyPrice, info.articleBuyPrice));
-      this.articleBuyPrice = info.articleBuyPrice;
-      result.modified.push('articleBuyPrice');
-      result.modifiedForStorage++;
-    }
-    // articleShippingCost
-    if (info.hasOwnProperty('articleShippingCost') && info.articleShippingCost !== this.articleShippingCost) {
-      const msg = Popup.getTranslation('popup_shippingcosts', '.Shipping Costs');
-      messages.push(Article.getDiffMessage(msg, this.articleShippingCost, info.articleShippingCost));
-      this.articleShippingCost = info.articleShippingCost;
-      result.modified.push('articleShippingCost');
-      result.modifiedForStorage++;
-    }
-    // articleShippingMethods
-    if (info.hasOwnProperty('articleShippingMethods') && info.articleShippingMethods !== this.articleShippingMethods) {
-      const msg = Popup.getTranslation('popup_shippingmethods', '.Shipping Methods');
-      messages.push(Article.getDiffMessage(msg, this.articleShippingMethods, info.articleShippingMethods));
-      this.articleShippingMethods = info.articleShippingMethods;
-      result.modifiedForStorage++;
-    }
-    // articlePaymentMethods
-    if (info.hasOwnProperty('articlePaymentMethods') && info.articlePaymentMethods !== this.articlePaymentMethods) {
-      const msg = Popup.getTranslation('popup_paymentmethods', '.Payment Methods');
-      messages.push(Article.getDiffMessage(msg, this.articlePaymentMethods, info.articlePaymentMethods));
-      this.articlePaymentMethods = info.articlePaymentMethods;
-      result.modifiedForStorage++;
-    }
-    // articleMinimumBid
-    if (info.hasOwnProperty('articleMinimumBid') && info.articleMinimumBid !== this.articleMinimumBid) {
-      const msg = Popup.getTranslation('popup_minimumbid', '.Minimum Bid');
-      messages.push(Article.getDiffMessage(msg, this.articleMinimumBid, info.articleMinimumBid));
-      this.articleMinimumBid = info.articleMinimumBid;
-      result.modified.push('articleMinimumBid');
-      result.modifiedForStorage++;
-    }
-    // articleEndTime
-    if (info.hasOwnProperty('articleEndTime') && info.articleEndTime !== this.articleEndTime) {
-      const msg = Popup.getTranslation('popup_auctionendtime', '.Auction End Time');
-      messages.push(Article.getDiffMessage(msg, this.articleEndTime, info.articleEndTime));
-      this.articleEndTime = info.articleEndTime;
-      result.modified.push('articleEndTime');
-      result.modifiedForStorage++;
-    }
-    // articleAuctionState
-    if (info.hasOwnProperty('articleAuctionState') && info.articleAuctionState !== this.articleAuctionState) {
-      const msg = Popup.getTranslation('generic_status', '.Status');
-      messages.push(Article.getDiffMessage(msg, this.articleAuctionStateText, info.articleAuctionStateText));
-      this.articleAuctionState = info.articleAuctionState;
-      if (info.hasOwnProperty('articleAuctionStateText'))
-        this.articleAuctionStateText = info.articleAuctionStateText;
-      else
-        this.articleAuctionStateText = "Text fehlt";
-      result.modifiedForStorage++;
-    }
-    // articleImage
-    if (info.hasOwnProperty('articleImage') && info.articleImage !== this.articleImage) {
-      const msg = Popup.getTranslation('generic_picture', '.Picture');
-      messages.push(Article.getDiffMessage(msg, this.articleImage, info.articleImage));
-      this.articleImage = info.articleImage;
-      result.modifiedForStorage++;
-    }
-    // autoBid (do not log or count as modified as the storage is already up-to-date)
-    if (info.hasOwnProperty('articleAutoBid')) {
-      this.articleAutoBid = info.articleAutoBid;
-      result.modifiedForDisplay++;
-    }
-    // maxBid (do not log or count as modified as the storage is already up-to-date)
-    if (info.hasOwnProperty('articleMaxBid')) {
-      this.articleMaxBid = info.articleMaxBid;
-      result.modifiedForDisplay++;
-    }
-    // articleGroup (do not log or count as modified as the storage is already up-to-date)
-    if (info.hasOwnProperty('articleGroup')) {
-      this.articleGroup = info.articleGroup;
-      result.modifiedForDisplay++;
-    }
+
     if (result.modifiedForStorage > 0) {
       this.addLog({
         component: Popup.getTranslation('generic_item', '.Item'),
@@ -1192,7 +1119,8 @@ class Article {
       const key = keys[i];
       if (previous != null && (articles[previous].articleEndTime - articles[key].articleEndTime) < 15*1000) {
         const diff = (articles[key].articleEndTime - (articles[previous].articleEndTime - 10*1000)) / 1000;
-        articles[key].adjustmentReason = `Bietzeit um ${diff}s angepasst, da Gefahr der Überschneidung mit Artikel ${previous}.`;
+        articles[key].adjustmentReason = Popup.getTranslation('popup_adjustedBidtime',
+          '.Bid time was adjusted by $1 s, due to collision with Item %2', diff.toString(10), previous);
         // todo adjust the bidding preparation time (currently hardcoded to 30s)
         // leave 5s buffer (twice the biddingTime)
         if (articles[previous].articleEndTime < (Date.now() + 5*1000)) {
@@ -1221,9 +1149,10 @@ class Article {
     if (tabOpenedForBidding) {
       this.tabOpenedForBidding = true;
       this.addLog({
-        component: "Bietvorgang",
+        component: Popup.getTranslation('cs_bidding', '.Bidding'),
         level: "Info",
-        message: `Artikel Tab wurde zum Bieten geöffnet (${tab.id}).`
+        message: Popup.getTranslation('popup_articleTabOpenedForBidding',
+          '.Item tab opened for bidding (tab $1)', tab.id.toString())
       });
     }
     return tab.id;
@@ -1636,15 +1565,13 @@ class ArticlesTable {
       throw new Error("updateArticle() ArticleInfo and Row do not match!");
     }
     const modifiedInfo = article.updateInfo(articleInfo);
-    if (modifiedInfo.modifiedForStorage > 0 || modifiedInfo.modifiedForDisplay > 0) {
+    if (modifiedInfo.modifiedForStorage > 0) {
       row.invalidate('data').draw(false);
       // update info in storage, if there is any change. Do not inform the articleTab.
-      if (modifiedInfo.modifiedForStorage > 0) {
-        article.updateInfoInStorage(articleInfo, null, true)
-          .catch(e => {
-            console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
-          });
-      }
+      article.updateInfoInStorage(articleInfo, null, true)
+        .catch(e => {
+          console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
+        });
       modifiedInfo.modified.forEach(key => {
         this.markCellUpdated(row, key);
       });
@@ -1673,29 +1600,33 @@ class ArticlesTable {
     if (row == null && articleInfo.hasOwnProperty('articleId'))
       row = this.getRow(`#${articleInfo.articleId}`);
     if (row == null || row.length !== 1) return;
-    const data = row.data();
     //console.debug('Biet-O-Matic: updateRowMaxBid(%s) info=%s', data.articleId, JSON.stringify(articleInfo));
+    const article = row.data();
+    const info = {};
+
     // minBid
     if (articleInfo.hasOwnProperty('minBid')) {
-      data.articleMinimumBid = articleInfo.minBid;
+      info.articleMinimumBid = articleInfo.minBid;
     }
     // maxBid
     if (articleInfo.hasOwnProperty('maxBid')) {
       if (articleInfo.maxBid == null || Number.isNaN(articleInfo.maxBid)) {
-        data.articleMaxBid = 0;
+        info.articleMaxBid = 0;
       } else {
-        data.articleMaxBid = articleInfo.maxBid;
+        info.articleMaxBid = articleInfo.maxBid;
       }
     }
     // autoBid
     if (articleInfo.hasOwnProperty('autoBid')) {
       if (articleInfo.autoBid != null) {
-        data.articleAutoBid = articleInfo.autoBid;
+        info.articleAutoBid = articleInfo.autoBid;
       }
     }
-    // invalidate data, redraw
-    // todo selective redraw for parts of the row ?
-    row.invalidate('data').draw(false);
+
+    const modifiedInfo = article.updateInfo(info);
+    if (modifiedInfo.modifiedForStorage > 0) {
+      row.invalidate('data').draw(false);
+    }
   }
 
   /*
@@ -2871,48 +2802,46 @@ class ArticlesTable {
       const row = this.getRow(`#${articleId}`);
       if (row == null || row.length !== 1)
         return;
-      let article = row.data();
+      const article = row.data();
+      const info = {};
       console.debug("Biet-O-Matic: Input changed event: Article=%s, field=%s", article.articleId, e.target.id);
+
       if (e.target.id.startsWith('inpMaxBid_')) {
         // maxBid was entered
         // normally with input type=number this should not be necessary - but there was a problem reported...
-        article.articleMaxBid = Number.parseFloat(e.target.value.replace(/,/, '.'));
+        info.articleMaxBid = Number.parseFloat(e.target.value.replace(/,/, '.'));
         if (Number.isNaN(article.articleMaxBid))
-          article.articleMaxBid = 0;
+          info.articleMaxBid = 0;
         // check if maxBid > buyPrice (sofortkauf), then adjust it to the buyprice - 1 cent
         if (article.hasOwnProperty('articleBuyPrice') && article.articleMaxBid >= article.articleBuyPrice) {
-          article.articleMaxBid = article.articleBuyPrice - 0.01;
+          info.articleMaxBid = article.articleBuyPrice - 0.01;
         } else if (article.hasOwnProperty('articleMinimumBid') && article.articleMaxBid > 0 &&
           article.articleMaxBid < article.articleMinimumBid) {
-          article.articleMaxBid = article.articleMinimumBid;
+          info.articleMaxBid = article.articleMinimumBid;
         }
       } else if (e.target.id.startsWith('chkAutoBid_')) {
         // autoBid checkbox was clicked
-        article.articleAutoBid = e.target.checked;
+        info.articleAutoBid = e.target.checked;
       } else if (e.target.id.startsWith('inpGroup_')) {
         // group has been updated
         if (e.target.value === '' || e.target.value === $.fn.DataTable.RowGroup.defaults.emptyDataGroup)
-          article.articleGroup = undefined;
+          info.articleGroup = undefined;
         else
-          article.articleGroup = e.target.value;
+          info.articleGroup = e.target.value;
         this.lastFocusedInput = null;
       }
 
-      // redraw the row
-      row.invalidate('data').draw(false);
       // store info when inputs updated
-      let info = {};
-      if (article.hasOwnProperty('articleMaxBid'))
-        info.maxBid = article.articleMaxBid;
-      if (article.hasOwnProperty('articleAutoBid'))
-        info.autoBid = article.articleAutoBid;
-      if (article.hasOwnProperty('articleGroup'))
-        info.group = article.articleGroup;
-      // update storage info and inform tab of new values
-      article.updateInfoInStorage(info, article.tabId)
-        .catch(e => {
-          console.log("Biet-O-Matic: Failed to store article info: %s", e.message);
-        });
+      const modifiedInfo = article.updateInfo(info);
+      if (modifiedInfo.modifiedForStorage > 0) {
+        // redraw the row
+        row.invalidate('data').draw(false);
+        // update storage info and inform tab of new values
+        article.updateInfoInStorage(info, article.tabId)
+          .catch(e => {
+            console.log("Biet-O-Matic: Failed to store article info: " + e);
+          });
+      }
     });
 
     // datatable length change
