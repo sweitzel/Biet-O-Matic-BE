@@ -1029,8 +1029,8 @@ class Article {
     let message = {};
     message.timestamp = Date.now();
     message.message = JSON.stringify(messageObject);
-    message.component = "Unbekannt";
-    message.level = "Interner Fehler";
+    message.component = Popup.getTranslation('generic_unknown', '.Unknown');
+    message.level = Popup.getTranslation('generic_internalError', '.Internal Error');
     if (messageObject.hasOwnProperty('timestamp'))
       message.timestamp = messageObject.timestamp;
     if (messageObject.hasOwnProperty('message'))
@@ -1082,9 +1082,9 @@ class Article {
   // return the link for that article
   getUrl() {
     if (this.hasOwnProperty('articlePlatform'))
-      return `https://cgi.${this.articlePlatform}/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&orig_cvip=true`;
+      return `https://cgi.${this.articlePlatform}/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&nordt=true&orig_cvip=true&rt=nc`;
     else
-      return `https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&orig_cvip=true`;
+      return `https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&nordt=true&orig_cvip=true&rt=nc'`;
   }
 
   // returns the autoBid state for window and article group
@@ -1892,7 +1892,8 @@ class ArticlesTable {
       // if the maxBid is < minimum bidding price or current Price, add highlight color
       if ((row.articleEndTime - Date.now() > 0) && chkAutoBid.disabled) {
         inpMaxBid.classList.add('bomHighlightBorder');
-        inpMaxBid.title = Popup.getTranslation('popup_enterMinAmount', '.Enter at least $1',  row.articleMinimumBid.toString();
+        inpMaxBid.title = Popup.getTranslation('popup_enterMinAmount', '.Enter at least $1',
+          row.articleMinimumBid.toString());
       } else {
         inpMaxBid.classList.remove('bomHighlightBorder');
         inpMaxBid.title = Popup.getTranslation('popup_minIncreaseReached', ".Required increase reached");
@@ -2205,7 +2206,7 @@ class ArticlesTable {
     if (article.tabId == null) {
       console.debug("Biet-O-Matic: toggleArticleTab(%s) Opening", article.articleId);
       browser.tabs.create({
-        url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + article.articleId  + '&orig_cvip=true',
+        url: article.getUrl(),
         active: false,
         openerTabId: this.popup.tabId
       }).then(tab => {
@@ -2244,7 +2245,7 @@ class ArticlesTable {
         }
       })
       .catch(e => {
-      console.log("Biet-O-Matic: refreshArticle() Failed to refresh: " +  e);
+      console.warn(`Biet-O-Matic: refreshArticle(${article.articleId}) Failed to refresh: ${e}`);
     });
   }
 
@@ -2732,15 +2733,18 @@ class ArticlesTable {
           // "https://www.ebay.de/c/18021266829#oid184096781363"
           const ebayRecommendationUrl = /(www\.ebay\.[a-z]{1,3})\/c\/([0-9]+)#oid([0-9]+)/;
           if (changeInfo.status === 'loading' && tabInfo.hasOwnProperty('url') && ebayRecommendationUrl.test(tabInfo.url)) {
-            let matches = tabInfo.url.match(ebayRecommendationUrl);
-            let host = matches[1];
-            let articleId = matches[3];
-            browser.tabs.update(tabId, {
-              url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + articleId + '&nordt=true&orig_cvip=true&rt=nc',
-              openerTabId: this.popup.tabId,
-            }).then(() => {
-              console.log("onUpdatedListener found bad ebay t=%O c=%s, redirecting to %s : %s", tabInfo, JSON.stringify(changeInfo), host, articleId);
-            });
+            const matches = tabInfo.url.match(ebayRecommendationUrl);
+            const host = matches[1];
+            const articleId = matches[3];
+            const row = this.getRow('#' + articleId);
+            if (typeof row !== 'undefined' && row.length === 1) {
+              browser.tabs.update(tabId, {
+                url: row.data().getUrl(),
+                openerTabId: this.popup.tabId,
+              }).then(() => {
+                console.log("onUpdatedListener found bad ebay t=%O c=%s, redirecting to %s : %s", tabInfo, JSON.stringify(changeInfo), host, articleId);
+              });
+            }
           }
           // status == complete, then inject content script, request info and update table
           if (changeInfo.status === 'complete') {

@@ -43,7 +43,7 @@ const auctionEndStates = {
   },
   unknown: {
     id: null,
-    human: browser.i18n.getMessage('generic_unknown'),
+    human: browser.i18n.getMessage('generic_stillUnknown'),
   }
 };
 

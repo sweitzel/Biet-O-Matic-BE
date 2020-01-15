@@ -53,6 +53,9 @@
   "generic_inactive": {
     "message": "inaktiv"
   },
+  "generic_internalError": {
+    "message": "Interner Fehler"
+  },
   "generic_item": {
     "message": "Artikel"
   },
@@ -77,8 +80,11 @@
   "generic_status": {
     "message": "Status"
   },
-  "generic_unknown": {
+  "generic_stillUnknown": {
     "message": "noch unbekannt"
+  },
+  "generic_unknown": {
+    "message": "Unbekannt"
   },
   "generic_unlimited": {
     "message": "unbegrenzt"

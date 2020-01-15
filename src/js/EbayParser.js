@@ -229,7 +229,7 @@ class EbayParser {
             if (textMethod.trim().length > 0)
               methods.push(textMethod.split(','));
             // get images
-            let t = $(v + " > div");
+            let t = $(domEntry, "div");
             if (typeof t !== 'undefined' && t.length === 1) {
               let res =  $(t).find('img');
               if (typeof res !== 'undefined' && res.length > 0) {
@@ -238,6 +238,8 @@ class EbayParser {
                   methods.push(D(element).attr('alt').toString());
                 });
               }
+            } else {
+              console.log("Biet-O-Matic: Could not parse articlePaymentMethods images, t=%O", t);
             }
             value = methods.join(', ');
           } catch(e) {
