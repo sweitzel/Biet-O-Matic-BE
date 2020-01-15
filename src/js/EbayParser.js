@@ -151,16 +151,14 @@ class EbayParser {
     // US $1,000.12
     // GBP 26.00
     // EUR 123,00
-    const regex = /.*([0-9,]+)(?:.|,)([0-9]{2})/;
+    const regex = /(.*?)([0-9,]+)(?:.|,)([0-9]{2})/;
     if (regex.test(price)) {
       const rexres = price.match(regex);
-      let p1 = rexres[1].replace(/,/, '');
-      let p2 = rexres[2];
-      console.log("Got value from regex attr, val=%s", price)
+      let p1 = rexres[2].replace(/,/, '');
+      let p2 = rexres[3];
       result.price = Number.parseFloat(`${p1}.${p2}`);
     } else {
       // fallback get price from
-      console.log("Got value from content attr, price=%s", price);
       result.price = Number.parseFloat(domEntry.getAttribute("content"));
     }
     return result;
@@ -235,9 +233,9 @@ class EbayParser {
             if (typeof t !== 'undefined' && t.length === 1) {
               let res =  $(t).find('img');
               if (typeof res !== 'undefined' && res.length > 0) {
+                const D=$;
                 $(res).each((index, element) => {
-                  console.log("index=%s, element=%O", index, element);
-                  methods.push($(element).attr('alt').toString());
+                  methods.push(D(element).attr('alt').toString());
                 });
               }
             }

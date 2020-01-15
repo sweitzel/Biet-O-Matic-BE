@@ -8,6 +8,21 @@
   "appOpen": {
     "message": "Open Biet-O-Matic BE"
   },
+  "cs_bidding": {
+    "message": "Bidding"
+  },
+  "cs_biddingFailed": {
+    "message": "Auction not successful. Your bid was not received or accepted by eBay (e.g. when another bidder placed a higher bid before yours.)"
+  },
+  "cs_biddingOverbid": {
+    "message": "Auction was not successful. You were overbid."
+  },
+  "cs_biddingStatusUnknown": {
+    "message": "Final auction end state is still unknown."
+  },
+  "cs_biddingSuccess": {
+    "message": "Auction was successful. Item purchased."
+  },
   "filePopup": {
     "message": "popup.en.html"
   },
@@ -26,6 +41,9 @@
   "generic_description": {
     "message": "Description"
   },
+  "generic_ended": {
+    "message": "ended"
+  },
   "generic_group": {
     "message": "Group"
   },
@@ -41,17 +59,26 @@
   "generic_noGroup": {
     "message": "Other Auctions"
   },
+  "generic_overbid": {
+    "message": "overbid"
+  },
   "generic_picture": {
     "message": "Picture"
   },
   "generic_price": {
     "message": "Price"
   },
+  "generic_purchased": {
+    "message": "purchased"
+  },
   "generic_search": {
     "message": "Search"
   },
   "generic_status": {
     "message": "Status"
+  },
+  "generic_unknown": {
+    "message": "still unknown"
   },
   "generic_unlimited": {
     "message": "unlimited"

@@ -17,16 +17,9 @@ import "../css/contentScript.css";
 
 // auction states as communicated to the overview page
 const auctionEndStates = {
-  ended: 0,
-  purchased: 1,
-  overbid: 2,
-  unknown: null
-};
-
-// auction states as communicated to the overview page
-const auctionEndStates2 = {
   ended: {
     id: 0,
+    human: browser.i18n.getMessage('generic_ended'),
     strings: {
       de: ["Dieses Angebot wurde beendet"],
       en: ["Bidding has ended on this item"]
@@ -34,6 +27,7 @@ const auctionEndStates2 = {
   },
   purchased: {
     id: 1,
+    human: browser.i18n.getMessage('generic_purchased'),
     strings: {
       de: ["Sie waren der Höchstbietende"],
       en: ["You won this auction"]
@@ -41,12 +35,16 @@ const auctionEndStates2 = {
   },
   overbid: {
     id: 2,
+    human: browser.i18n.getMessage('generic_overbid'),
     strings: {
       de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht"],
       en: ["TODO123XXXX"]
     }
   },
-  unknown: { id: null }
+  unknown: {
+    id: null,
+    human: browser.i18n.getMessage('generic_unknown'),
+  }
 };
 
 class EbayArticle {
@@ -245,10 +243,10 @@ class EbayArticle {
       // set tooltip for button to minBidValue
       let t = document.querySelector('.tgl-btn');
       if (buttonInput.disabled) {
-        t.title = `Geben sie minimal ${minBidValue} ein`;
+        t.title = EbayArticle.getTranslation('popup_enterMinAmount', '.Enter at least $1', minBidValue.toString());
         buttonInput.checked =  false;
       } else {
-        t.title = "Minimale Erhöhung erreicht";
+        t.title = EbayArticle.getTranslation('popup_minIncreaseReached', '.Minimum reached');
       }
     } else if (isMaxBidLargerThanBidPrice === true) {
       //console.debug("Enable bid button: isMaxBidLargerThanBidPrice=%s", isMaxBidLargerThanBidPrice);
@@ -258,6 +256,37 @@ class EbayArticle {
       buttonInput.checked = false;
     }
   }
+
+  /*
+   * determine the auction end state by checking text determined by parsePageRefresh() against regex
+   */
+  static getAuctionEndState(ebayArticleInfo) {
+    // check if the given string matches the given endState
+    function matches(endState, messageToCheck) {
+      if (!auctionEndStates.hasOwnProperty(endState)) {
+        console.warn("Biet-O-Matic: getAuctionEndState() Invalid endState: " + endState);
+        return false;
+      }
+      const strings = auctionEndStates[endState].strings;
+      for (let lang in strings) {
+        const messages = strings[lang];
+        for (let message in messages) {
+          if (messageToCheck.includes(message)) {
+            console.log("Biet-O-Matic: getAuctionEndState() Status determined from lang=%s, message=%s", lang, message);
+            return true;
+          }
+        }
+      }
+    }
+    if (ebayArticleInfo.hasOwnProperty('articleAuctionStateText')) {
+      for (const key in auctionEndStates) {
+        if (matches(key, ebayArticleInfo.articleAuctionStateText))
+          return key;
+      }
+    }
+    return auctionEndStates.unknown;
+  }
+
 
   /*
    * Detect changes on the page (by user) via event listeners
@@ -798,22 +827,7 @@ class EbayArticle {
       return ebayArticleInfo;
     }
     // determine auction state - if any yet
-    // TODO: think of a better way, to support languages or be robust against changing strings
-    let currentState = auctionEndStates.unknown;
-    if (ebayArticleInfo.hasOwnProperty('articleAuctionStateText')) {
-      if (ebayArticleInfo.articleAuctionStateText.includes('Dieses Angebot wurde beendet')) {
-        currentState = auctionEndStates.ended;
-      } else if (ebayArticleInfo.articleAuctionStateText.includes('Sie waren der Höchstbietende')) {
-        currentState = auctionEndStates.purchased;
-      } else if (ebayArticleInfo.articleAuctionStateText.includes('Sie wurden überboten')) {
-        currentState = auctionEndStates.overbid;
-      } else if (ebayArticleInfo.articleAuctionStateText.includes('Mindestpreis wurde noch nicht erreicht')) {
-        // Sie sind derzeit Höchstbietender, aber der Mindestpreis wurde noch nicht erreicht.
-        // its not really overbid, but we will not win the auction due to defined minimum price
-        currentState = auctionEndStates.overbid;
-      }
-      console.debug("Biet-O-Matic: handleReload() state=%s (%d)", ebayArticleInfo.articleAuctionStateText, currentState);
-    }
+    let currentState = EbayArticle.getAuctionEndState(ebayArticleInfo);
 
     // info related to previous bidding
     const bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
@@ -834,7 +848,7 @@ class EbayArticle {
     let simulate = false;
     if (settings != null && typeof settings !== 'undefined' && settings.hasOwnProperty('simulation')) {
       simulate = settings.simulation;
-      if (currentState !== auctionEndStates.unknown && simulate) {
+      if (currentState.id !== auctionEndStates.unknown.id && simulate) {
         if (bidInfo != null && ebayArticleInfo.articleBidPrice > bidInfo.maxBid)
           currentState = auctionEndStates.overbid;
         else if (bidInfo != null && ebayArticleInfo.articleBidPrice <= bidInfo.maxBid)
@@ -848,16 +862,16 @@ class EbayArticle {
      * - if auctionEndState from stored result is incomplete (e.g. state.unknown), then send updated state
      * The popup can then use the result to decide e.g. to stop the automatic bidding
      */
-    if (articleStoredInfo != null && typeof articleStoredInfo !== 'undefined' && articleStoredInfo.hasOwnProperty(ebayArticleInfo.articleId)) {
+    if (articleStoredInfo !== auctionEndStates.unknown.id && typeof articleStoredInfo !== 'undefined' && articleStoredInfo.hasOwnProperty(ebayArticleInfo.articleId)) {
       const data = articleStoredInfo[ebayArticleInfo.articleId];
       /*
        * Note: auctionEndState is set by sendAuctionEndState and only used here to inform the popup about
        * the auction end state
        */
       if (data.hasOwnProperty('auctionEndState') &&
-        (currentState !== auctionEndStates.unknown && data.auctionEndState === auctionEndStates.unknown)) {
+        (currentState.id !== auctionEndStates.unknown.id && data.auctionEndState === auctionEndStates.unknown.id)) {
         // send updated end state
-        ebayArticleInfo.auctionEndState = currentState;
+        ebayArticleInfo.auctionEndState = currentState.id;
         await EbayArticle.sendAuctionEndState(ebayArticleInfo, simulate)
           .catch(e => {
             console.warn(`Biet-O-Matic: handleReload() Sending Auction End State failed: ${e.message}`);
@@ -875,9 +889,9 @@ class EbayArticle {
       // go back to previous page (?)
       // remove bidinfo if the auction for sure ended
       if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
-        ebayArticleInfo.auctionEndState = currentState;
+        ebayArticleInfo.auctionEndState = currentState.id;
         console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s (%d)",
-          ebayArticleInfo.articleAuctionStateText, currentState);
+          ebayArticleInfo.articleAuctionStateText, currentState.id);
         await EbayArticle.sendAuctionEndState(ebayArticleInfo, simulate).catch(e => {
           console.warn(`Sending initial auction end state failed: ${e.message}`);
         });

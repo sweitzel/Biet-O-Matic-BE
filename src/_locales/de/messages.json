@@ -8,6 +8,21 @@
   "appOpen": {
     "message": "Öffne Biet-O-Matic BE"
   },
+  "cs_bidding": {
+    "message": "Bietvorgang"
+  },
+  "cs_biddingFailed": {
+    "message": "Auktion nicht erfolgreich. Gebot wurde nicht gesendet bzw. von eBay akzeptiert (z.B. wenn ein anderer Bieter ein gleichhohes Gebot etwas eher abgab)."
+  },
+  "cs_biddingOverbid": {
+    "message": "Auktion nicht erfolgreich. Sie wurden überboten."
+  },
+  "cs_biddingStatusUnknown": {
+    "message": "Finaler Auktions Status noch unbekannt."
+  },
+  "cs_biddingSuccess": {
+    "message": "Auktion erfolgreich. Artikel ersteigert."
+  },
   "filePopup": {
     "message": "popup.de.html"
   },
@@ -26,6 +41,9 @@
   "generic_description": {
     "message": "Beschreibung"
   },
+  "generic_ended": {
+    "message": "beendet"
+  },
   "generic_group": {
     "message": "Gruppe"
   },
@@ -41,17 +59,26 @@
   "generic_noGroup": {
     "message": "Sonstige Auktionen"
   },
+  "generic_overbid": {
+    "message": "überboten"
+  },
   "generic_picture": {
     "message": "Bild"
   },
   "generic_price": {
     "message": "Artikel Preis"
   },
+  "generic_purchased": {
+    "message": "gekauft"
+  },
   "generic_search": {
     "message": "Suche"
   },
   "generic_status": {
     "message": "Status"
+  },
+  "generic_unknown": {
+    "message": "noch unbekannt"
   },
   "generic_unlimited": {
     "message": "unbegrenzt"

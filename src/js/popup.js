@@ -866,7 +866,7 @@ class Article {
     // articleBidCount
     if (info.hasOwnProperty('articleBidCount') && info.articleBidCount !== this.articleBidCount) {
       const msg = Popup.getTranslation('popup_numberbids', '.Number of Bids');
-      messages.push(Article.getDiffMessage('Anzahl Gebote', this.articleBidCount, info.articleBidCount));
+      messages.push(Article.getDiffMessage(msg, this.articleBidCount, info.articleBidCount));
       this.articleBidCount = info.articleBidCount;
       result.modified.push('articleBidCount');
       result.modifiedForStorage++;
@@ -874,7 +874,7 @@ class Article {
     // articleBuyPrice
     if (info.hasOwnProperty('articleBuyPrice') && info.articleBuyPrice !== this.articleBuyPrice) {
       const msg = Popup.getTranslation('popup_buynowprice', '.Buy-It-Now Price');
-      messages.push(Article.getDiffMessage('Kaufpreis', this.articleBuyPrice, info.articleBuyPrice));
+      messages.push(Article.getDiffMessage(msg, this.articleBuyPrice, info.articleBuyPrice));
       this.articleBuyPrice = info.articleBuyPrice;
       result.modified.push('articleBuyPrice');
       result.modifiedForStorage++;
@@ -882,7 +882,7 @@ class Article {
     // articleShippingCost
     if (info.hasOwnProperty('articleShippingCost') && info.articleShippingCost !== this.articleShippingCost) {
       const msg = Popup.getTranslation('popup_shippingcosts', '.Shipping Costs');
-      messages.push(Article.getDiffMessage('Lieferkosten', this.articleShippingCost, info.articleShippingCost));
+      messages.push(Article.getDiffMessage(msg, this.articleShippingCost, info.articleShippingCost));
       this.articleShippingCost = info.articleShippingCost;
       result.modified.push('articleShippingCost');
       result.modifiedForStorage++;
@@ -890,21 +890,21 @@ class Article {
     // articleShippingMethods
     if (info.hasOwnProperty('articleShippingMethods') && info.articleShippingMethods !== this.articleShippingMethods) {
       const msg = Popup.getTranslation('popup_shippingmethods', '.Shipping Methods');
-      messages.push(Article.getDiffMessage('Liefermethoden', this.articleShippingMethods, info.articleShippingMethods));
+      messages.push(Article.getDiffMessage(msg, this.articleShippingMethods, info.articleShippingMethods));
       this.articleShippingMethods = info.articleShippingMethods;
       result.modifiedForStorage++;
     }
     // articlePaymentMethods
     if (info.hasOwnProperty('articlePaymentMethods') && info.articlePaymentMethods !== this.articlePaymentMethods) {
       const msg = Popup.getTranslation('popup_paymentmethods', '.Payment Methods');
-      messages.push(Article.getDiffMessage('Zahlungsmethoden', this.articlePaymentMethods, info.articlePaymentMethods));
+      messages.push(Article.getDiffMessage(msg, this.articlePaymentMethods, info.articlePaymentMethods));
       this.articlePaymentMethods = info.articlePaymentMethods;
       result.modifiedForStorage++;
     }
     // articleMinimumBid
     if (info.hasOwnProperty('articleMinimumBid') && info.articleMinimumBid !== this.articleMinimumBid) {
       const msg = Popup.getTranslation('popup_minimumbid', '.Minimum Bid');
-      messages.push(Article.getDiffMessage('Minimal Gebot', this.articleMinimumBid, info.articleMinimumBid));
+      messages.push(Article.getDiffMessage(msg, this.articleMinimumBid, info.articleMinimumBid));
       this.articleMinimumBid = info.articleMinimumBid;
       result.modified.push('articleMinimumBid');
       result.modifiedForStorage++;
@@ -912,7 +912,7 @@ class Article {
     // articleEndTime
     if (info.hasOwnProperty('articleEndTime') && info.articleEndTime !== this.articleEndTime) {
       const msg = Popup.getTranslation('popup_auctionendtime', '.Auction End Time');
-      messages.push(Article.getDiffMessage('Auktionsende', this.articleEndTime, info.articleEndTime));
+      messages.push(Article.getDiffMessage(msg, this.articleEndTime, info.articleEndTime));
       this.articleEndTime = info.articleEndTime;
       result.modified.push('articleEndTime');
       result.modifiedForStorage++;
@@ -1213,7 +1213,7 @@ class Article {
       this.articleId, tabOpenedForBidding);
     // orig_cvip will go directly to the original bidding page
     let tab = await browser.tabs.create({
-      url: 'https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=' + this.articleId + '&orig_cvip=true',
+      url: this.getUrl(),
       active: false,
       openerTabId: this.popup.tabId
     });
@@ -1277,7 +1277,7 @@ class Article {
         });
       // add the ended state to the article log
       this.addLog({
-        component: "Bietvorgang",
+        component: Popup.getTranslation('cs_bidding', '.Bidding'),
         level: "Status",
         message: Article.stateToText(info.auctionEndState)
       });
@@ -1293,13 +1293,13 @@ class Article {
   // convert state id to text
   static stateToText(state) {
     if (state === 0)
-      return "Auktion nicht erfolgreich - Das Gebot konnte vermutlich nicht rechtzeitig abgegeben werden!";
+      return Popup.getTranslation('cs_biddingFailed', '.Auction failed');
     else if (state === 1)
-      return "Auktion erfolgreich, der Artikel wurde gekauft.";
+      return Popup.getTranslation('cs_biddingSuccess', '.Auction was successful. Item was purchased.');
     else if (state === 2)
-      return "Auktion nicht erfolgreich, sie wurden überboten.";
+      return Popup.getTranslation('cs_biddingOverbid', '.Auction was not successful. You were overbidden.');
     else
-      return "Der finale Status ist noch nicht bekannt.";
+      return Popup.getTranslation('cs_biddingStatusUnknown', '.Final auction state is unknown.');
   }
 
   toString () {
@@ -1892,7 +1892,7 @@ class ArticlesTable {
       // if the maxBid is < minimum bidding price or current Price, add highlight color
       if ((row.articleEndTime - Date.now() > 0) && chkAutoBid.disabled) {
         inpMaxBid.classList.add('bomHighlightBorder');
-        inpMaxBid.title = Popup.getTranslation('popup_enterMinAmount', '.Enter at least $AMOUNT$',  row.articleMinimumBid);
+        inpMaxBid.title = Popup.getTranslation('popup_enterMinAmount', '.Enter at least $1',  row.articleMinimumBid.toString();
       } else {
         inpMaxBid.classList.remove('bomHighlightBorder');
         inpMaxBid.title = Popup.getTranslation('popup_minIncreaseReached', ".Required increase reached");
