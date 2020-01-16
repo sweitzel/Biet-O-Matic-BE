@@ -1,6 +1,6 @@
 {
   "appDesc": {
-    "message": "A browser extension to perform automated bids for eBay articles, also when you are away from your computer"
+    "message": "A browser extension to perform automated bids for eBay items, also when you are away from your computer"
   },
   "appName": {
     "message": "Biet-O-Matic BE"
@@ -18,7 +18,7 @@
     "message": "Group Auto-Bid was deactivated short before the bid confirmation"
   },
   "cs_autobidInactiveForArticle": {
-    "message": "Auto-bid is inactive for this article"
+    "message": "Auto-bid is inactive for this item"
   },
   "cs_autobidInactiveForGroup": {
     "message": "Auto-bid is inactive for group $1"
@@ -93,10 +93,10 @@
     "message": "active"
   },
   "generic_articleAutoBid": {
-    "message": "Article Auto-Bid"
+    "message": "Item Auto-Bid"
   },
   "generic_articleMaxBid": {
-    "message": "Article Maximum Bid"
+    "message": "Item Maximum Bid"
   },
   "generic_autoBid": {
     "message": "Auto-Bid"
@@ -171,22 +171,22 @@
     "message": "Updated"
   },
   "popup_activateArticleAutoBid": {
-    "message": "Activates Article Auto-Bid"
+    "message": "Activates item auto-bid"
   },
   "popup_adjustedBidtime": {
     "message": "Adjusted bid-time by $1 s due to risk of colliding with item $2"
   },
   "popup_articleAuctionEnded": {
-    "message": "Article auction has already ended"
+    "message": "Item auction has already ended"
   },
   "popup_articleAuctionEndsSoon": {
-    "message": "Article auction ends soon"
+    "message": "Item auction ends soon"
   },
   "popup_articleAuctionEndsVerySoon": {
-    "message": "Article auction ends in less then a minute"
+    "message": "Item auction ends in less then a minute"
   },
   "popup_articleRemove": {
-    "message": "Removes all events and configuration for this article"
+    "message": "Removes all events and configuration for this item"
   },
   "popup_articleTabOpenedForBidding": {
     "message": "Item tab has been opened for bidding (tab=$1)"
@@ -216,16 +216,16 @@
     "message": "Buy-It-Now Price"
   },
   "popup_closeArticleTab": {
-    "message": "Closes the articles tab"
+    "message": "Closes the item tab"
   },
   "popup_deactivateArticleAutoBid": {
-    "message": "Deactivates Article Auto-Bid"
+    "message": "Deactivates item auto-bid"
   },
   "popup_enterMinAmount": {
     "message": "Enter at least $1"
   },
   "popup_hide_articleEvents": {
-    "message": "Hide article events"
+    "message": "Hide item events"
   },
   "popup_minIncreaseReached": {
     "message": "Required minimum price increase reached"
@@ -237,7 +237,7 @@
     "message": "Number of Bids"
   },
   "popup_openArticleInTab": {
-    "message": "Opens the article in a new tab"
+    "message": "Opens the item in a new tab"
   },
   "popup_paymentmethods": {
     "message": "Payment Methods"
@@ -249,6 +249,6 @@
     "message": "Shipping Methods"
   },
   "popup_show_articleEvents": {
-    "message": "Show article events"
+    "message": "Show item events"
   }
 }

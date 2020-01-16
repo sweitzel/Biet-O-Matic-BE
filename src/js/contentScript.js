@@ -270,7 +270,7 @@ class EbayArticle {
       const strings = auctionEndStates[endState].strings;
       for (let lang in strings) {
         const messages = strings[lang];
-        for (let message in messages) {
+        for (let message of messages) {
           if (messageToCheck.includes(message)) {
             console.log("Biet-O-Matic: getAuctionEndState() Status determined from lang=%s, message=%s", lang, message);
             return true;
@@ -281,7 +281,7 @@ class EbayArticle {
     if (ebayArticleInfo.hasOwnProperty('articleAuctionStateText')) {
       for (const key in auctionEndStates) {
         if (matches(key, ebayArticleInfo.articleAuctionStateText))
-          return key;
+          return auctionEndStates[key];
       }
     }
     return auctionEndStates.unknown;
@@ -839,7 +839,6 @@ class EbayArticle {
     }
     // determine auction state - if any yet
     let currentState = EbayArticle.getAuctionEndState(ebayArticleInfo);
-
     // info related to previous bidding
     const bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
     // info from sync storage
@@ -903,10 +902,12 @@ class EbayArticle {
         ebayArticleInfo.auctionEndState = currentState.id;
         console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s (%d)",
           ebayArticleInfo.articleAuctionStateText, currentState.id);
-        await EbayArticle.sendAuctionEndState(ebayArticleInfo, simulate).catch(e => {
-          console.warn(`Sending initial auction end state failed: ${e.message}`);
-        });
-        window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
+        await EbayArticle.sendAuctionEndState(ebayArticleInfo, simulate)
+          .catch(e => {
+            console.warn("Sending initial auction end state failed: " + e);
+          });
+        console.debug("Biet-O-Matic: Setting auctionEnded now. sendAuctionEndState finished");
+        window.sessionStorage.removeItem("bidInfo:" + ebayArticleInfo.articleId);
         // set this, so the script will not trigger parsing further down
         ebayArticleInfo.auctionEnded = true;
       } else {

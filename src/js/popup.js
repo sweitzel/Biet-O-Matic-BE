@@ -302,6 +302,7 @@ class AutoBid {
       newSettings = Object.assign({}, oldSettings, newSettings);
     }
     console.debug("AutoBid.setSyncState(%s) Setting autoBid info %s", autoBidEnabled, JSON.stringify(newSettings));
+    AutoBid.cachedChange = newSettings;
     await browser.storage.sync.set({'SETTINGS': newSettings});
   }
 
@@ -503,7 +504,7 @@ class AutoBid {
   /*
    * Check if the changeinfo is relevant for this instance
    * Will be called when the storage update event is received
-   * - change was by different id
+   * - returns true, if the change was by different id
    *   {"SETTINGS":{
    *   "newValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138","timestamp":1577979582486}},
    *   "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138","timestamp":1577979572481}}}}
@@ -513,8 +514,27 @@ class AutoBid {
       console.log("Biet-O-Matic: checkChangeIsRelevant() newValue missing: %s", JSON.stringify(changeInfo));
       return true;
     }
+
+    function sortObjByKey(value) {
+      return (typeof value === 'object') ?
+        (Array.isArray(value) ?
+            value.map(sortObjByKey) :
+            Object.keys(value).sort().reduce(
+              (o, key) => {
+                const v = value[key];
+                o[key] = sortObjByKey(v);
+                return o;
+              }, {})
+        ) :
+        value;
+    }
+
     const newValue = changeInfo.newValue;
-    if (newValue.length > 0 && AutoBid.hasOwnProperty('beWindowId') && newValue.autoBid.id === AutoBid.beWindowId) {
+    if (JSON.stringify(sortObjByKey(newValue)) === JSON.stringify(sortObjByKey(AutoBid.cachedChange))) {
+      console.debug("Biet-O-Matic: AutoBid.checkChangeIsRelevant: Change is not relevant for this id=%s: cached",
+        AutoBid.beWindowId);
+      return false
+    } else if (newValue.length > 0 && AutoBid.hasOwnProperty('beWindowId') && newValue.autoBid.id === AutoBid.beWindowId) {
       console.debug("Biet-O-Matic: AutoBid.checkChangeIsRelevant: Change is not relevant for this id=%s: %s",
         AutoBid.beWindowId, JSON.stringify(newValue));
       return false;
@@ -872,7 +892,6 @@ class Article {
           this.articleAuctionState = info.articleAuctionState;
         }
         result.modifiedForStorage++;
-        console.log("XXX modified: %s -> %s", key, this[key]);
         result.modified.push(key);
       }
     }
@@ -1224,7 +1243,7 @@ class Article {
     if (state === 0)
       return Popup.getTranslation('cs_biddingFailed', '.Auction failed');
     else if (state === 1)
-      return Popup.getTranslation('cs_biddingSuccess', '.Auction was successful. Item was purchased.');
+      return Popup.getTranslation('cs_biddingSuccess', '.Auction was successful. Item has been purchased.');
     else if (state === 2)
       return Popup.getTranslation('cs_biddingOverbid', '.Auction was not successful. You were overbidden.');
     else
@@ -1659,6 +1678,8 @@ class ArticlesTable {
         throw new Error(`Article ${articleId} is already open in another tab (${rowByArticleId.data().tabId})!`);
       } else if (rowByArticleId.data().tabId == null) {
         rowByArticleId.data().tabId = tab.id;
+        // redraw the row in case no other updates are registered
+        rowByArticleId.invalidate('data').draw(false);
       }
     }
     if (rowByArticleId.length === 0) {
@@ -2608,18 +2629,19 @@ class ArticlesTable {
               const article = row.data();
               console.debug("Biet-O-Matic: Browser Event ebayArticleSetAuctionEndState received: sender=%O, state=%s",
                 sender, request.detail.auctionEndState);
-              article.handleAuctionEnded(request.detail)
+              // return the promise
+              return article.handleAuctionEnded(request.detail)
                 .then(() => {
                   this.updateArticle(request.detail, null);
                   return Promise.resolve(true);
                 })
                 .catch(e => {
-                  console.log("Biet-O-Matic: Event ebayArticleSetAuctionEndState failed due to handleAuctionEnded: %s", e.message);
-                  return Promise.reject(`Popup handleAuctionEnded failed: ${e.message}`);
+                  console.log("Biet-O-Matic: Event ebayArticleSetAuctionEndState failed due to handleAuctionEnded: " + e);
+                  return Promise.reject("Popup handleAuctionEnded failed: " + e);
                 });
             }
           } catch (e) {
-            console.warn(`Biet-O-Matic: Event.ebayArticleSetAuctionEndState failed: ${e.message}`);
+            console.warn("Biet-O-Matic: Event.ebayArticleSetAuctionEndState failed: " + e);
             throw new Error(e.message);
           }
           break;
@@ -2681,6 +2703,9 @@ class ArticlesTable {
           if (changeInfo.status === 'complete') {
             console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tabInfo=%s',
               tabId, JSON.stringify(changeInfo), JSON.stringify(tabInfo));
+            // update favicon
+            const autoBidState = AutoBid.getLocalState();
+            Popup.updateFavicon(autoBidState.autoBidEnabled, {id: tabId}, autoBidState.simulation);
             if (tabInfo.hasOwnProperty('url')) {
               Article.getInfoFromTab(tabInfo, "browser.tabs.onUpdated")
                 .then(articleInfo => {
@@ -2727,7 +2752,7 @@ class ArticlesTable {
       if (area === 'sync') {
         if (changes.hasOwnProperty('SETTINGS')) {
           if (AutoBid.checkChangeIsRelevant(changes.SETTINGS)) {
-            console.info("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing AutoBid.");
+            console.debug("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing AutoBid.");
             AutoBid.renderState();
           }
         }
@@ -3073,8 +3098,6 @@ class Popup {
       Popup.locale = en;
 
     this.registerEvents();
-    // restore settings from session storage (autoBidEnabled, bidAllEnabled, compactView)
-    this.restoreSettings();
 
     await Group.removeAllUnused()
       .catch(e => {
@@ -3086,6 +3109,9 @@ class Popup {
     await this.table.addArticlesFromStorage();
     this.table.addArticlesFromTabs();
     await Popup.checkBrowserStorage();
+
+    // restore settings from session storage (autoBidEnabled, bidAllEnabled, compactView)
+    this.restoreSettings();
   }
 
   /*
@@ -3137,7 +3163,7 @@ class Popup {
       console.debug("Biet-O-Matic: restoreSettings() updating from session storage: settings=%s", JSON.stringify(result));
       // pagination setting for articlesTable
       if (result.hasOwnProperty('articlesTableLength') && this.table != null) {
-        this.table.DataTable.page.len(result.articlesTableLength).draw();
+        this.table.DataTable.page.len(result.articlesTableLength).draw(false);
       }
     }
   }
@@ -3184,30 +3210,29 @@ class Popup {
     }
     if (tab == null) {
       // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
-      let query = browser.tabs.query({
-        currentWindow: true,
-        url: [ browser.extension.getURL("*"), "*://*.ebay.de/itm/*","*://*.ebay.com/itm/*" ]
-      });
-      query.then((tabs) => {
-        console.debug("Biet-O-Matic: updateFavicon(), Setting icon on all article tabs");
-        for (let tab of tabs) {
-          //console.debug("Biet-O-Matic: updateFavicon(), Set icon on tab %d (%s)", tab.id, tab.url);
+      let query = browser.tabs.query({currentWindow: true});
+      query.then(tabs => {
+        console.debug("Biet-O-Matic: updateFavicon(), Setting icon on %d tabs", Object.keys(tabs).length);
+        for (const tab of tabs) {
           browser.browserAction.setIcon({
             imageData: favImg,
             tabId: tab.id
           });
-          if (simulate) {
-            browser.browserAction.setBadgeText({text: 'T'});
-            //browser.browserAction.setBadgeBackgroundColor({color: '#fff'});
-          } else {
-            browser.browserAction.setBadgeText({text: ''});
-          }
+          // update simulation badge (windowId not supported by chrome)
+          if (simulate)
+            browser.browserAction.setBadgeText({text: 'T', tabId: tab.id});
+          else
+            browser.browserAction.setBadgeText({text: '', tabId: tab.id});
         }
       });
     } else {
       // update for specific single tab
-      console.debug("Biet-O-Matic: updateFavicon(), Setting icon on single tab %d (%s)", tab.id, tab.url);
+      console.debug("Biet-O-Matic: updateFavicon(), Setting icon on single tab=%d", tab.id);
       browser.browserAction.setIcon({imageData: favImg, tabId: tab.id});
+      if (simulate)
+        browser.browserAction.setBadgeText({text: 'T', tabId: tab.id});
+      else
+        browser.browserAction.setBadgeText({text: '', tabId: tab.id});
     }
   }
 
