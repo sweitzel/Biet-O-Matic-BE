@@ -231,8 +231,8 @@ class EbayArticle {
     const isMaxBidLargerThanBidPrice = (maxBidValue > this.articleBidPrice);
 
     if (isMinBidLargerOrEqualBidPrice) {
-      console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
-        isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
+      //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
+      //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
       buttonInput.disabled = !isMaxBidLargerOrEqualMinBid;
       // set tooltip for button to minBidValue
       let t = document.querySelector('.tgl-btn');
@@ -810,7 +810,7 @@ class EbayArticle {
    * Note: We also send the minimal article info parsed by handleReload
    *       So the popup has the latest state information without refreshing
    */
-  static async sendAuctionEndState(ebayArticleInfo, simulate = false) {
+  static async sendAuctionEndState(ebayArticleInfo) {
     await browser.runtime.sendMessage({
       action: 'ebayArticleSetAuctionEndState',
       articleId: ebayArticleInfo.articleId,
@@ -849,16 +849,6 @@ class EbayArticle {
     const settings = await browser.runtime.sendMessage({
       action: 'getWindowSettings',
     });
-    let simulate = false;
-    if (settings != null && typeof settings !== 'undefined' && settings.hasOwnProperty('simulation')) {
-      simulate = settings.simulation;
-      if (currentState.id !== auctionEndStates.unknown.id && simulate) {
-        if (bidInfo != null && ebayArticleInfo.articleBidPrice > bidInfo.articleMaxBid)
-          currentState = auctionEndStates.overbid;
-        else if (bidInfo != null && ebayArticleInfo.articleBidPrice <= bidInfo.articleMaxBid)
-          currentState = auctionEndStates.purchased;
-      }
-    }
 
     /*
      * Retrieve stored article info from popup
@@ -866,7 +856,8 @@ class EbayArticle {
      * - if auctionEndState from stored result is incomplete (e.g. state.unknown), then send updated state
      * The popup can then use the result to decide e.g. to stop the automatic bidding
      */
-    if (articleStoredInfo !== auctionEndStates.unknown.id && typeof articleStoredInfo !== 'undefined' && articleStoredInfo.hasOwnProperty(ebayArticleInfo.articleId)) {
+
+    if (articleStoredInfo != null && typeof articleStoredInfo !== 'undefined' && articleStoredInfo.hasOwnProperty(ebayArticleInfo.articleId)) {
       const data = articleStoredInfo[ebayArticleInfo.articleId];
       /*
        * Note: auctionEndState is set by sendAuctionEndState and only used here to inform the popup about
@@ -876,7 +867,7 @@ class EbayArticle {
         (currentState.id !== auctionEndStates.unknown.id && data.auctionEndState === auctionEndStates.unknown.id)) {
         // send updated end state
         ebayArticleInfo.auctionEndState = currentState.id;
-        await EbayArticle.sendAuctionEndState(ebayArticleInfo, simulate)
+        await EbayArticle.sendAuctionEndState(ebayArticleInfo)
           .catch(e => {
             console.warn(`Biet-O-Matic: handleReload() Sending Auction End State failed: ${e.message}`);
           });
@@ -896,7 +887,7 @@ class EbayArticle {
         ebayArticleInfo.auctionEndState = currentState.id;
         console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s (%d)",
           ebayArticleInfo.articleAuctionStateText, currentState.id);
-        await EbayArticle.sendAuctionEndState(ebayArticleInfo, simulate)
+        await EbayArticle.sendAuctionEndState(ebayArticleInfo)
           .catch(e => {
             console.warn("Sending initial auction end state failed: " + e);
           });

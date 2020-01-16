@@ -854,7 +854,7 @@ class Article {
    * merge updated info and add the change to the article log
    * - group, maxBid and autoBid are only needed for browser sync feature
    */
-  updateInfo(info) {
+  updateInfo(info, shouldLogChange = true) {
     const result = {
       modifiedForStorage: 0,
       modified: []
@@ -890,7 +890,7 @@ class Article {
       }
     }
 
-    if (result.modifiedForStorage > 0) {
+    if (shouldLogChange && result.modifiedForStorage > 0) {
       console.log("Adding log for info=%O, messages=%O", info, messages);
       this.addLog({
         component: Popup.getTranslation('generic_item', '.Item'),
@@ -984,10 +984,8 @@ class Article {
     // get info for article from storage
     let log = this.getLog();
     console.debug("Biet-O-Matic: addLog(%s) info=%s", this.articleId, JSON.stringify(message));
-    console.log("XXX1 log=%s", JSON.stringify(log))
     if (log == null) log = [];
     log.push(message);
-    console.log("XXX2 log=%s", JSON.stringify(log))
     window.localStorage.setItem("log:" + this.articleId, JSON.stringify(log));
     // inform local popup about the change
     const row = this.popup.table.getRow(`#${this.articleId}`);
@@ -1570,26 +1568,45 @@ class ArticlesTable {
   /*
    * update article with fresh information
    * - if row is null, it will be determined by articleId
+   * - optional parameters: {onlyIfExistsInStorage, updatedFromRemote, informTab}
    */
-  updateArticle(articleInfo, row = null, informTab = false, onlyIfExistsInStorage = false) {
+  updateArticle(articleInfo, row = null,
+                options = {
+                  informTab: false,
+                  onlyIfExistsInStorage: false,
+                  updatedFromRemote: false
+                }) {
     if (row == null)
       row = this.getRow(`#${articleInfo.articleId}`);
     if (row == null || row.length !== 1) return;
     const article = row.data();
-    console.debug("Biet-O-Matic: updateArticle(%s) called. info=%O", articleInfo.articleId, articleInfo);
+    console.debug("Biet-O-Matic: updateArticle(%s) called. info=%O, options=%O", articleInfo.articleId, articleInfo, options);
     // sanity check if the info + row match
     if (articleInfo.hasOwnProperty('articleId') && article.articleId !== articleInfo.articleId) {
       throw new Error(`updateArticle() Article Id from row=${article.articleId} and info=${articleInfo.articleId} do not match!`);
     }
-    const modifiedInfo = article.updateInfo(articleInfo);
+    // if updatedFromRemote, then do not log change
+    const modifiedInfo = article.updateInfo(articleInfo, !options.updatedFromRemote);
     if (modifiedInfo.modifiedForStorage > 0) {
       row.invalidate('data').draw(false);
-      let tabId = informTab ? article.tabId : null;
-      // update info in storage, if there is any change
-      article.updateInfoInStorage(articleInfo, tabId, onlyIfExistsInStorage)
-        .catch(e => {
-          console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
-        });
+      // if the information was submitted from remote instance (detect via storage change),
+      // then inform the open tab and do not store again
+      if (options.updatedFromRemote) {
+        // send update to article tab (update maxBid, autoBid)
+        if (article.tabId != null) {
+          browser.tabs.sendMessage(article.tabId, {
+            action: 'UpdateArticleMaxBid',
+            detail: {articleMaxBid: article.articleMaxBid, articleAutoBid: article.articleAutoBid}
+          }).catch(e => {
+            console.log("Biet-O-Matic: addOrUpdateArticle() Sending UpdateArticleMaxBid to tab %s failed: %s", article.tabId, e);
+          });
+        }
+      } else {
+        article.updateInfoInStorage(articleInfo, options.informTab ? article.tabId : null, options.onlyIfExistsInStorage)
+          .catch(e => {
+            console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e);
+          });
+      }
       modifiedInfo.modified.forEach(key => {
         this.markCellUpdated(row, key);
       });
@@ -1641,7 +1658,7 @@ class ArticlesTable {
       }
     }
 
-    this.updateArticle(info, row, false, false);
+    this.updateArticle(info, row);
   }
 
   /*
@@ -1658,7 +1675,8 @@ class ArticlesTable {
     let tabId = null;
     if (tab != null) tabId = tab.id;
     let articleId = articleInfo.articleId;
-    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) tab=%O, info=%O', articleId, tab, articleInfo);
+    console.debug('Biet-O-Matic: addOrUpdateArticle(%s) updatedFromRemote=%s tab=%O, info=%O',
+      articleId, updatedFromRemote, tab, articleInfo);
     // check if tab articleId changed
     const oldArticleId = this.getArticleIdByTabId(tabId);
     if (oldArticleId != null && oldArticleId !== articleInfo.articleId) {
@@ -1686,7 +1704,7 @@ class ArticlesTable {
       });
     } else {
       // article in table - update it (do not update storage if not already exists)
-      this.updateArticle(articleInfo, rowByArticleId, false, true);
+      this.updateArticle(articleInfo, rowByArticleId, {informTab: updatedFromRemote, updatedFromRemote: updatedFromRemote});
       // // send update to article tab (update maxBid, autoBid)
       // if (updatedFromRemote && articleInfo.hasOwnProperty('articleMaxBid') && articleInfo.hasOwnProperty('articleAutoBid')) {
       //   const row = this.getRow(`#${articleInfo.articleId}`);
@@ -2187,7 +2205,7 @@ class ArticlesTable {
     article.getRefreshedInfo()
       .then(info => {
         // apply the update info
-        this.updateArticle(info, row, false, true);
+        this.updateArticle(info, row, {onlyIfExistsInStorage: true});
         if (cell.length === 1) {
           cell.node().classList.remove('loading-spinner');
         }
@@ -2474,7 +2492,7 @@ class ArticlesTable {
             if (this.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received from tab %s, articleId=%s, articleDescription=%s",
                 sender.tab.id, request.detail.articleId, request.detail.articleDescription);
-              this.updateArticle(request.detail, null, false, false);
+              this.updateArticle(request.detail, null);
               return Promise.resolve(true);
             }
           } catch (e) {
@@ -2613,15 +2631,17 @@ class ArticlesTable {
               if (!request.hasOwnProperty('articleId') || request.articleId === 'undefined')
                 articleId = this.getArticleIdByTabId(sender.tab.id);
               else
-                articleId = request.articleId;
+                return Promise.reject("ebayArticleSetAuctionEndState: articleId missing");
               const row = this.getRow(`#${request.articleId}`);
+              if (typeof row === 'undefined' || row.length !== 1)
+                return Promise.reject("ebayArticleSetAuctionEndState: articleId invalid:" + request.articleId);
               const article = row.data();
               console.debug("Biet-O-Matic: Browser Event ebayArticleSetAuctionEndState received: sender=%O, state=%s",
                 sender, request.detail.auctionEndState);
               // return the promise
               return article.handleAuctionEnded(request.detail)
                 .then(() => {
-                  this.updateArticle(request.detail, row, false, false);
+                  this.updateArticle(request.detail, row);
                   return Promise.resolve(true);
                 })
                 .catch(e => {
@@ -2844,7 +2864,7 @@ class ArticlesTable {
           info.articleGroup = e.target.value;
         this.lastFocusedInput = null;
       }
-      this.updateArticle(info, row, true, false);
+      this.updateArticle(info, row, {informTab: true});
     });
 
     // datatable length change
