@@ -801,14 +801,14 @@ class Article {
       Article.convertKeys(oldStoredInfo);
     } else {
       // should we only store the info if an storage entry already exists?
-      if (onlyIfExists === true) return false;
+      if (onlyIfExists === true) return;
     }
     // store maxBid as number
-    if (info != null && info.hasOwnProperty('maxBid')) {
-      if (typeof info.maxBid === 'string') {
-        console.debug("Biet-O-Matic: updateInfoInStorage() Convert maxBid string=%s to float=%s",
-          info.maxbid, Number.parseFloat(info.maxBid.replace(/,/, '.')));
-        info.maxBid = Number.parseFloat(info.maxBid.replace(/,/, '.'));
+    if (info != null && info.hasOwnProperty('articleMaxBid')) {
+      if (typeof info.articleMaxBid === 'string') {
+        console.debug("Biet-O-Matic: updateInfoInStorage() Convert articleMaxBid string=%s to float=%s",
+          info.articleMaxBid, Number.parseFloat(info.articleMaxBid.replace(/,/, '.')));
+        info.articleMaxBid = Number.parseFloat(info.articleMaxBid.replace(/,/, '.'));
       }
     }
 
@@ -827,19 +827,13 @@ class Article {
     let diffText = Article.getDiffMessage(Popup.getTranslation('generic_updated', '.Updated'), oldStoredInfo, newStoredInfo);
     //console.log("oldInfo=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, newStoredInfo, mergedStoredInfo, diffText);
     if (diffText != null) {
-      // probably not needed anymore as printed by updateInfo
-      // this.addLog({
-      //   component: Popup.getTranslation("generic_item", ".Item"),
-      //   level: Popup.getTranslation('generic_configuration', ".Configuration"),
-      //   message: diffText
-      // });
       // store the info back to the storage
       await browser.storage.sync.set({[this.articleId]: mergedStoredInfo});
       if (tabId != null) {
         // send update to article tab
         await browser.tabs.sendMessage(tabId, {
           action: 'UpdateArticleMaxBid',
-          detail: info  // Note: use the original info with short keys
+          detail: info
         });
       }
     }
@@ -897,6 +891,7 @@ class Article {
     }
 
     if (result.modifiedForStorage > 0) {
+      console.log("Adding log for info=%O, messages=%O", info, messages);
       this.addLog({
         component: Popup.getTranslation('generic_item', '.Item'),
         level: Popup.getTranslation('generic_updated', '.Updated'),
@@ -987,11 +982,13 @@ class Article {
       message.level = messageObject.level;
 
     // get info for article from storage
-    let log = JSON.parse(window.localStorage.getItem(`log:${this.articleId}`));
+    let log = this.getLog();
     console.debug("Biet-O-Matic: addLog(%s) info=%s", this.articleId, JSON.stringify(message));
+    console.log("XXX1 log=%s", JSON.stringify(log))
     if (log == null) log = [];
     log.push(message);
-    window.localStorage.setItem(`log:${this.articleId}`, JSON.stringify(log));
+    console.log("XXX2 log=%s", JSON.stringify(log))
+    window.localStorage.setItem("log:" + this.articleId, JSON.stringify(log));
     // inform local popup about the change
     const row = this.popup.table.getRow(`#${this.articleId}`);
     if (row != null && row.length === 1) {
@@ -1004,7 +1001,7 @@ class Article {
 
   // return the log for the article from the storage, or null if none
   getLog() {
-    return JSON.parse(window.localStorage.getItem(`log:${this.articleId}`));
+    return JSON.parse(window.localStorage.getItem("log:" + this.articleId));
   }
 
   // remove all log entries for specified article
@@ -1057,7 +1054,7 @@ class Article {
       currency = this.articleCurrency;
     } else {
       console.log("Biet-O-Matic: Article %s - using default currency EUR", this.articleId);
-      currency = 'EUR';
+      currency = 'EUR?';
     }
     let price;
     if (this.hasOwnProperty('articleBidPrice'))
@@ -1065,7 +1062,7 @@ class Article {
     else if (this.hasOwnProperty('articleBuyPrice'))
       price = this.articleBuyPrice;
     try {
-      return new Intl.NumberFormat('de', {style: 'currency', currency: currency}).format(price);
+      return new Intl.NumberFormat(Popup.lang,{style: 'currency', currency: currency}).format(price);
     } catch (e) {
       return price;
     }
@@ -1073,8 +1070,9 @@ class Article {
 
   // same logic as activateAutoBid from contentScript
   activateAutoBid() {
-    console.debug("Biet-O-Matic: activateAutoBid(%s), maxBidValue=%s (%s), minBidValue=%s (%s)",
-      this.articleId, this.articleMaxBid, typeof this.articleMaxBid,  this.articleMinimumBid, typeof this.articleMinimumBid);
+    console.debug("Biet-O-Matic: activateAutoBid(%s), autoBid=%s, maxBidValue=%s (%s), minBidValue=%s (%s)",
+      this.articleId, this.articleAutoBid, this.articleMaxBid, typeof this.articleMaxBid,
+      this.articleMinimumBid, typeof this.articleMinimumBid);
     //let isMaxBidEntered = (Number.isNaN(maxBidValue) === false);
     const isMinBidLargerOrEqualBidPrice = (this.articleMinimumBid >= this.articleBidPrice);
     const isMaxBidLargerOrEqualMinBid = (this.articleMaxBid >= this.articleMinimumBid);
@@ -1219,7 +1217,7 @@ class Article {
       if (info.auctionEndState === 1) {
         await Group.setState(this.articleGroup, false);
       }
-      await this.updateInfoInStorage(info)
+      await this.updateInfoInStorage(info, null, true)
         .catch(e => {
           console.warn("Biet-O-Matic: Unable to store article info: %s", e.message);
         });
@@ -1573,21 +1571,22 @@ class ArticlesTable {
    * update article with fresh information
    * - if row is null, it will be determined by articleId
    */
-  updateArticle(articleInfo, row = null) {
+  updateArticle(articleInfo, row = null, informTab = false, onlyIfExistsInStorage = false) {
     if (row == null)
       row = this.getRow(`#${articleInfo.articleId}`);
     if (row == null || row.length !== 1) return;
     const article = row.data();
     console.debug("Biet-O-Matic: updateArticle(%s) called. info=%O", articleInfo.articleId, articleInfo);
     // sanity check if the info + row match
-    if (article.articleId !== articleInfo.articleId) {
-      throw new Error("updateArticle() ArticleInfo and Row do not match!");
+    if (articleInfo.hasOwnProperty('articleId') && article.articleId !== articleInfo.articleId) {
+      throw new Error(`updateArticle() Article Id from row=${article.articleId} and info=${articleInfo.articleId} do not match!`);
     }
     const modifiedInfo = article.updateInfo(articleInfo);
     if (modifiedInfo.modifiedForStorage > 0) {
       row.invalidate('data').draw(false);
-      // update info in storage, if there is any change. Do not inform the articleTab.
-      article.updateInfoInStorage(articleInfo, null, true)
+      let tabId = informTab ? article.tabId : null;
+      // update info in storage, if there is any change
+      article.updateInfoInStorage(articleInfo, tabId, onlyIfExistsInStorage)
         .catch(e => {
           console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
         });
@@ -1611,7 +1610,7 @@ class ArticlesTable {
   }
 
   /*
- * Updates the maxBid input and autoBid checkbox for a given row
+ * Updates the maxBid input and autoBid checkbox for a given row, triggered from tab
  * Note: the articleInfo keys are the short keys (maxBid, autoBid) as the info comes from contentScript
  * Also performs row redraw to show the updated data.
  */
@@ -1624,28 +1623,25 @@ class ArticlesTable {
     const info = {};
 
     // minBid
-    if (articleInfo.hasOwnProperty('minBid')) {
-      info.articleMinimumBid = articleInfo.minBid;
+    if (articleInfo.hasOwnProperty('articleMinimumBid')) {
+      info.articleMinimumBid = articleInfo.articleMinimumBid;
     }
     // maxBid
-    if (articleInfo.hasOwnProperty('maxBid')) {
-      if (articleInfo.maxBid == null || Number.isNaN(articleInfo.maxBid)) {
+    if (articleInfo.hasOwnProperty('articleMaxBid')) {
+      if (articleInfo.articleMaxBid == null || Number.isNaN(articleInfo.articleMaxBid)) {
         info.articleMaxBid = 0;
       } else {
-        info.articleMaxBid = articleInfo.maxBid;
+        info.articleMaxBid = articleInfo.articleMaxBid;
       }
     }
     // autoBid
-    if (articleInfo.hasOwnProperty('autoBid')) {
-      if (articleInfo.autoBid != null) {
-        info.articleAutoBid = articleInfo.autoBid;
+    if (articleInfo.hasOwnProperty('articleAutoBid')) {
+      if (articleInfo.articleAutoBid != null) {
+        info.articleAutoBid = articleInfo.articleAutoBid;
       }
     }
 
-    const modifiedInfo = article.updateInfo(info);
-    if (modifiedInfo.modifiedForStorage > 0) {
-      row.invalidate('data').draw(false);
-    }
+    this.updateArticle(info, row, false, false);
   }
 
   /*
@@ -1654,7 +1650,7 @@ class ArticlesTable {
     - if in table, update the entry
     - also check if same tab has been reused
     - if tab is specified:
-    - if updatedFromRemote will inform the open tab about the changes
+    - if updatedFromRemote will inform the open tab about the changes and prevent log addition
   */
   addOrUpdateArticle(articleInfo, tab = null, updatedFromRemote = false) {
     if (!articleInfo.hasOwnProperty('articleId'))
@@ -1689,22 +1685,22 @@ class ArticlesTable {
         this.addArticle(a);
       });
     } else {
-      // article in table - update it
-      this.updateArticle(articleInfo, rowByArticleId);
-      // send update to article tab (update maxBid, autoBid)
-      if (updatedFromRemote && articleInfo.hasOwnProperty('articleMaxBid') && articleInfo.hasOwnProperty('articleAutoBid')) {
-        const row = this.getRow(`#${articleInfo.articleId}`);
-        if (row.data().hasOwnProperty('tabId') && row.data().tabId != null) {
-          let tabId = row.data().tabId;
-          browser.tabs.sendMessage(tabId, {
-            action: 'UpdateArticleMaxBid',
-            detail: {articleMaxBid: articleInfo.articleMaxBid, articleAutoBid: articleInfo.articleAutoBid}
-          }).catch(e => {
-            console.log("Biet-O-Matic: addOrUpdateArticle() Sending UpdateArticleMaxBid to tab %s failed: %s",
-              tabId, e.message);
-          });
-        }
-      }
+      // article in table - update it (do not update storage if not already exists)
+      this.updateArticle(articleInfo, rowByArticleId, false, true);
+      // // send update to article tab (update maxBid, autoBid)
+      // if (updatedFromRemote && articleInfo.hasOwnProperty('articleMaxBid') && articleInfo.hasOwnProperty('articleAutoBid')) {
+      //   const row = this.getRow(`#${articleInfo.articleId}`);
+      //   if (row.data().hasOwnProperty('tabId') && row.data().tabId != null) {
+      //     let tabId = row.data().tabId;
+      //     browser.tabs.sendMessage(tabId, {
+      //       action: 'UpdateArticleMaxBid',
+      //       detail: {articleMaxBid: articleInfo.articleMaxBid, articleAutoBid: articleInfo.articleAutoBid}
+      //     }).catch(e => {
+      //       console.log("Biet-O-Matic: addOrUpdateArticle() Sending UpdateArticleMaxBid to tab %s failed: %s",
+      //         tabId, e.message);
+      //     });
+      //   }
+      // }
     }
   }
 
@@ -2191,7 +2187,7 @@ class ArticlesTable {
     article.getRefreshedInfo()
       .then(info => {
         // apply the update info
-        this.updateArticle(info, row);
+        this.updateArticle(info, row, false, true);
         if (cell.length === 1) {
           cell.node().classList.remove('loading-spinner');
         }
@@ -2478,7 +2474,7 @@ class ArticlesTable {
             if (this.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received from tab %s, articleId=%s, articleDescription=%s",
                 sender.tab.id, request.detail.articleId, request.detail.articleDescription);
-              this.updateArticle(request.detail, null);
+              this.updateArticle(request.detail, null, false, false);
               return Promise.resolve(true);
             }
           } catch (e) {
@@ -2497,14 +2493,8 @@ class ArticlesTable {
               else
                 articleId = request.articleId;
               const row = this.getRow(`#${articleId}`);
-              const article = row.data();
-              if (row.length === 1)
+              if (row != null && row.length === 1)
                 this.updateRowMaxBid(request.detail, row);
-              if (typeof article !== 'undefined') {
-                article.updateInfoInStorage(request.detail, null).then();
-              } else {
-                console.warn(`Biet-O-Matic: Browser Event ebayArticleMaxBidUpdate for tab ${sender.tab.id} failed, article ${request.articleId} could not be determined`);
-              }
               return Promise.resolve(true);
             }
           } catch (e) {
@@ -2601,8 +2591,7 @@ class ArticlesTable {
         case 'addArticleLog':
           try {
             if (this.currentWindowId === sender.tab.windowId) {
-              console.debug("Biet-O-Matic: Browser Event addArticleLog received from tab %s, detail=%s",
-                sender.tab.id, JSON.stringify(request.detail));
+              console.debug("Biet-O-Matic: Browser Event addArticleLog received from tab %s", sender.tab.id);
               const article = this.getRow(`#${request.articleId}`).data();
               // redraw status (COLUMN 6)
               if (request.detail.message.level !== "Performance") {
@@ -2632,7 +2621,7 @@ class ArticlesTable {
               // return the promise
               return article.handleAuctionEnded(request.detail)
                 .then(() => {
-                  this.updateArticle(request.detail, null);
+                  this.updateArticle(request.detail, row, false, false);
                   return Promise.resolve(true);
                 })
                 .catch(e => {
@@ -2855,18 +2844,7 @@ class ArticlesTable {
           info.articleGroup = e.target.value;
         this.lastFocusedInput = null;
       }
-
-      // store info when inputs updated
-      const modifiedInfo = article.updateInfo(info);
-      if (modifiedInfo.modifiedForStorage > 0) {
-        // redraw the row
-        row.invalidate('data').draw(false);
-        // update storage info and inform tab of new values
-        article.updateInfoInStorage(info, article.tabId)
-          .catch(e => {
-            console.log("Biet-O-Matic: Failed to store article info: " + e);
-          });
-      }
+      this.updateArticle(info, row, true, false);
     });
 
     // datatable length change

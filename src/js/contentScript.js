@@ -179,35 +179,29 @@ class EbayArticle {
     const maxBidInput = document.getElementById('MaxBidId');
     // id=BomAutoBid defined by us
     const autoBidInput = document.getElementById('BomAutoBid');
-    if (!info.hasOwnProperty('maxBid') && info.hasOwnProperty('articleMaxBid'))
-      info.maxBid = info.articleMaxBid;
-    if (!info.hasOwnProperty('autoBid') && info.hasOwnProperty('articleAutoBid'))
-      info.autoBid = info.articleAutoBid;
 
     if (maxBidInput != null) {
-      if (info.maxBid != null) {
+      if (info.articleMaxBid != null) {
         try {
-          if (typeof info.maxBid === 'string')
-            info.maxBid = Number.parseFloat(info.maxBid);
-          maxBidInput.value = info.maxBid.toLocaleString('de-DE',
+          if (typeof info.articleMaxBid === 'string')
+            info.articleMaxBid = Number.parseFloat(info.articleMaxBid.toString());
+          maxBidInput.value = info.articleMaxBid.toLocaleString('de-DE',
             {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
         } catch (e) {
-          console.warn("Biet-O-Matic: updateMaxBidInfo() Failed to parse, info.maxBid=%s (%s)",
-            info.maxBid, typeof info.maxBid);
-          maxBidInput.value = info.maxBid.toString();
+          console.warn("Biet-O-Matic: updateMaxBidInfo() Failed to parse, info.articleMaxBid=%s (%s)",
+            info.articleMaxBid, typeof info.articleMaxBid);
+          maxBidInput.value = info.articleMaxBid.toString();
         }
       } else {
-        info.maxBid = Number.parseFloat(maxBidInput.value);
+        info.articleMaxBid = this.articleMaxBid;
       }
       if (autoBidInput != null) {
-        if (info.autoBid != null) {
-          autoBidInput.checked = info.autoBid;
+        if (info.articleAutoBid != null) {
+          autoBidInput.checked = info.articleAutoBid;
         }
       }
-      // update in ebayArticleInfo, it might have been updated by popup
-      this.articleMaxBid = info.maxBid;
-      this.articleAutoBid = info.autoBid;
-      this.activateAutoBidButton(info.maxBid);
+      Object.assign(this, info);
+      this.activateAutoBidButton(info.articleMaxBid, null);
     }
   }
 
@@ -229,7 +223,7 @@ class EbayArticle {
       maxBidValue = maxBidValue.replace(/,/, '.');
       maxBidValue = Number.parseFloat(maxBidValue);
     }
-    console.debug("Biet-O-Matic: activateAutoBidButton(), maxBidValue=%s (%s), minBidValue=%s (%s)",
+    console.debug("Biet-O-Matic: activateAutoBidButton() maxBidValue=%s (%s), minBidValue=%s (%s)",
       maxBidValue, typeof maxBidValue,  minBidValue, typeof minBidValue);
     //let isMaxBidEntered = (Number.isNaN(maxBidValue) === false);
     const isMinBidLargerOrEqualBidPrice = (minBidValue >= this.articleBidPrice);
@@ -237,8 +231,8 @@ class EbayArticle {
     const isMaxBidLargerThanBidPrice = (maxBidValue > this.articleBidPrice);
 
     if (isMinBidLargerOrEqualBidPrice) {
-      //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
-      //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
+      console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
+        isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
       buttonInput.disabled = !isMaxBidLargerOrEqualMinBid;
       // set tooltip for button to minBidValue
       let t = document.querySelector('.tgl-btn');
@@ -351,9 +345,9 @@ class EbayArticle {
             action: 'ebayArticleMaxBidUpdated',
             articleId: this.articleId,
             detail: {
-              maxBid: maxBidInputValue,
-              autoBid: bomAutoBidNew.checked,
-              minBid: minBidValue
+              articleMaxBid: maxBidInputValue,
+              articleAutoBid: bomAutoBidNew.checked,
+              articleMinimumBid: minBidValue
             }
           }).catch((e) => {
             console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
@@ -370,7 +364,7 @@ class EbayArticle {
             action: 'ebayArticleMaxBidUpdated',
             articleId: this.articleId,
             detail: {
-              autoBid: bomAutoBidNew.checked
+              articleAutoBid: bomAutoBidNew.checked
             }
           }).catch((e) => {
             console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
@@ -548,8 +542,8 @@ class EbayArticle {
       if (bidInfo == null) {
         // bid not yet running (or not anymore after page refresh)
         bidInfo = {
-          maxBid: this.articleMaxBid,
-          endTime: this.articleEndTime,
+          articleMaxBid: this.articleMaxBid,
+          articleEndTime: this.articleEndTime,
           started: Date.now()
         };
         window.sessionStorage.setItem(`bidInfo:${this.articleId}`, JSON.stringify(bidInfo));
@@ -859,9 +853,9 @@ class EbayArticle {
     if (settings != null && typeof settings !== 'undefined' && settings.hasOwnProperty('simulation')) {
       simulate = settings.simulation;
       if (currentState.id !== auctionEndStates.unknown.id && simulate) {
-        if (bidInfo != null && ebayArticleInfo.articleBidPrice > bidInfo.maxBid)
+        if (bidInfo != null && ebayArticleInfo.articleBidPrice > bidInfo.articleMaxBid)
           currentState = auctionEndStates.overbid;
-        else if (bidInfo != null && ebayArticleInfo.articleBidPrice <= bidInfo.maxBid)
+        else if (bidInfo != null && ebayArticleInfo.articleBidPrice <= bidInfo.articleMaxBid)
           currentState = auctionEndStates.purchased;
       }
     }
@@ -898,7 +892,7 @@ class EbayArticle {
         ebayArticleInfo.articleId, JSON.stringify(bidInfo));
       // go back to previous page (?)
       // remove bidinfo if the auction for sure ended
-      if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
+      if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.articleEndTime <= Date.now()) {
         ebayArticleInfo.auctionEndState = currentState.id;
         console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s (%d)",
           ebayArticleInfo.articleAuctionStateText, currentState.id);
