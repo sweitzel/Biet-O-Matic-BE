@@ -45,6 +45,8 @@ und der Artikel bleibt in der Tabelle.
   auf den Sofortkaufpreis, **minus 1 Cent** reduziert.
 * Das Feld für den Artikel Automatikmodus wird erst zum anklicken freigegeben, wenn das gesetzte Maximal Gebot höher
   als der aktuelle Artikel Preis bzw. der Minimalerhöhungsschritt ist.
+* Aktualisierungen der Artikel Attribute (Preis, Anzahl Gebote, usw.) werden durch setzen einer gelben Hintergrundfarbe
+  auf den geänderten Zellen visualisiert. Die Visualisierung bleibt bis zum neu laden der Seite bestehen.
 
 {{< hint info >}}
 Der Artikel Automatikmodus wird automatisch deaktiviert, wenn der Artikel Preis während der Auktion über das definierte Maximalgebot geht.
@@ -76,8 +78,7 @@ Sie einfach die "Umschalt-Taste" während sie den globalen Automatikmodus aktivi
 wenn das BE Symbol ein kleines 'T' anzeigt. 
 Der Einzige Unterschied zum Normalen bieten ist, das das Gebot kurz vor Ablauf der Auktion nicht bestätigt wird.
 
-Das Ergebnis der Auktion wird ebenfalls simuliert und sollte dann in der Regel zur deaktivierung der Gruppen-Automatik,
-führen, da eine Auktion als "gewonnen" angenommen wird.
+Die Simulation führt allerdings nicht zur Deaktivierung der Biet-Automatik, da kein "gekaufter" Status simuliert wird.
 
 ## eBay Artikel Seite
 Beim Ladevorgang der eBay Artikelseite, erweitert BE diese durch einen Knopf, welcher den Automatikmodus für diesen

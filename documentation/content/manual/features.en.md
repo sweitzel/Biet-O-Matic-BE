@@ -43,6 +43,8 @@ and the item will remain in the table.
   reduced to the buy-now price, **minus 1 cent**.
 * The field for the item auto-bid mode is only enabled for clicking, if the entered maximum bid is higher than
   the current item price + the increase step.
+* Updates for Item attributes (e.g. price, number of bids etc) will be visualized by setting a yellow background color
+  on the updated cells. That highlighting color will persist until the page is reloaded.
 
 {{< hint info >}}
 The item auto-bid mode is automatically deactivated if the item price goes above the defined maximum bid during the auction.
@@ -73,8 +75,7 @@ the mouse (scroll all the way down to get all the entries) and then copy with th
 If desired, the simulation mode can also be activated for testing without risk.
 The only difference to the normal bid is that the bid is not confirmed shortly before the auction ends.
 
-The result of the auction will also be simulated and should be used to deactivate the group automatic,
-because an auction is assumed to be "won".
+The simulation will not lead to deactivation of the auto-bid, as no purchased end-state will be simulated.
 
 ## eBay Item Page
 When loading the eBay item page, BE enhances it with a button that enables the auto-bid mode for this item.

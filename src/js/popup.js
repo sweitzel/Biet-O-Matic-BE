@@ -1135,7 +1135,7 @@ class Article {
       if (previous != null && (articles[previous].articleEndTime - articles[key].articleEndTime) < 15*1000) {
         const diff = (articles[key].articleEndTime - (articles[previous].articleEndTime - 10*1000)) / 1000;
         articles[key].adjustmentReason = Popup.getTranslation('popup_adjustedBidtime',
-          '.Bid time was adjusted by $1 s, due to collision with Item %2', diff.toString(10), previous);
+          '.Bid time was adjusted by $1 s, due to collision with Item %2', diff.toString(10), previous.toString());
         // todo adjust the bidding preparation time (currently hardcoded to 30s)
         // leave 5s buffer (twice the biddingTime)
         if (articles[previous].articleEndTime < (Date.now() + 5*1000)) {
