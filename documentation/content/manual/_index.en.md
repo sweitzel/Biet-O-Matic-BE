@@ -5,66 +5,63 @@ weight: 1
 type: "docs"
 ---
 
-# Handbuch
+# Manual
 
+## Requirements
 
-## Voraussetzungen
+### Supported eBay platforms
+Only www.ebay.de and www.ebay.com are supported.
 
-### Unterstützte eBay Plattformen
-Es werden nur www.ebay.de und www.ebay.com unterstützt.
+### Accurate System Clock
+BE uses the system clock to execute tasks at certain times. It is especially important that the maximum bid is received
+on eBay before the auction ends - and on the other hand not too early - so that other bidders don't get into a bidding war.
 
-### Genaue System Uhr
-BE verwendet die Systemuhr, um Aufgaben zu gewissen Zeitpunkte auszuführen. Besonders wichtig ist es natürlich,
-das das Maximal Gebot bei eBay eingeht, bevor die Auktion endet - und auf der anderen Seite auch nicht zu früh - damit 
-nicht andere Bieter sich eine Gebot-Schlacht liefern. 
+Therefore please make sure that your PC automatically synchronizes the time with the internet time. Since Windows 7 this
+function is built in and active by default. However, it can happen that the preconfigured update interval is not sufficient
+(for example, if the hardware timer is inaccurate) and an adjustment is necessary.
 
-Von daher stellen sie bitte sicher das ihr PC die Zeit automatisch mit der Internet Zeit synchronisiert. Seit Windows
-7 ist diese Funktion übrigens eingebaut und standardmäßig aktiv. Allerdings kann es vorkommen das das voreingestellte
-Interval nicht ausreicht (beispielsweise bei einem ungenauen Zeitgeber der Hardware) und hier eine Anpassung nötig ist.
+By the way, BE has no technical possibility to correct the time on its own - the browser does not have the necessary
+authorizations for this.
 
-BE hat übrigens keine technische Möglichkeit die Zeit selbständig zu korrigieren - hierzu fehlen im Browser die
-Berechtigungen. 
-
-## Erweiterungs Verwaltung 
+## Extension Management
 ### Installation
-Die Installation der BE erfolgt über den Browser Erweiterungs Store. Hierbei ist nichts spezielles zu beachten.
+The BE is installed using the browser extension store. There is nothing special to note here.
 
 ### Update
-Das Update der BE erfolgt automatisch über den Browser. Ein Browserneustart ist zum aktivieren des Updates *nicht* 
-erforderlich. 
+BE is updated automatically by the browser at regular times.
+It is not necessary to restart the browser to activate the update.
 
-> Wenn vor dem Update der globale Automatikmodus in einem Fenster aktiv war, wird nach dem Update BE wieder automatisch
-> gestartet, damit weiter automatisch geboten werden kann.
+> If the global auto-bid was active in a window before the update, BE will start again automatically after the update
+> so that bidding can continue automatically.
 
-### Deinstallation
-Die Deinstallation der BE erolgt über den Browser. Beim löschen der BE werden auch die gespeicherten Daten gelöscht.
+### De-installation
+De-installing the BE is done via the browser. When you delete the BE, the stored data is also deleted.
 
-# Bedienung
-Siehe Abschnitt [Funktionen]({{< ref "/manual/features" >}})
+## Operation
+See section [Features]({{< ref "/manual/features" >}})
 
-# Gespeicherte Daten
-## Artikel Informationen
-* Informationen über Artikel werden im `browser.sync.storage` gesichert, sobald der Benutzer ein Maximal Gebot oder Gruppe für
-diesen Artikel eingibt.
-* Die Informationen stehen auch auf anderen (eigenen) Rechnern zur Verfügung, falls der Benutzer die Sitzungs Synchronisation
-aktiviert hat.
+## Stored data
 
-## Ereignis Protokolle 
-* Ereignis Protokolle werden im `window.localStorage` gesichert sobald relevante Ereignisse eintreffen
-* Artikel Biet-Ereignis Protokolle enthalten Informationen über den Artikel und helfen dem Nutzer, aber auch dem
-Hersteller dabei Probleme zu prüfen.
-* Artikel Informations Ereignisse werden erstellt, sobald sich Informationen bezüglich eines Artikels geändert haben.
-* Einstellungsänderungs Ereignisse werden erstellt, falls sich eine Einstellung (z.B. Automatikmodus) geändert hat.
+### Item Information
+
+* Information about an item are saved in the `browser.sync.storage` when the user enters a maximum bid or group for it.
+* The information is also available on other (own) computers if the user has activated session synchronization.
+
+### Event Logs
+
+* Event logs are saved in `window.localStorage` as soon as relevant events occur.
+* Item bidding event logs contain information about the item and help the user, but also the support to check for problems.
+* Item information events are created when information about an item has changed.
+* Setting-change events are created when a setting (e.g. automatic mode) has changed.
 
 {{< hint info >}}
-Sämtliche Protokolle werden nur lokal gespeichert und nicht synchronisiert
+All event logs are only stored locally and are not synchronized with other Computers
 {{< /hint >}}
 
-# Datenexport
-Ein Datenexport zur Sicherung oder Archivierung ist aktuell noch nicht eingebaut.
-Es ist aber möglich, dieses über die Erweiterung "Storage Area Explorer" durchzuführen.
+## Data export
+A data export for backup or archiving is currently not yet implemented.
+However, it is possible to do this using the "Storage Area Explorer" extension.
 
-Zur Analyse von Problemen kann es hilfreich sein diese Daten zur Analyse zu exportieren manuell in der Support-Anfrage
-zu übermitteln.
+> To help support analyze problems, it can be helpful to export this data for analysis manually in the support request.
 
-{{< image src="be_export.de.png" alt="Daten Sicherung" >}}
+{{< image src="be_export.de.png" alt="Data export" >}}

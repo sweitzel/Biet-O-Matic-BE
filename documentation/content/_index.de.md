@@ -36,13 +36,13 @@ Bitte beachten Sie:
 * Für Anfragen bitte erst kurz prüfen ob es bereits diese oder eine ähnliche Anfrage gab
 * Neue Anfragen bitte immer in separate "Topics" und in der richtigen Kategorie stellen 
 
-## QuellCode
-Der QuellCode von B-O-M BE ist auf www.github.com/sweitzel/Biet-O-Matic-BE erhältlich.
+## Quell-Code
+Der Quell-Code von B-O-M BE ist auf www.github.com/sweitzel/Biet-O-Matic-BE erhältlich.
 Es ist auch möglich über die bekannten Möglichkeiten Änderungen am QuellCode über "Pull Requests" direkt anzufragen.
 Auch lassen sich auf GitHub Probleme melden, was vermutlich zu einer besseren Ordnung und Übersichtlichkeit 
 führt (Ein Forum ist ja kein Problem/Ticket Management System)
 
-Der QuellCode steht unter der [Apache Lizenz](https://github.com/sweitzel/Biet-O-Matic-BE/blob/master/LICENSE)
+Der Quell-Code steht unter der [Apache Lizenz](https://github.com/sweitzel/Biet-O-Matic-BE/blob/master/LICENSE).
 
 ## Spenden
 B-O-M BE entstand als Freizeit Projekt und in relativ kurzer Zeit. Um jedoch längerfristig die ordnungsgemäße Funktion

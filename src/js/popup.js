@@ -3106,12 +3106,16 @@ class Popup {
 
     this.table = new ArticlesTable(this, '#articles');
 
+    /*
+     * restore settings from session storage (autoBidEnabled, bidAllEnabled, compactView)
+     * Note: requires table to be initialized already
+     */
+    this.restoreSettings();
+
     await this.table.addArticlesFromStorage();
     this.table.addArticlesFromTabs();
     await Popup.checkBrowserStorage();
 
-    // restore settings from session storage (autoBidEnabled, bidAllEnabled, compactView)
-    this.restoreSettings();
   }
 
   /*

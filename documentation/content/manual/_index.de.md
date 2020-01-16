@@ -7,7 +7,6 @@ type: "docs"
 
 # Handbuch
 
-
 ## Voraussetzungen
 
 ### Unterstützte eBay Plattformen
@@ -39,17 +38,17 @@ erforderlich.
 ### Deinstallation
 Die Deinstallation der BE erolgt über den Browser. Beim löschen der BE werden auch die gespeicherten Daten gelöscht.
 
-# Bedienung
+## Bedienung
 Siehe Abschnitt [Funktionen]({{< ref "/manual/features" >}})
 
-# Gespeicherte Daten
-## Artikel Informationen
+## Gespeicherte Daten
+### Artikel Informationen
 * Informationen über Artikel werden im `browser.sync.storage` gesichert, sobald der Benutzer ein Maximal Gebot oder Gruppe für
 diesen Artikel eingibt.
 * Die Informationen stehen auch auf anderen (eigenen) Rechnern zur Verfügung, falls der Benutzer die Sitzungs Synchronisation
 aktiviert hat.
 
-## Ereignis Protokolle 
+### Ereignis Protokolle 
 * Ereignis Protokolle werden im `window.localStorage` gesichert sobald relevante Ereignisse eintreffen
 * Artikel Biet-Ereignis Protokolle enthalten Informationen über den Artikel und helfen dem Nutzer, aber auch dem
 Hersteller dabei Probleme zu prüfen.
@@ -60,11 +59,11 @@ Hersteller dabei Probleme zu prüfen.
 Sämtliche Protokolle werden nur lokal gespeichert und nicht synchronisiert
 {{< /hint >}}
 
-# Datenexport
+## Datenexport
 Ein Datenexport zur Sicherung oder Archivierung ist aktuell noch nicht eingebaut.
 Es ist aber möglich, dieses über die Erweiterung "Storage Area Explorer" durchzuführen.
 
-Zur Analyse von Problemen kann es hilfreich sein diese Daten zur Analyse zu exportieren manuell in der Support-Anfrage
-zu übermitteln.
+> Zur Analyse von Problemen kann es hilfreich sein, diese Daten zur Analyse zu exportieren und in der Support-Anfrage
+> zu übermitteln.
 
 {{< image src="be_export.de.png" alt="Daten Sicherung" >}}
