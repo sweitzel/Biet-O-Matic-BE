@@ -77,8 +77,7 @@ class EbayArticle {
       this.ebayParser.init(oldInfo);
       info = this.ebayParser.parsePage();
     } catch (e) {
-      console.log("Biet-O-Matic: EbayParser failed: %s", e.message);
-      return;
+      throw new Error("Biet-O-Matic: EbayParser failed: " + e);
     }
     // check if the same article is already handled by another tab
     const result = await browser.runtime.sendMessage({
@@ -92,6 +91,10 @@ class EbayArticle {
         throw new Error(`Biet-O-Matic: Stopping execution on this page, already active in another tab (${result.data.tabId}).`);
       }
     }
+
+    if (info.articleId == null)
+      return Promise.reject("Parsing page information failed: articleId null");
+
     // assign the determined info to this Article instance
     Object.assign(this, info);
 
@@ -390,7 +393,7 @@ class EbayArticle {
               console.debug("Biet-O-Matic: Mutation received: %d seconds left", timeLeftInSeconds);
               this.doBid()
                 .catch(e => {
-                  console.info("Biet-O-Matic: doBid() was aborted: %s", e.message);
+                  console.info("Biet-O-Matic: doBid() was aborted: %s", e);
                   EbayArticle.sendArticleLog(this.articleId, e);
                 });
             }
@@ -694,7 +697,7 @@ class EbayArticle {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
           level: EbayArticle.getTranslation('generic_success', '.Success'),
           message: EbayArticle.getTranslation('cs_testBidFinished',
-            'Test bid ended $1 ms before auction has ended.', t.toString())
+            '.Test bid ended $1 ms before auction has ended.', t.toString())
         });
       } else {
         // confirm the bid
@@ -707,7 +710,7 @@ class EbayArticle {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
           level: EbayArticle.getTranslation('generic_success', '.Success'),
           message: EbayArticle.getTranslation('cs_bidFinished ',
-            'Bid performed $1 ms before auction has ended.', t.toString()),
+            '.Bid performed $1 ms before auction has ended.', t.toString()),
         });
       }
       // finally also send performance info to popup
@@ -834,21 +837,9 @@ class EbayArticle {
     // determine auction state - if any yet
     let currentState = EbayArticle.getAuctionEndState(ebayArticleInfo);
     // info related to previous bidding
-    const bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
+    const bidInfo = JSON.parse(window.sessionStorage.getItem("bidInfo:" + ebayArticleInfo.articleId));
     // info from sync storage
     const articleStoredInfo = await browser.storage.sync.get(ebayArticleInfo.articleId);
-
-    /*
-     * retrieve settings from popup
-     * if simulation is on, then we define bid status:
-     * - if endPrice > bidPrice: overbid
-     * - if endPrice <= bidprice: purchased
-     */
-    // retrieve settings from popup
-    // if simulation is on, then we define successful bid status randomly with 33% chance (ended, overbid, purchased)
-    const settings = await browser.runtime.sendMessage({
-      action: 'getWindowSettings',
-    });
 
     /*
      * Retrieve stored article info from popup
@@ -963,16 +954,16 @@ class EbayArticle {
           console.debug("Biet-O-Matic: Initialized - Article Info: %s", ebayArticle.toString());
           ebayArticle.extendPage();
           ebayArticle.monitorChanges().catch(e => {
-            console.warn(`Biet-O-Matic: monitorChanges() failed: ${e.message}`);
+            console.warn("Biet-O-Matic: monitorChanges() failed: " + e);
           });
         } catch (e) {
-          console.warn(`Biet-O-Matic: Internal Error while post-initializing: ${e.message}`);
+          console.warn("Biet-O-Matic: Internal Error while post-initializing: " + e);
         }
       })
       .catch(e => {
-        console.error(`Biet-O-Matic: Article Init failed: ${e.message}`);
+        console.error("Biet-O-Matic: Article Init failed: " + e);
       });
   }).catch(e => {
-    console.warn(`Biet-O-Matic: handleReload() failed: ${e.message}`);
+    console.warn("Biet-O-Matic: handleReload() failed: " + e);
   });
 })();

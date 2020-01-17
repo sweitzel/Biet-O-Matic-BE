@@ -27,7 +27,7 @@
     "message": "Global Auto-Bid is inactive"
   },
   "cs_bidFinished": {
-    "message": "Bid process has been completed $1 ms before the auction ended"
+    "message": "Bid process has been completed ${1}ms before the auction ended"
   },
   "cs_bidding": {
     "message": "Bidding"
@@ -84,7 +84,7 @@
     "message": "Problem reported by ebay"
   },
   "cs_testBidFinished": {
-    "message": "Test bid process (till confirmation) has been completed $1 ms before the auction ended"
+    "message": "Test bid process (till confirmation) has been completed ${1}ms before the auction ended"
   },
   "filePopup": {
     "message": "popup.en.html"
@@ -174,7 +174,7 @@
     "message": "Activates item auto-bid"
   },
   "popup_adjustedBidtime": {
-    "message": "Adjusted bid-time by $1 s due to risk of colliding with item $2"
+    "message": "Adjusted bid-time by ${1}s due to risk of colliding with item $2"
   },
   "popup_articleAuctionEnded": {
     "message": "Item auction has already ended"

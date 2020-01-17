@@ -174,7 +174,7 @@
     "message": "Aktiviert den Automatikmodus für diesen Artikel"
   },
   "popup_adjustedBidtime": {
-    "message": "Bietzeitpunkt wurde um $1 s angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
+    "message": "Bietzeitpunkt wurde um ${1}s angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
   },
   "popup_articleAuctionEnded": {
     "message": "Artikel Auktion hat bereits geendet"

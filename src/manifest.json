@@ -2,7 +2,7 @@
   "name": "__MSG_appName__",
   "short_name": "BOM",
   "description": "__MSG_appDesc__",
-  "default_locale": "de",
+  "default_locale": "en",
   "background": {
     "scripts": [
       "background.bundle.js"

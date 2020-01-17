@@ -27,8 +27,8 @@ import 'datatables.net-responsive-jqui';
 import 'datatables.net-rowgroup-jqui';
 
 // date-fns as alternative to moment
-import { format, formatDistanceToNow } from 'date-fns';
-import { de, en } from 'date-fns/locale';
+import {format, formatDistanceToNow} from 'date-fns';
+import {de, en} from 'date-fns/locale';
 
 // FontAwesome
 import '@fortawesome/fontawesome-free/css/all.css';
@@ -90,7 +90,7 @@ class Group {
     if (groupInfo.hasOwnProperty(name) && groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === autoBid)
       return;
 
-    groupInfo[name] = { autoBid: autoBid, timestamp: Date.now() };
+    groupInfo[name] = {autoBid: autoBid, timestamp: Date.now()};
     Popup.cachedGroups[name] = groupInfo[name];
     //console.log("group.setState %s", JSON.stringify(groupInfo));
 
@@ -157,12 +157,12 @@ class Group {
         // check article is used from previous determined info
         if (usedGroups.hasOwnProperty(groupName)) return;
         // remove if group has no timestamp or timestamp is older 5 days
-        if (!groups[groupName].hasOwnProperty('timestamp') || (Date.now() - groups[groupName].timestamp) / 1000 > 60*60*24*5) {
+        if (!groups[groupName].hasOwnProperty('timestamp') || (Date.now() - groups[groupName].timestamp) / 1000 > 60 * 60 * 24 * 5) {
           console.debug("Biet-O-Matic: Group.removeAllUnused() Removing group: %s", groupName);
           Group.remove(groupName);
         }
       });
-    } catch(e) {
+    } catch (e) {
       console.log("Biet-O-Matic: Group.removeAllUnused() Error: %s", e.message);
     }
   }
@@ -194,6 +194,7 @@ class Group {
   static waitFor(selector, timeout = 3000) {
     return new Promise(function (resolve, reject) {
       waitForElementToDisplay(selector, 250, timeout);
+
       function waitForElementToDisplay(selector, time, timeout) {
         if (timeout <= 0) {
           reject(`waitFor(${selector}), timeout expired!`);
@@ -246,6 +247,7 @@ class AutoBid {
     }
     return info;
   }
+
   static setLocalState(autoBidEnabled, simulation) {
     Popup.updateSetting('autoBidEnabled', autoBidEnabled);
     Popup.updateSetting('simulation', simulation);
@@ -330,9 +332,9 @@ class AutoBid {
         AutoBid.setLocalState(info.autoBidEnabled);
       }
     } else if (Object.keys(localInfo).length === 0) {
-        Object.assign(info, syncInfo);
-        // initially set localState after extension update
-        AutoBid.setLocalState(info.autoBidEnabled, info.simulation);
+      Object.assign(info, syncInfo);
+      // initially set localState after extension update
+      AutoBid.setLocalState(info.autoBidEnabled, info.simulation);
     }
     return info;
   }
@@ -482,7 +484,7 @@ class AutoBid {
     } catch (e) {
       console.warn(`Biet-O-Matic: deadManSwitch() internal error: ${e.message}`);
     } finally {
-      setTimeout( function () {
+      setTimeout(function () {
         AutoBid.deadManSwitch();
       }, 60000);
     }
@@ -492,11 +494,11 @@ class AutoBid {
   static async removeDeadAutoBid() {
     let syncState = await AutoBid.getSyncState();
     if (syncState.hasOwnProperty('timestamp') && syncState.timestamp != null) {
-      if ((Date.now() - syncState.timestamp)/1000 > 300 ) {
+      if ((Date.now() - syncState.timestamp) / 1000 > 300) {
         console.debug("Biet-O-Matic: removeDeadAutoBid() Removing dead entry: %s", JSON.stringify(syncState));
         await AutoBid.setSyncState(null);
       } else {
-        console.debug("Biet-O-Matic: removeDeadAutoBid() Entry good (%ss old)", (Date.now() - syncState.timestamp)/1000);
+        console.debug("Biet-O-Matic: removeDeadAutoBid() Entry good (%ss old)", (Date.now() - syncState.timestamp) / 1000);
       }
     }
   }
@@ -555,6 +557,7 @@ class AutoBid {
     AutoBid.deadManSwitch();
   }
 }
+
 // static class vars
 AutoBid.beWindowId = null;
 
@@ -734,7 +737,8 @@ class Article {
         } else {
           console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
         }
-        await setTimeout(() => {}, 1000);
+        await setTimeout(() => {
+        }, 1000);
       }
     } while (retryCount++ < 3);
     return result;
@@ -861,20 +865,20 @@ class Article {
     };
     let messages = [];
     const checkList = {
-      articleDescription:       {i18nKey: 'generic_description', defaultText: '.Description'},
-      articleBidPrice:          {i18nKey: 'generic_price', defaultText: '.Price'},
-      articleBidCount:          {i18nKey: 'popup_numberbids', defaultText: '.Number of Bids'},
-      articleBuyPrice:          {i18nKey: 'popup_buynowprice', defaultText: '.Buy-It-Now Price'},
-      articleShippingCost:      {i18nKey: 'popup_shippingcosts', defaultText: '.Shipping Costs'},
-      articleShippingMethods:   {i18nKey: 'popup_shippingmethods', defaultText: '.Shipping Methods'},
-      articlePaymentMethods:    {i18nKey: 'popup_paymentmethods', defaultText: '.Payment Methods'},
-      articleMinimumBid:        {i18nKey: 'popup_minimumbid', defaultText: '.Minimum Bid'},
-      articleEndTime:           {i18nKey: 'popup_auctionendtime', defaultText: '.Auction End Time'},
-      articleAuctionStateText:  {i18nKey: 'generic_status', defaultText: '.Status'},
-      articleImage:             {i18nKey: 'generic_picture', defaultText: '.Picture'},
-      articleAutoBid:           {i18nKey: 'generic_articleAutoBid', defaultText: '.Article Auto-Bid'},
-      articleMaxBid:            {i18nKey: 'generic_articleMaxBid', defaultText: '.Article Maximum Bid'},
-      articleGroup:             {i18nKey: 'generic_group', defaultText: '.Article Group'}
+      articleDescription: {i18nKey: 'generic_description', defaultText: '.Description'},
+      articleBidPrice: {i18nKey: 'generic_price', defaultText: '.Price'},
+      articleBidCount: {i18nKey: 'popup_numberbids', defaultText: '.Number of Bids'},
+      articleBuyPrice: {i18nKey: 'popup_buynowprice', defaultText: '.Buy-It-Now Price'},
+      articleShippingCost: {i18nKey: 'popup_shippingcosts', defaultText: '.Shipping Costs'},
+      articleShippingMethods: {i18nKey: 'popup_shippingmethods', defaultText: '.Shipping Methods'},
+      articlePaymentMethods: {i18nKey: 'popup_paymentmethods', defaultText: '.Payment Methods'},
+      articleMinimumBid: {i18nKey: 'popup_minimumbid', defaultText: '.Minimum Bid'},
+      articleEndTime: {i18nKey: 'popup_auctionendtime', defaultText: '.Auction End Time'},
+      articleAuctionStateText: {i18nKey: 'generic_status', defaultText: '.Status'},
+      articleImage: {i18nKey: 'generic_picture', defaultText: '.Picture'},
+      articleAutoBid: {i18nKey: 'generic_articleAutoBid', defaultText: '.Article Auto-Bid'},
+      articleMaxBid: {i18nKey: 'generic_articleMaxBid', defaultText: '.Article Maximum Bid'},
+      articleGroup: {i18nKey: 'generic_group', defaultText: '.Article Group'}
     }
 
     for (const key in checkList) {
@@ -891,7 +895,6 @@ class Article {
     }
 
     if (shouldLogChange && result.modifiedForStorage > 0) {
-      console.log("Adding log for info=%O, messages=%O", info, messages);
       this.addLog({
         component: Popup.getTranslation('generic_item', '.Item'),
         level: Popup.getTranslation('generic_updated', '.Updated'),
@@ -942,7 +945,7 @@ class Article {
         else
           return `${description}: ${oldVal} -> ${newVal}`;
       }
-    } catch(e) {
+    } catch (e) {
       console.warn(`getDiffMessage(${description}) failed: ${e.message}`);
       return `${description}: Kann die Unterschiede nicht anzeigen!`;
     }
@@ -1031,7 +1034,7 @@ class Article {
   // returns the autoBid state for window and article group
   async getAutoBidState() {
     let groupName = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
-    if (this.hasOwnProperty('articleGroup') && this.articleGroup != null && typeof this.articleGroup !== 'undefined' )
+    if (this.hasOwnProperty('articleGroup') && this.articleGroup != null && typeof this.articleGroup !== 'undefined')
       groupName = this.articleGroup;
     const info = {
       articleAutoBid: this.articleAutoBid,
@@ -1060,7 +1063,7 @@ class Article {
     else if (this.hasOwnProperty('articleBuyPrice'))
       price = this.articleBuyPrice;
     try {
-      return new Intl.NumberFormat(Popup.lang,{style: 'currency', currency: currency}).format(price);
+      return new Intl.NumberFormat(Popup.lang, {style: 'currency', currency: currency}).format(price);
     } catch (e) {
       return price;
     }
@@ -1115,7 +1118,7 @@ class Article {
       };
     });
 
-    const sorter = function(a,b) {
+    const sorter = function (a, b) {
       // sort by articleId if endTimes are same
       if (a.articleEndTime === b.articleEndTime) {
         return a.articleId - b.articleId;
@@ -1132,16 +1135,16 @@ class Article {
       // sort the array on every iteration, because we modify the articleEndTimes
       const keys = Object.keys(articles).sort(sorter);
       const key = keys[i];
-      if (previous != null && (articles[previous].articleEndTime - articles[key].articleEndTime) < 15*1000) {
-        const diff = (articles[key].articleEndTime - (articles[previous].articleEndTime - 10*1000)) / 1000;
+      if (previous != null && (articles[previous].articleEndTime - articles[key].articleEndTime) < 15 * 1000) {
+        const diff = (articles[key].articleEndTime - (articles[previous].articleEndTime - 10 * 1000)) / 1000;
         articles[key].adjustmentReason = Popup.getTranslation('popup_adjustedBidtime',
-          '.Bid time was adjusted by $1 s, due to collision with Item %2', diff.toString(10), previous.toString());
+          '.Bid time was adjusted by $1s, due to collision with item $2', [diff.toString(10), previous.toString()]);
         // todo adjust the bidding preparation time (currently hardcoded to 30s)
         // leave 5s buffer (twice the biddingTime)
-        if (articles[previous].articleEndTime < (Date.now() + 5*1000)) {
+        if (articles[previous].articleEndTime < (Date.now() + 5 * 1000)) {
           console.warn(`Biet-O-Matic: Failed to adjust Article ${key} bidding time, would be too close to its end time!`);
         } else {
-          articles[key].articleEndTime = articles[previous].articleEndTime - 15*1000;
+          articles[key].articleEndTime = articles[previous].articleEndTime - 15 * 1000;
         }
       }
       previous = key;
@@ -1246,17 +1249,17 @@ class Article {
       return Popup.getTranslation('cs_biddingStatusUnknown', '.Final auction state is unknown.');
   }
 
-  toString () {
+  toString() {
     let str = '';
     String.prototype.trunc =
-      function(n){
-        return this.substr(0,n-1)+(this.length>n?'...':'');
+      function (n) {
+        return this.substr(0, n - 1) + (this.length > n ? '...' : '');
       };
     for (let p in this) {
       if (this.hasOwnProperty(p)) {
         let v = null;
         if (this[p] != null)
-          v  = (this[p] || '').toString().trunc(64);
+          v = (this[p] || '').toString().trunc(64);
         str += `${p}=${v} (${typeof this[p]})\n`;
       }
     }
@@ -1417,7 +1420,7 @@ class ArticlesTable {
         {width: "100px", targets: [4, 5, 8]},
         {width: "220px", targets: [3]},
         {width: "300px", targets: [2, 6]},
-        {type: "natural", targets: [7] }
+        {type: "natural", targets: [7]}
       ],
       searchDelay: 400,
       rowId: 'articleId',
@@ -1438,14 +1441,14 @@ class ArticlesTable {
       },
       dom: '<l<t>ip>',
       stateSave: false,
-      language: ArticlesTable.getDatatableTranslation(navigator.language.slice(0,2))
+      language: ArticlesTable.getDatatableTranslation(navigator.language.slice(0, 2))
     });
   }
 
   // add open article tabs to the table
   addArticlesFromTabs() {
     // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
-    browser.tabs.query({currentWindow: true,url: ['*://*.ebay.de/itm/*', '*://*.ebay.com/itm/*']})
+    browser.tabs.query({currentWindow: true, url: ['*://*.ebay.de/itm/*', '*://*.ebay.com/itm/*']})
       .then(tabs => {
         for (const tab of tabs) {
           const myTab = tab;
@@ -1482,8 +1485,8 @@ class ArticlesTable {
         }
       })
       .catch(e => {
-      console.warn("Biet-O-Matic: Failed to add articles from tabs: %s", e.message);
-    });
+        console.warn("Biet-O-Matic: Failed to add articles from tabs: %s", e.message);
+      });
   }
 
   // add articles which are in storage
@@ -1704,7 +1707,10 @@ class ArticlesTable {
       });
     } else {
       // article in table - update it (do not update storage if not already exists)
-      this.updateArticle(articleInfo, rowByArticleId, {informTab: updatedFromRemote, updatedFromRemote: updatedFromRemote});
+      this.updateArticle(articleInfo, rowByArticleId, {
+        informTab: updatedFromRemote,
+        updatedFromRemote: updatedFromRemote
+      });
       // // send update to article tab (update maxBid, autoBid)
       // if (updatedFromRemote && articleInfo.hasOwnProperty('articleMaxBid') && articleInfo.hasOwnProperty('articleAutoBid')) {
       //   const row = this.getRow(`#${articleInfo.articleId}`);
@@ -1756,7 +1762,7 @@ class ArticlesTable {
    * - generate link to existing or new article tab
    * - include article image if present
    */
-  static renderArticleId (data, type, row) {
+  static renderArticleId(data, type, row) {
     if (type !== 'display') return data;
     let div = document.createElement("div");
     div.id = data;
@@ -2094,17 +2100,20 @@ class ArticlesTable {
     span.textContent = Popup.getTranslation('generic_unlimited', '.unlimited');
     if (data != null && typeof data !== 'undefined') {
       const timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: Popup.locale, addSuffix: true});
-      const date = new Intl.DateTimeFormat('default', {'dateStyle': 'medium', 'timeStyle': 'medium'}).format(new Date(data));
+      const date = new Intl.DateTimeFormat('default', {
+        'dateStyle': 'medium',
+        'timeStyle': 'medium'
+      }).format(new Date(data));
       span.textContent = `${date} (${timeLeft})`;
       if (data - Date.now() < 0) {
         // ended
         span.classList.add('auctionEnded');
         span.title = Popup.getTranslation('popup_articleAuctionEnded', '.Article Auction already ended');
-      } else if (data - Date.now() < 60*1000) {
+      } else if (data - Date.now() < 60 * 1000) {
         // ends within 1 minute
         span.classList.add('auctionEndsVerySoon');
         span.title = Popup.getTranslation('popup_articleAuctionEndsVerySoon', '.Article Auction ends in less then a minute.');
-      } else if (data - Date.now() < 600*1000) {
+      } else if (data - Date.now() < 600 * 1000) {
         // ends within 10 minutes
         span.classList.add('auctionEndsSoon');
         span.title = Popup.getTranslation('popup_articleAuctionEndsSoon', '.Article Auction ends soon.');
@@ -2211,8 +2220,8 @@ class ArticlesTable {
         }
       })
       .catch(e => {
-      console.warn(`Biet-O-Matic: refreshArticle(${article.articleId}) Failed to refresh: ${e}`);
-    });
+        console.warn(`Biet-O-Matic: refreshArticle(${article.articleId}) Failed to refresh: ${e}`);
+      });
   }
 
   // switch datatable compact mode
@@ -2223,7 +2232,7 @@ class ArticlesTable {
       $('#articles').removeClass('compact');
     }
     // redraw table if it is initialized
-    if ( $.fn.dataTable.isDataTable( '#articles' ) ) {
+    if ($.fn.dataTable.isDataTable('#articles')) {
       $('#articles').DataTable().rows().invalidate('data').draw(false);
     }
   }
@@ -2299,7 +2308,7 @@ class ArticlesTable {
    */
   static async reloadTab(tabId = null) {
     if (tabId == null) return;
-    if (Popup.checkRateLimit('reloadTab', tabId, 60*1000)) {
+    if (Popup.checkRateLimit('reloadTab', tabId, 60 * 1000)) {
       return;
     }
     await browser.tabs.reload(tabId);
@@ -2324,7 +2333,7 @@ class ArticlesTable {
 
   // limit to once a minute
   static redrawArticleDate(articleId) {
-    if (Popup.checkRateLimit('redrawArticleDate', articleId, 60*1000)) {
+    if (Popup.checkRateLimit('redrawArticleDate', articleId, 60 * 1000)) {
       return;
     }
     // redraw date (COLUMN 3)
@@ -2454,7 +2463,7 @@ class ArticlesTable {
         // skip articles with open tab
         if (article.hasOwnProperty('tabId') && article.tabId != null) return;
         // skip articles which ended already (longer than 60 minutes ago)
-        if (article.articleEndTime < (Date.now() - 60*60*1000)) return;
+        if (article.articleEndTime < (Date.now() - 60 * 60 * 1000)) return;
         this.refreshArticle(row);
       });
     } catch (e) {
@@ -2464,7 +2473,7 @@ class ArticlesTable {
         this.regularRefreshArticleInfo();
       }, 60000);
     }
-}
+  }
 
   /*
    * Events for the Articles Table:
@@ -2537,7 +2546,7 @@ class ArticlesTable {
                 }
                 if (article.tabId !== sender.tab.id) {
                   console.log("Biet-O-Matic: ebayArticleRefresh() Article %s - Found tabId mismatch %s -> %s",
-                      request.articleId, article.tabId, sender.tab.id);
+                    request.articleId, article.tabId, sender.tab.id);
                 }
                 article.tabRefreshed = Date.now();
                 ArticlesTable.redrawArticleDate(request.articleId);
@@ -2594,12 +2603,16 @@ class ArticlesTable {
               if (request.hasOwnProperty('articleId'))
                 articleId = request.articleId;
               else
-                articleId = this.getArticleIdByTabId(sender.tab.id);
+                Promise.reject("getAutoBidState: missing request attribute: articleId");
               console.debug("Biet-O-Matic: Browser Event getAutoBidState received from tab %s, article=%s",
                 sender.tab.id, articleId);
-              const row = this.getRow(`#${articleId}`);
-              const article = row.data();
-              return Promise.resolve(article.getAutoBidState());
+              if (articleId != null) {
+                const row = this.getRow(`#${articleId}`);
+                const article = row.data();
+                return Promise.resolve(article.getAutoBidState());
+              } else {
+                return Promise.reject("getAutoBidState: articleId is null!");
+              }
             }
           } catch (e) {
             console.warn("Biet-O-Matic: Event.getAutoBidState internal error: %s", e.message);
@@ -2627,10 +2640,7 @@ class ArticlesTable {
         case 'ebayArticleSetAuctionEndState':
           try {
             if (this.currentWindowId === sender.tab.windowId) {
-              let articleId;
               if (!request.hasOwnProperty('articleId') || request.articleId === 'undefined')
-                articleId = this.getArticleIdByTabId(sender.tab.id);
-              else
                 return Promise.reject("ebayArticleSetAuctionEndState: articleId missing");
               const row = this.getRow(`#${request.articleId}`);
               if (typeof row === 'undefined' || row.length !== 1)
@@ -2939,8 +2949,8 @@ class ArticlesTable {
       Group.toggleState(name)
         .then(() => Group.renderState('spanGroupAutoBid', name))
         .catch(e => {
-        console.log("Biet-O-Matic: Failed to toggle group %s autoBid state: %s", name, e.message);
-      });
+          console.log("Biet-O-Matic: Failed to toggle group %s autoBid state: %s", name, e.message);
+        });
     });
   }
 
@@ -2951,7 +2961,7 @@ class ArticlesTable {
   * Contributors: Mike Grier (mgrier.com), Clint Priest, Kyle Adams, guillermo
   * See: http://js-naturalsort.googlecode.com/svn/trunk/naturalSort.js
   */
-  static naturalSort (a, b, sortEmptyGroupLast = false) {
+  static naturalSort(a, b, sortEmptyGroupLast = false) {
     const re = /(^-?[0-9]+(\.?[0-9]*)[df]?e?[0-9]?%?$|^0x[0-9a-f]+$|[0-9]+)/gi;
     const sre = /(^[ ]*|[ ]*$)/g;
     const dre = /(^([\w ]+,?[\w ]+)?[\w ]+,?[\w ]+\d+:\d+(:\d+)?[\w ]?|^\d{1,4}[\/\-]\d{1,4}[\/\-]\d{1,4}|^\w+, \w+ \d+, \d{4})/;
@@ -2968,21 +2978,21 @@ class ArticlesTable {
     const y = b.toString().replace(sre, '') || '';
 
     // chunk/tokenize
-    const xN = x.replace(re, '\0$1\0').replace(/\0$/,'').replace(/^\0/,'').split('\0');
-    const yN = y.replace(re, '\0$1\0').replace(/\0$/,'').replace(/^\0/,'').split('\0');
+    const xN = x.replace(re, '\0$1\0').replace(/\0$/, '').replace(/^\0/, '').split('\0');
+    const yN = y.replace(re, '\0$1\0').replace(/\0$/, '').replace(/^\0/, '').split('\0');
     // numeric, hex or date detection
     const xD = Number.parseInt(x.match(hre), 10) || (xN.length !== 1 && x.match(dre) && Date.parse(x));
     const yD = Number.parseInt(y.match(hre), 10) || xD && y.match(dre) && Date.parse(y) || null;
 
     // first try and sort Hex codes or Dates
     if (yD) {
-      if ( xD < yD ) return -1;
-      else if ( xD > yD ) return 1;
+      if (xD < yD) return -1;
+      else if (xD > yD) return 1;
       else return 0;
     }
 
     // natural sorting through split numeric strings and default strings
-    for(let cLoc=0, numS=Math.max(xN.length, yN.length); cLoc < numS; cLoc++) {
+    for (let cLoc = 0, numS = Math.max(xN.length, yN.length); cLoc < numS; cLoc++) {
       // find floats not starting with '0', string or 0 if not defined (Clint Priest)
       let oFxNcL = !(xN[cLoc] || '').match(ore) && Number.parseFloat(xN[cLoc]) || xN[cLoc] || 0;
       let oFyNcL = !(yN[cLoc] || '').match(ore) && Number.parseFloat(yN[cLoc]) || yN[cLoc] || 0;
@@ -3036,10 +3046,10 @@ class Popup {
       // reload page
       browser.tabs.reload();
     });
-    $('#inpRemoveOldArticles').on('click', async function() {
+    $('#inpRemoveOldArticles').on('click', async function () {
       // sync storage
       let result = await browser.storage.sync.get(null);
-      Object.keys(result).forEach(function(articleId) {
+      Object.keys(result).forEach(function (articleId) {
         let data = result[articleId];
         //Date.now = 1576359588  yesterday = 1576265988;
         let diff = (Date.now() - data.endTime) / 1000;
@@ -3269,9 +3279,11 @@ class Popup {
       return translatedText;
     }
   }
+
   //endregion
 
 }
+
 // static class-var declaration outside the class
 Popup.rateLimit = {};
 
@@ -3290,14 +3302,14 @@ class Favicon {
     // text color
     ctx.fillStyle = Favicon.getContrastYIQ(color);
 
-    let acronym = title.split(' ').map(function(item) {
+    let acronym = title.split(' ').map(function (item) {
       return item[0];
     }).join('').substr(0, 2);
 
     let fontSize = Favicon.measureText(ctx, acronym, 'Arial', 0, 60, 50);
     ctx.font = `bold ${fontSize}px "Arial"`;
-    ctx.textAlign='center';
-    ctx.textBaseline="middle";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = "middle";
     ctx.fillText(acronym, 32, 38);
 
     // prepare icon as Data URL
@@ -3312,13 +3324,13 @@ class Favicon {
   }
 
   static measureText(context, text, fontface, min, max, desiredWidth) {
-    if (max-min < 1) {
+    if (max - min < 1) {
       return min;
     }
-    let test = min+((max-min)/2); //Find half interval
-    context.font=`bold ${test}px "${fontface}"`;
+    let test = min + ((max - min) / 2); //Find half interval
+    context.font = `bold ${test}px "${fontface}"`;
     let found;
-    if ( context.measureText(text).width > desiredWidth) {
+    if (context.measureText(text).width > desiredWidth) {
       found = Favicon.measureText(context, text, fontface, min, test, desiredWidth);
     } else {
       found = Favicon.measureText(context, text, fontface, test, max, desiredWidth);
@@ -3327,15 +3339,16 @@ class Favicon {
   }
 
   /* determine good contrast color (black or white) for given BG color */
-  static getContrastYIQ(hexcolor){
-    const r = parseInt(hexcolor.substr(0,2),16);
-    const g = parseInt(hexcolor.substr(2,2),16);
-    const b = parseInt(hexcolor.substr(4,2),16);
+  static getContrastYIQ(hexcolor) {
+    const r = parseInt(hexcolor.substr(0, 2), 16);
+    const g = parseInt(hexcolor.substr(2, 2), 16);
+    const b = parseInt(hexcolor.substr(4, 2), 16);
     // http://www.w3.org/TR/AERT#color-contrast
-    let yiq = ((r*299)+(g*587)+(b*114))/1000;
+    let yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
     return (yiq >= 128) ? 'black' : 'white';
   }
 }
+
 //endregion
 
 
