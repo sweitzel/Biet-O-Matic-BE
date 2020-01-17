@@ -27,7 +27,7 @@
     "message": "Fenster Automatikmodus ist nicht aktiv"
   },
   "cs_bidFinished": {
-    "message": "Bietvorgang wurde $1 ms bevor die Auktion endete abgeschlossen"
+    "message": "Bietvorgang wurde $1ms vor Auktionsende abgeschlossen"
   },
   "cs_bidding": {
     "message": "Bietvorgang"
@@ -84,7 +84,7 @@
     "message": "Problem von eBay gemeldet"
   },
   "cs_testBidFinished": {
-    "message": "Test Bietvorgang (bis zur Bestätigung) wurde $1 ms bevor die Auktion endete abgeschlossen"
+    "message": "Test Bietvorgang (bis zur Bestätigung) wurde $1ms bevor die Auktion endete abgeschlossen"
   },
   "filePopup": {
     "message": "popup.de.html"
@@ -174,7 +174,7 @@
     "message": "Aktiviert den Automatikmodus für diesen Artikel"
   },
   "popup_adjustedBidtime": {
-    "message": "Bietzeitpunkt wurde um ${1}s angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
+    "message": "Bietzeitpunkt wurde um $1s angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
   },
   "popup_articleAuctionEnded": {
     "message": "Artikel Auktion hat bereits geendet"

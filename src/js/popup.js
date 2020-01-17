@@ -535,7 +535,7 @@ class AutoBid {
     if (JSON.stringify(sortObjByKey(newValue)) === JSON.stringify(sortObjByKey(AutoBid.cachedChange))) {
       console.debug("Biet-O-Matic: AutoBid.checkChangeIsRelevant: Change is not relevant for this id=%s: cached",
         AutoBid.beWindowId);
-      return false
+      return false;
     } else if (newValue.length > 0 && AutoBid.hasOwnProperty('beWindowId') && newValue.autoBid.id === AutoBid.beWindowId) {
       console.debug("Biet-O-Matic: AutoBid.checkChangeIsRelevant: Change is not relevant for this id=%s: %s",
         AutoBid.beWindowId, JSON.stringify(newValue));
@@ -730,6 +730,8 @@ class Article {
     do {
       try {
         result = await browser.tabs.sendMessage(tab.id, {action: "GetArticleInfo"});
+        // abort the retries
+        return;
       } catch (error) {
         if (retryCount >= 3) {
           // all retries failed
@@ -879,7 +881,7 @@ class Article {
       articleAutoBid: {i18nKey: 'generic_articleAutoBid', defaultText: '.Article Auto-Bid'},
       articleMaxBid: {i18nKey: 'generic_articleMaxBid', defaultText: '.Article Maximum Bid'},
       articleGroup: {i18nKey: 'generic_group', defaultText: '.Article Group'}
-    }
+    };
 
     for (const key in checkList) {
       if (info.hasOwnProperty(key) && info[key] !== this[key]) {
@@ -2454,7 +2456,7 @@ class ArticlesTable {
   async regularRefreshArticleInfo() {
     try {
       // check if autoBid is enabled
-      const localState = AutoBid.getLocalState()
+      const localState = AutoBid.getLocalState();
       if (!localState.autoBidEnabled) return;
       console.debug("Biet-O-Matic: regularRefreshArticleInfo() will execute now.");
       this.DataTable.rows().every(index => {
@@ -2505,8 +2507,8 @@ class ArticlesTable {
               return Promise.resolve(true);
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: Event.ebayArticleUpdated internal error: %s", e.message);
-            throw new Error(e.message);
+            console.warn("Biet-O-Matic: Event.ebayArticleUpdated internal error: %s", e);
+            throw new Error(e);
           }
           break;
         case 'ebayArticleMaxBidUpdated':
@@ -2525,8 +2527,8 @@ class ArticlesTable {
               return Promise.resolve(true);
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: Event.ebayArticleMaxBidUpdated internal error: %s", e.message);
-            throw new Error(e.message);
+            console.warn("Biet-O-Matic: Event.ebayArticleMaxBidUpdated internal error: %s", e);
+            throw new Error(e);
           }
           break;
         case 'ebayArticleRefresh':
@@ -2554,8 +2556,8 @@ class ArticlesTable {
               return Promise.resolve(true);
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: Event.ebayArticleRefresh internal error: %s", e.message);
-            throw new Error(e.message);
+            console.warn("Biet-O-Matic: Event.ebayArticleRefresh internal error: %s", e);
+            throw new Error(e);
           }
           break;
         case 'getArticleInfo':
@@ -2576,8 +2578,8 @@ class ArticlesTable {
               }
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: Event.getArticleInfo internal error: %s", e.message);
-            throw new Error(e.message);
+            console.warn("Biet-O-Matic: Event.getArticleInfo internal error: %s", e);
+            throw new Error(e);
           }
           break;
         case 'getArticleSyncInfo':
@@ -2592,8 +2594,8 @@ class ArticlesTable {
               }
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: Event.getArticleSyncInfo internal error: %s", e.message);
-            throw new Error(e.message);
+            console.warn("Biet-O-Matic: Event.getArticleSyncInfo internal error: %s", e);
+            throw new Error(e);
           }
           break;
         case 'getAutoBidState':
@@ -2603,7 +2605,7 @@ class ArticlesTable {
               if (request.hasOwnProperty('articleId'))
                 articleId = request.articleId;
               else
-                Promise.reject("getAutoBidState: missing request attribute: articleId");
+                return Promise.reject("getAutoBidState: missing request attribute: articleId");
               console.debug("Biet-O-Matic: Browser Event getAutoBidState received from tab %s, article=%s",
                 sender.tab.id, articleId);
               if (articleId != null) {
@@ -2615,8 +2617,8 @@ class ArticlesTable {
               }
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: Event.getAutoBidState internal error: %s", e.message);
-            throw new Error(e.message);
+            console.warn("Biet-O-Matic: Event.getAutoBidState internal error: %s", e);
+            throw new Error(e);
           }
           break;
         case 'addArticleLog':
@@ -2633,8 +2635,8 @@ class ArticlesTable {
               return Promise.resolve(true);
             }
           } catch (e) {
-            console.warn("Biet-O-Matic: Event.addArticleLog internal error: %s", e.message);
-            throw new Error(e.message);
+            console.warn("Biet-O-Matic: Event.addArticleLog internal error: %s", e);
+            throw new Error(e);
           }
           break;
         case 'ebayArticleSetAuctionEndState':
@@ -2661,7 +2663,7 @@ class ArticlesTable {
             }
           } catch (e) {
             console.warn("Biet-O-Matic: Event.ebayArticleSetAuctionEndState failed: " + e);
-            throw new Error(e.message);
+            throw new Error(e);
           }
           break;
         /*
@@ -2682,8 +2684,8 @@ class ArticlesTable {
               return Promise.resolve(article.perlenschnur());
             }
           } catch (e) {
-            console.log("Biet-O-Matic: Event.ebayArticleGetAdjustedBidTime failed: %s", e.message);
-            throw new Error(e.message);
+            console.log("Biet-O-Matic: Event.ebayArticleGetAdjustedBidTime failed: %s", e);
+            throw new Error(e);
           }
           break;
       }

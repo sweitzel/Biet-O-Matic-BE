@@ -294,14 +294,14 @@ class EbayArticle {
   async monitorChanges() {
     const maxBidInput = await EbayArticle.waitFor('#MaxBidId', 2000);
     const bomAutoBid = await EbayArticle.waitFor('#BomAutoBid', 2000)
-      .catch(e => {
+      .catch(() => {
         throw new Error("Biet-O-Matic: monitorChanges() cannot find BomAutoBid button, aborting");
       });
     // max bid input changed?
     if (maxBidInput == null) {
       return;
     } else {
-      maxBidInput.addEventListener('change', (e) => {
+      maxBidInput.addEventListener('change', () => {
         const maxBidInputNew = document.getElementById('MaxBidId');
         const bomAutoBidNew = document.getElementById('BomAutoBid');
         if (maxBidInputNew != null) {
@@ -360,7 +360,7 @@ class EbayArticle {
     }
     // inform popup about autoBid changes
     if (bomAutoBid != null) {
-      bomAutoBid.addEventListener('change', (e) => {
+      bomAutoBid.addEventListener('change', () => {
         const bomAutoBidNew = document.getElementById('BomAutoBid');
         if (bomAutoBidNew != null) {
           browser.runtime.sendMessage({
@@ -403,7 +403,7 @@ class EbayArticle {
             if (typeof oldN !== 'undefined' && oldN.textContent !== newN.textContent) {
               let info = this.ebayParser.parsePageRefresh();
               Object.assign(this, info);
-              this.activateAutoBidButton(info.articleMaxBid, info.articleMinimumBid);
+              this.activateAutoBidButton(this.articleMaxBid, this.articleMinimumBid);
               // send info to extension popup about new price
               browser.runtime.sendMessage({
                 action: 'ebayArticleUpdated',
@@ -469,12 +469,10 @@ class EbayArticle {
    */
   async doBid() {
     let simulate = false;
-    let perfSnapshot = [];
     try {
       this.storePerfInfo(EbayArticle.getTranslation('cs_initialisation', '.Initialization'));
       // if end time reached, abort directly
       if ((this.hasOwnProperty('auctionEnded') && this.auctionEnded) || this.endTime <= Date.now()) {
-        let t = Date.now() - this.endTime;
         throw {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
           level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
@@ -616,7 +614,7 @@ class EbayArticle {
 
       // get confirm button
       const confirmButton = await EbayArticle.waitFor('#confirm_button', 2000)
-        .catch((e) => {
+        .catch(() => {
           console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
           throw {
             component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
@@ -666,7 +664,7 @@ class EbayArticle {
             '.Could not recheck autoBidEnabled Option')
         };
       }
-      if (autoBidInfo.hasOwnProperty('autoBidEnabled') && autoBidInfo.autoBidEnabled === false) {
+      if (autoBidInfo.autoBidEnabled === false) {
         console.info("Biet-O-Matic: doBid() abort, Window autoBid is now off.");
         throw {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
@@ -675,7 +673,7 @@ class EbayArticle {
             '.Auto-Bid was deactivated before the bid was submitted.')
         };
       }
-      if (autoBidInfo.hasOwnProperty('grouAutoBid') && autoBidInfo.groupAutoBid === false) {
+      if (autoBidInfo.groupAutoBid === false) {
         console.info("Biet-O-Matic: doBid() abort, Group autoBid is now off.");
         throw {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
