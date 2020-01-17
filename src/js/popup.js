@@ -724,26 +724,21 @@ class Article {
         throw new Error(`getInfoFromTab(${tab.id}) executeScript failed: ${e.message}`);
       });
 
-    let result;
-    const slotTime = 500;
     let retryCount = 0;
     do {
       try {
-        result = await browser.tabs.sendMessage(tab.id, {action: "GetArticleInfo"});
-        // abort the retries
-        return;
+        return await browser.tabs.sendMessage(tab.id, {action: "GetArticleInfo"});
       } catch (error) {
         if (retryCount >= 3) {
           // all retries failed
-          result = Promise.reject(error);
+          return Promise.reject(error);
         } else {
-          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
+          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error);
         }
         await setTimeout(() => {
         }, 1000);
       }
     } while (retryCount++ < 3);
-    return result;
   }
 
   /*
@@ -1093,7 +1088,7 @@ class Article {
   }
 
   /*
-   * Adjust article bid times to ensure that minimum 10s are between to biddings
+   * Adjust article bid times to ensure that minimum 10s are between two biddings
    * - determine all autoBid-enabled articles for same group as this article
    * - sort by articleId and articleEndTime
    * - start from end and build new object with key articleId

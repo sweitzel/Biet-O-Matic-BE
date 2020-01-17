@@ -393,7 +393,7 @@ class EbayArticle {
               console.debug("Biet-O-Matic: Mutation received: %d seconds left", timeLeftInSeconds);
               this.doBid()
                 .catch(e => {
-                  console.info("Biet-O-Matic: doBid() was aborted: %s", e);
+                  console.info("Biet-O-Matic: doBid() was aborted: " + e);
                   EbayArticle.sendArticleLog(this.articleId, e);
                 });
             }
@@ -409,7 +409,7 @@ class EbayArticle {
                 action: 'ebayArticleUpdated',
                 detail: this
               }).catch((e) => {
-                console.warn(`Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: ${e.message}`);
+                console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: " + e);
               });
             } else {
               // send trigger to extension popup, so it can refresh the date (timeleft)
@@ -417,7 +417,7 @@ class EbayArticle {
                 action: 'ebayArticleRefresh',
                 articleId: this.articleId
               }).catch((e) => {
-                console.warn("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed - reloading page!: %s", e.message);
+                console.warn("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed - reloading page!: " + e);
                 location.reload();
               });
             }
