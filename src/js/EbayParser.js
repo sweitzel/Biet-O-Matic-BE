@@ -7,6 +7,7 @@
  * Apache License Version 2.0, January 2004, http://www.apache.org/licenses/
  */
 
+import browser from "webextension-polyfill";
 import $ from "jquery";
 
 class EbayParser {
@@ -121,6 +122,7 @@ class EbayParser {
       let info = this.parseInfoEntry(item[0], item[1]);
       result = Object.assign({}, result, info);
     }
+
     return result;
   }
 
@@ -215,7 +217,7 @@ class EbayParser {
           result.articleAuctionStateText = $(value)[0].textContent.trim()
             .replace(/\n/g, '')
             .replace(/\s+/g, ' ')
-            .replace(/[\s\|-]+$/g, '');
+            .replace(/[\s-\|]+$/g, '');
         } else if (key === 'articleImage') {
           // store primary Image URL
           value = domEntry.src;
@@ -304,6 +306,40 @@ class EbayParser {
       console.warn("Biet-O-Matic: Unable to parse date from Input Date=%s", text);
     }
     return null;
+  }
+
+  /*
+   * determine the auction end state by checking text determined by parsePage() against regex
+   */
+  static getAuctionEndState(ebayArticleInfo) {
+    try {
+      // check if the given string matches the given endState
+      const matches = (endState, messageToCheck) => {
+        if (!EbayParser.auctionEndStates.hasOwnProperty(endState)) {
+          console.warn("Biet-O-Matic: getAuctionEndState() Invalid endState: " + endState);
+          return false;
+        }
+        const strings = EbayParser.auctionEndStates[endState].strings;
+        for (const lang of Object.keys(strings)) {
+          const messages = strings[lang];
+          for (const message of messages) {
+            if (messageToCheck.includes(message)) {
+              console.log("Biet-O-Matic: getAuctionEndState() Status determined from lang=%s, message=%s", lang, message);
+              return true;
+            }
+          }
+        }
+      };
+      if (ebayArticleInfo.hasOwnProperty('articleAuctionStateText') && ebayArticleInfo.articleAuctionStateText !== "") {
+        for (const key of Object.keys(EbayParser.auctionEndStates)) {
+          if (matches(key, ebayArticleInfo.articleAuctionStateText))
+            return EbayParser.auctionEndStates[key];
+        }
+      }
+    } catch (e) {
+      console.warn("Biet-O-Matic: getAuctionEndState failed: " + e);
+    }
+    return EbayParser.auctionEndStates.unknown;
   }
 
   //region Status HTML Cleanup
@@ -407,4 +443,36 @@ class EbayParser {
   }
 //endregion
 }
+// auction states as communicated to the overview page
+EbayParser.auctionEndStates = {
+  ended: {
+    id: 0,
+    human: browser.i18n.getMessage('generic_ended'),
+    strings: {
+      de: ["Dieses Angebot wurde beendet"],
+      en: ["Bidding has ended on this item"]
+    },
+  },
+  purchased: {
+    id: 1,
+    human: browser.i18n.getMessage('generic_purchased'),
+    strings: {
+      de: ["Sie waren der Höchstbietende"],
+      en: ["You won this auction"]
+    }
+  },
+  overbid: {
+    id: 2,
+    human: browser.i18n.getMessage('generic_overbid'),
+    strings: {
+      de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht"],
+      en: ["You've been outbid", "TODO456DEF"]
+    }
+  },
+  unknown: {
+    id: null,
+    human: browser.i18n.getMessage('generic_stillUnknown'),
+  }
+};
+
 export default EbayParser;

@@ -11,41 +11,8 @@
  */
 
 import browser from "webextension-polyfill";
-import $ from "jquery";
 import EbayParser from "./EbayParser.js";
 import "../css/contentScript.css";
-
-// auction states as communicated to the overview page
-const auctionEndStates = {
-  ended: {
-    id: 0,
-    human: browser.i18n.getMessage('generic_ended'),
-    strings: {
-      de: ["Dieses Angebot wurde beendet"],
-      en: ["Bidding has ended on this item"]
-    },
-  },
-  purchased: {
-    id: 1,
-    human: browser.i18n.getMessage('generic_purchased'),
-    strings: {
-      de: ["Sie waren der Höchstbietende"],
-      en: ["You won this auction"]
-    }
-  },
-  overbid: {
-    id: 2,
-    human: browser.i18n.getMessage('generic_overbid'),
-    strings: {
-      de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht"],
-      en: ["You've been outbid", "TODO456DEF"]
-    }
-  },
-  unknown: {
-    id: null,
-    human: browser.i18n.getMessage('generic_stillUnknown'),
-  }
-};
 
 class EbayArticle {
   constructor() {
@@ -255,37 +222,6 @@ class EbayArticle {
   }
 
   /*
-   * determine the auction end state by checking text determined by parsePageRefresh() against regex
-   */
-  static getAuctionEndState(ebayArticleInfo) {
-    // check if the given string matches the given endState
-    function matches(endState, messageToCheck) {
-      if (!auctionEndStates.hasOwnProperty(endState)) {
-        console.warn("Biet-O-Matic: getAuctionEndState() Invalid endState: " + endState);
-        return false;
-      }
-      const strings = auctionEndStates[endState].strings;
-      for (let lang in strings) {
-        const messages = strings[lang];
-        for (let message of messages) {
-          if (messageToCheck.includes(message)) {
-            console.log("Biet-O-Matic: getAuctionEndState() Status determined from lang=%s, message=%s", lang, message);
-            return true;
-          }
-        }
-      }
-    }
-    if (ebayArticleInfo.hasOwnProperty('articleAuctionStateText')) {
-      for (const key in auctionEndStates) {
-        if (matches(key, ebayArticleInfo.articleAuctionStateText))
-          return auctionEndStates[key];
-      }
-    }
-    return auctionEndStates.unknown;
-  }
-
-
-  /*
    * Detect changes on the page (by user) via event listeners
    * - #MaxBidId: (Bid input)
    * - #prcIsum_bidPrice: Current price of the article
@@ -393,7 +329,7 @@ class EbayArticle {
               console.debug("Biet-O-Matic: Mutation received: %d seconds left", timeLeftInSeconds);
               this.doBid()
                 .catch(e => {
-                  console.info("Biet-O-Matic: doBid() was aborted: " + e);
+                  console.info("Biet-O-Matic: doBid() was aborted: " + e.message);
                   EbayArticle.sendArticleLog(this.articleId, e);
                 });
             }
@@ -496,7 +432,7 @@ class EbayArticle {
       }
       // check window/group autoBid status
       let autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
-      if (autoBidInfo == null || typeof autoBidInfo === 'undefined') {
+      if (autoBidInfo == null || typeof autoBidInfo === 'undefined' || !autoBidInfo.hasOwnProperty('autoBidEnabled') ) {
         throw {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
           level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
@@ -542,7 +478,7 @@ class EbayArticle {
 
       // check bid-lock. When another article auction is still running for the same group, we cannot peform bid
       let bidLockInfo = await browser.runtime.sendMessage({action: 'getBidLockState', articleId: this.articleId});
-      if (bidLockInfo == null || typeof bidLockInfo === 'undefined') {
+      if (bidLockInfo == null || typeof bidLockInfo === 'undefined' || !bidLockInfo.hasOwnProperty('bidIsLocked')) {
         throw {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
           level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
@@ -741,7 +677,7 @@ class EbayArticle {
       }
     } catch (e) {
       // pass error through, will be forwarded to popup
-      console.log("Biet-O-Matic: doBid() aborted: " + e);
+      //console.log("Biet-O-Matic: doBid() aborted: " + e);
       throw e;
     } finally {
       //console.debug("Biet-O-Matic: doBid() reached the end.");
@@ -853,7 +789,7 @@ class EbayArticle {
       return ebayArticleInfo;
     }
     // determine auction state - if any yet
-    let currentState = EbayArticle.getAuctionEndState(ebayArticleInfo);
+    let currentState = EbayParser.getAuctionEndState(ebayArticleInfo);
     // info related to previous bidding
     const bidInfo = JSON.parse(window.sessionStorage.getItem("bidInfo:" + ebayArticleInfo.articleId));
     // info from sync storage
@@ -873,12 +809,13 @@ class EbayArticle {
        * the auction end state
        */
       if (data.hasOwnProperty('auctionEndState') &&
-        (currentState.id !== auctionEndStates.unknown.id && data.auctionEndState === auctionEndStates.unknown.id)) {
+        (currentState.id !== EbayParser.auctionEndStates.unknown.id &&
+          data.auctionEndState === EbayParser.auctionEndStates.unknown.id)) {
         // send updated end state
         ebayArticleInfo.auctionEndState = currentState.id;
         await EbayArticle.sendAuctionEndState(ebayArticleInfo)
           .catch(e => {
-            console.warn(`Biet-O-Matic: handleReload() Sending Auction End State failed: ${e.message}`);
+            console.warn("Biet-O-Matic: handleReload() Sending Auction End State failed: " + e);
           });
       }
     }

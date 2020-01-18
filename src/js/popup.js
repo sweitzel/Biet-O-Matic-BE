@@ -157,7 +157,8 @@ class Group {
         // check article is used from previous determined info
         if (usedGroups.hasOwnProperty(groupName)) return;
         // remove if group has no timestamp or timestamp is older 5 days
-        if (!groups[groupName].hasOwnProperty('timestamp') || (Date.now() - groups[groupName].timestamp) / 1000 > 60 * 60 * 24 * 5) {
+        if (!groups[groupName].hasOwnProperty('timestamp') ||
+          ((Date.now() - groups[groupName].timestamp) / 1000) > (60 * 60 * 24 * 5)) {
           console.debug("Biet-O-Matic: Group.removeAllUnused() Removing group: %s", groupName);
           Group.remove(groupName);
         }
@@ -1052,7 +1053,70 @@ class Article {
    * - but still 2..n auctions could end at the same time
    */
   async getBidLockState() {
-    // get articles
+    if (!this.hasOwnProperty('articleEndTime')) return;
+    const result = { bidIsLocked: false, message: "" };
+
+    // get articles which have the same group, autoBid enabled
+    const articles = {};
+    // build an object with required information
+    this.popup.table.DataTable.rows().every(index => {
+      const row = this.popup.table.DataTable.row(index);
+      const article = row.data();
+      // groups have to match
+      if (!article.hasOwnProperty('articleGroup') || !this.hasOwnProperty('articleGroup') || article.articleGroup !== this.articleGroup)
+        return;
+      // check if that article has autoBidEnabled, if not its not interesting
+      if (!article.articleAutoBid)
+        return;
+      // ignore sofortkauf items (because they have to be manually purchased)
+      if (!article.hasOwnProperty('articleEndTime') || article.articleEndTime == null)
+        return;
+      // ignore articles in the past
+      // || article.articleEndTime < Date.now();
+      articles[article.articleId] = {
+        articleEndTime: article.articleEndTime,
+      };
+      // handover existing auction end states
+      if (article.hasOwnProperty('auctionEndState')) {
+        articles[article.articleId].auctionEndState = article.auctionEndState;
+      }
+      if (article.hasOwnProperty('article.articleAuctionStateText')) {
+        // determine auctionEndState from text
+        const auctionEndState = EbayParser.getAuctionEndState({auctionEndStateText: article.auctionEndStateText});
+        articles[article.articleId].auctionEndState = auctionEndState.id;
+      }
+    });
+
+    const sorter = function (a, b) {
+      // sort by articleId if endTimes are same
+      if (a.articleEndTime === b.articleEndTime) {
+        return a.articleId - b.articleId;
+      }
+      return a.articleEndTime > b.articleEndTime ? 1 : -1;
+    };
+
+    /*
+     * Iterate through keys (articleId's) from the ones ending first to last
+     */
+    const sortedArticles = Object.keys(articles).sort(sorter);
+    //console.log("XXX articles=%O sortedArticles=%O", articles, sortedArticles);
+    for (const key of sortedArticles) {
+      // skip if endTime of that article is not within 10s of this article
+      const timeDiff =  Math.abs(this.articleEndTime - articles[key].articleEndTime);
+      if (timeDiff > 10000) continue;
+      // if we reach our article, we can abort.
+      if (this.articleId === key) break;
+      // if article has an final auctionEndState (!= unknown), then we can continue
+      if (articles[key].hasOwnProperty('auctionEndState') && articles[key].auctionEndState !== EbayParser.auctionEndStates.unknown.id) {
+        console.log("Article %s has an final auctionEndState: %s", articles[key].auctionEndState);
+        continue;
+      }
+
+      // if article has an auctionEndState of unknown, then try to get an updated state
+      result.bidIsLocked = true;
+      result.message = Popup.getTranslation('popup_bidCollision', '.Cannot perform bidding, another auction is still running: $1', [key.toString()]);
+    }
+    return result;
   }
 
   // get formatted bid price: EUR 123,12
@@ -1143,16 +1207,16 @@ class Article {
       // sort the array on every iteration, because we modify the articleEndTimes
       const keys = Object.keys(articles).sort(sorter);
       const key = keys[i];
-      if (previous != null && (articles[previous].articleEndTime - articles[key].articleEndTime) < 15 * 1000) {
+      if (previous != null && (articles[previous].articleEndTime - articles[key].articleEndTime) < 15000) {
         const diff = (articles[key].articleEndTime - (articles[previous].articleEndTime - 10 * 1000)) / 1000;
         articles[key].adjustmentReason = Popup.getTranslation('popup_adjustedBidtime',
           '.Bid time was adjusted by $1s, due to collision with item $2', [diff.toString(10), previous.toString()]);
         // todo adjust the bidding preparation time (currently hardcoded to 30s)
         // leave 5s buffer (twice the biddingTime)
-        if (articles[previous].articleEndTime < (Date.now() + 5 * 1000)) {
+        if (articles[previous].articleEndTime < (Date.now() + 5000)) {
           console.warn(`Biet-O-Matic: Failed to adjust Article ${key} bidding time, would be too close to its end time!`);
         } else {
-          articles[key].articleEndTime = articles[previous].articleEndTime - 15 * 1000;
+          articles[key].articleEndTime = articles[previous].articleEndTime - 15000;
         }
       }
       previous = key;
@@ -1237,7 +1301,7 @@ class Article {
         message: Article.stateToText(info.auctionEndState)
       });
     } catch (e) {
-      console.log("Biet-O-Matic: Article.handleAuctionEnded(%s) failed: %s, info=%s", JSON.stringify(info), e.message);
+      console.log("Biet-O-Matic: Article.handleAuctionEnded(%s) failed: %s, info=%s", this.articleId, e, JSON.stringify(info));
     }
     // close tab in 10 seconds if its still inactive (if the user activates the tab, it will stay open)
     setTimeout(() => {
@@ -2117,11 +2181,11 @@ class ArticlesTable {
         // ended
         span.classList.add('auctionEnded');
         span.title = Popup.getTranslation('popup_articleAuctionEnded', '.Article Auction already ended');
-      } else if (data - Date.now() < 60 * 1000) {
+      } else if (data - Date.now() < 60000) {
         // ends within 1 minute
         span.classList.add('auctionEndsVerySoon');
         span.title = Popup.getTranslation('popup_articleAuctionEndsVerySoon', '.Article Auction ends in less then a minute.');
-      } else if (data - Date.now() < 600 * 1000) {
+      } else if (data - Date.now() < 600000) {
         // ends within 10 minutes
         span.classList.add('auctionEndsSoon');
         span.title = Popup.getTranslation('popup_articleAuctionEndsSoon', '.Article Auction ends soon.');
@@ -2471,7 +2535,7 @@ class ArticlesTable {
         // skip articles with open tab
         if (article.hasOwnProperty('tabId') && article.tabId != null) return;
         // skip articles which ended already (longer than 60 minutes ago)
-        if (article.articleEndTime < (Date.now() - 60 * 60 * 1000)) return;
+        if (article.articleEndTime < (Date.now() - (60 * 60 * 1000))) return;
         this.refreshArticle(row);
       });
     } catch (e) {
@@ -2618,7 +2682,7 @@ class ArticlesTable {
               if (articleId != null) {
                 const row = this.getRow(`#${articleId}`);
                 const article = row.data();
-                return Promise.resolve(article.getBidLockState());
+                return Promise.resolve(article.getAutoBidState());
               } else {
                 return Promise.reject("getAutoBidState: articleId is null!");
               }
@@ -2641,7 +2705,7 @@ class ArticlesTable {
               if (articleId != null) {
                 const row = this.getRow(`#${articleId}`);
                 const article = row.data();
-                return Promise.resolve(true);
+                return Promise.resolve(article.getBidLockState());
               } else {
                 return Promise.reject("getBidLockState: articleId is null!");
               }

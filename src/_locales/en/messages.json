@@ -253,5 +253,9 @@
   },
   "test": {
     "message": "This is a test $1s"
+  },
+  "popup_bidCollision":{
+    "message": "Bidding aborted because it collided with another article: $1"
   }
+
 }

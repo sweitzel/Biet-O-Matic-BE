@@ -177,7 +177,7 @@
     "message": "Bietzeitpunkt wurde um $1s angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
   },
   "popup_articleAuctionEnded": {
-    "message": "Artikel Auktion hat bereits geendet"
+    "message": "Artikel Auktion ist bereits beendet"
   },
   "popup_articleAuctionEndsSoon": {
     "message": "Artikel Auktion endet bald"
@@ -250,5 +250,8 @@
   },
   "popup_show_articleEvents": {
     "message": "Zeigt Artikel Ereignisprotokoll"
+  },
+  "popup_bidCollision":{
+    "message": "Bieten abgebrochen, da mit anderer Auktion kollidiert: $1"
   }
 }
