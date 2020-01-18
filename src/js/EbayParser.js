@@ -110,8 +110,8 @@ class EbayParser {
     const parseInfoArray = new Map([
       ['articleId', ['#descItemNumber']],
       ['articleBidPrice', [
-        '#prcIsum_bidPrice',           // normal running article
-        '#mainContent > div:nth-child(1) > table > tbody > tr:nth-child(6) > td > div > div:nth-child(2) > div.u-flL.w29.vi-price-np > span', // ended auction
+        '#prcIsum_bidPrice',  // normal running article
+        '.vi-VR-cvipPrice',   // auction just ended (orig_cvip=false)
       ]],
       ['articleBidCount', ['#qty-test']],
       ['articleMinimumBid', ['#MaxBidId']],

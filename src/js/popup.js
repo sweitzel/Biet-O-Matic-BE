@@ -1044,6 +1044,17 @@ class Article {
     return info;
   }
 
+  /*
+   * Determines the Bid Lock state
+   * - this is used for articles which end close to each other
+   * - it prevents that the second article will be bid for, if the first articles auction state is not yet known
+   * - by use of perlenschnur algorithm it is ensured that between two articles are always 10s
+   * - but still 2..n auctions could end at the same time
+   */
+  async getBidLockState() {
+    // get articles
+  }
+
   // get formatted bid price: EUR 123,12
   getPrettyBidPrice() {
     //console.log("data=%O, type=%O, row=%O", data, type, row);
@@ -2482,6 +2493,7 @@ class ArticlesTable {
    * - ebayArticleSetAuctionEndState: from content script to update the Auction State with given info
    * - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
    * - getAutoBidState: returns the state of window and group autoBid for the given articleId
+   * - getBidLockState: returns the state of bid lock
    * - addArticleLog: from content script to store log info for article
    *
    * - browser.tabs.updated: reloaded/new url
@@ -2606,7 +2618,7 @@ class ArticlesTable {
               if (articleId != null) {
                 const row = this.getRow(`#${articleId}`);
                 const article = row.data();
-                return Promise.resolve(article.getAutoBidState());
+                return Promise.resolve(article.getBidLockState());
               } else {
                 return Promise.reject("getAutoBidState: articleId is null!");
               }
@@ -2616,13 +2628,36 @@ class ArticlesTable {
             throw new Error(e);
           }
           break;
+        case 'getBidLockState':
+          try {
+            if (this.currentWindowId === sender.tab.windowId) {
+              let articleId;
+              if (request.hasOwnProperty('articleId'))
+                articleId = request.articleId;
+              else
+                return Promise.reject("Evenbt.getBidLockState: missing request attribute: articleId");
+              console.debug("Biet-O-Matic: Browser Event getBidLockState received from tab %s, article=%s",
+                sender.tab.id, articleId);
+              if (articleId != null) {
+                const row = this.getRow(`#${articleId}`);
+                const article = row.data();
+                return Promise.resolve(true);
+              } else {
+                return Promise.reject("getBidLockState: articleId is null!");
+              }
+            }
+          } catch (e) {
+            console.warn("Biet-O-Matic: Event.getBidLockState internal error: %s", e);
+            throw new Error(e);
+          }
+          break;
         case 'addArticleLog':
           try {
             if (this.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event addArticleLog received from tab %s", sender.tab.id);
               const article = this.getRow(`#${request.articleId}`).data();
               // redraw status (COLUMN 6)
-              if (request.detail.message.level !== "Performance") {
+              if (request.detail.message.level !== Popup.getTranslation('generic_perfornmance', 'Performance')) {
                 this.updateArticleStatus(request.articleId, request.detail.message.message);
               }
               if (article != null)

@@ -38,7 +38,7 @@ const auctionEndStates = {
     human: browser.i18n.getMessage('generic_overbid'),
     strings: {
       de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht"],
-      en: ["TODO123XXXX"]
+      en: ["You've been outbid", "TODO456DEF"]
     }
   },
   unknown: {
@@ -539,6 +539,26 @@ class EbayArticle {
         console.debug("Biet-O-Matic: Enable simulated bidding.");
         simulate = true;
       }
+
+      // check bid-lock. When another article auction is still running for the same group, we cannot peform bid
+      let bidLockInfo = await browser.runtime.sendMessage({action: 'getBidLockState', articleId: this.articleId});
+      if (bidLockInfo == null || typeof bidLockInfo === 'undefined') {
+        throw {
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+          message: EbayArticle.getTranslation('cs_couldNotCheckBidLock',
+            '.Could not check if bidding is locked')
+        };
+      }
+      if (bidLockInfo.bidIsLocked) {
+        console.debug("Biet-O-Matic: doBid() abort, bidding is locked");
+        throw {
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: bidLockInfo.message
+        };
+      }
+
       // set bidInfo to ensure the bidding is not executed multiple times
       if (bidInfo == null) {
         // bid not yet running (or not anymore after page refresh)
@@ -719,10 +739,10 @@ class EbayArticle {
         bidInfo.bidPerformed = Date.now();
         window.sessionStorage.setItem(`bidInfo:${this.articleId}`, JSON.stringify(bidInfo));
       }
-    } catch (err) {
+    } catch (e) {
       // pass error through, will be forwarded to popup
-      //console.log("Biet-O-Matic: doBid() aborted: %s", err.message);
-      throw err;
+      console.log("Biet-O-Matic: doBid() aborted: " + e);
+      throw e;
     } finally {
       //console.debug("Biet-O-Matic: doBid() reached the end.");
     }
