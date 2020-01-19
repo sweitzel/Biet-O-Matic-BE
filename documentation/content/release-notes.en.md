@@ -27,6 +27,7 @@ Other major changes in this version:
   This ensures that automatic bidding can continue in absence after a BE update has taken place.
 * Bid-Lock implemented to ensure that not multiple items from the same group are purchased,
   if the auctions for the items end close to each other (10s), also see [Features]({{< relref "/manual/features#avoidance-of-double-purchases-auction-collision" >}})
+* If the browser supports it, BE will prevent the computer from entering sleep mode when global auto-bid is active.
 
 ### Bid-O-Matic BE Version 0.3.1
 {{< hint info>}}
@@ -35,7 +36,6 @@ Published on Sunday, 19.01.2020
 
 * First stable 0.3 version (for major changes, see above)
 * Minor adjustments:
-    * On some browsers, BE will prevent the computer from entering sleep mode when auto-bid is active.
     * Display of payment methods on the overview page when the mouse is moved over the price column
     * "No group" renamed "Other Auctions"
     * "Other Auctions" group is placed at the front of the list
@@ -86,4 +86,3 @@ Published on Monday, 06.01.2020
 These are the first prototype versions, which were released in December 2019. These versions
 were only made available to a limited circle of users to collect first opinions and test experiences
 and prepare it for the first stable release.
-

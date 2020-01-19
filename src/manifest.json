@@ -15,7 +15,8 @@
     "https://*.ebay.com/*",
     "https://*.ebay.de/*",
     "activeTab",
-    "storage"
+    "storage",
+    "power"
   ],
   "icons": {
     "48": "icon48.png",

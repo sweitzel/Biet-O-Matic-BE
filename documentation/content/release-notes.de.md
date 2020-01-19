@@ -27,6 +27,7 @@ Weitere größere Änderungen in dieser Version:
   Dies stellt sicher, dass in Abwesenheit weiterhin automatisch geboten werden kann, nachdem ein BE Update statt fand.
 * Biet-Sperre wurde eingeführt, um sicherzustellen, das nicht mehrere Artikel aus einer Gruppe ersteigert werden,
   wenn die Auktionen dicht beieinander enden (10s), siehe auch [Funktionen]({{< relref "/manual/features#vermeidung-von-doppelkufen-auktions-kollosion" >}})
+* Wenn der Browser es unterstützt, wird BE verhindern, dass der Computer in den Schlafmodus wechselt. Aber nur wenn die Biet-Automatik aktiv ist.
 
 ### Biet-O-Matic BE Version 0.3.1
 {{< hint info>}}
@@ -35,7 +36,6 @@ Erschienen am Sonntag, 19.01.2020
 
 * Erste stabile 0.3 Version (für die wichtigsten Änderungen, siehe oben)
 * Kleinere Anpassungen:
-    * Auf einigen Browsern wird BE verhindern das der Computer in den Schlafmodus wechselt, wenn die Biet-Automatik aktiv ist.
     * Anzeige der Zahlungsmethoden auf der Übersichtsseite, wenn man mit der Maus über die Preisspalte geht
     * "Keine Gruppe" umbenannt in "Sonstige Auktionen"
     * "Sonstige Auktionen" Gruppe wird vorne einsortiert

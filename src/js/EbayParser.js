@@ -465,8 +465,8 @@ EbayParser.auctionEndStates = {
     id: 2,
     human: browser.i18n.getMessage('generic_overbid'),
     strings: {
-      de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht"],
-      en: ["You've been outbid", "TODO456DEF"]
+      de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht", "Sie waren nicht der Höchstbietende bei dieser Auktion."],
+      en: ["You've been outbid", "TODO456DEF", "You didn't win this auction."]
     }
   },
   unknown: {

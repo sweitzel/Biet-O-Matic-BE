@@ -98,24 +98,29 @@ class EbayArticle {
       console.log("Biet-O-Matic: Do not extend page, no bid button found.");
       return;
     }
-    // add button right of bid button
+
+    // add button below (de)/right (com) of bid button
     let buttonDiv = document.getElementById("BomAutoBidDiv");
     if (buttonDiv != null) buttonDiv.remove();
-    buttonDiv = document.createElement("div");
+
+    buttonDiv = document.createElement('div');
     buttonDiv.id = "BomAutoBidDiv";
+
     if (this.articlePlatform === 'ebay.com')
       buttonDiv.style.width = '8.7rem';
     else
       buttonDiv.style.width = '280px';
-    buttonDiv.style.height = '30px';
     buttonDiv.style.align = 'center';
     buttonDiv.style.marginTop = '10px';
+
+    const div = document.createElement("div");
+    div.style.height = '30px';
     let buttonInput = document.createElement("input");
     buttonInput.id = "BomAutoBid";
     buttonInput.classList.add('tgl', 'tgl-skewed');
     buttonInput.type = 'checkbox';
     buttonInput.disabled = true;
-    buttonDiv.appendChild(buttonInput);
+    div.appendChild(buttonInput);
     let buttonLabel = document.createElement("label");
     buttonLabel.classList.add('tgl-btn');
     let offText = EbayArticle.getTranslation('generic_autoBid', '.Auto-Bid') + ' ' +
@@ -125,16 +130,19 @@ class EbayArticle {
     buttonLabel.setAttribute('data-tg-off', offText);
     buttonLabel.setAttribute('data-tg-on', onText);
     buttonLabel.setAttribute('for', 'BomAutoBid');
-    buttonDiv.appendChild(buttonLabel);
+    div.appendChild(buttonLabel);
 
     const span = document.createElement('span');
     span.id = 'BomAutoBidHint';
-    span.innerText = EbayArticle.getTranslation('cs_bomAutoBidHint', '.Please ensure group and global auto-bid are also enabled.');
+    span.innerText = EbayArticle.getTranslation('cs_bomAutoBidHint',
+      '.Please ensure group and global auto-bid are also enabled.');
     span.style.fontSize = 'small';
     span.style.display = 'none';
 
+    buttonDiv.appendChild(div);
+    buttonDiv.appendChild(span);
+
     //mainContent.appendChild(button);
-    bidButton.parentNode.insertBefore(span, bidButton.nextSibling);
     bidButton.parentNode.insertBefore(buttonDiv, bidButton.nextSibling);
 
     // complement with info from sync storage
@@ -319,7 +327,7 @@ class EbayArticle {
         if (bomAutoBidNew != null) {
           // show autoBid hint if autoBid enabled
           if (bomAutoBidNew.checked) {
-            bomAutoBidHint.style.display = 'block';
+            bomAutoBidHint.style.display = 'inline';
           } else {
             bomAutoBidHint.style.display = 'none';
           }

@@ -395,6 +395,18 @@ class AutoBid {
         autoBidMessage.append(info.messageHtml);
       }
       Popup.updateFavicon(info.autoBidEnabled, null, info.simulation);
+      // prevent computer sleep
+      try {
+        if (info.autoBidEnabled) {
+          console.log("Biet-O-Matic: Requesting browser to keep system awake.");
+          chrome.power.requestKeepAwake('system');
+        } else {
+          console.log("Biet-O-Matic: Cancelled request for browser to keep system awake.");
+          chrome.power.releaseKeepAwake();
+        }
+      } catch(e) {
+        console.log("Biet-O-Matic: Cannot modify computer sleep: %s", e);
+      }
     }).catch(e => {
       console.warn("Biet-O-Matic: AutoBid.renderState() failed: %s", e.message);
     });
@@ -1381,6 +1393,7 @@ class ArticlesTable {
       throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
     $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation('generic_noGroup', ".No Group");
     try {
+      const state = OptionCompactView.getState();
       ArticlesTable.setCompact(OptionCompactView.getState().compactViewEnabled);
     } catch(e) {
       console.log("Biet-O-Matic: ArticlesTable constructor cannot set compact mode: " + e);
@@ -3265,7 +3278,6 @@ class Popup {
     await this.table.addArticlesFromStorage();
     this.table.addArticlesFromTabs();
     await Popup.checkBrowserStorage();
-
   }
 
   /*
