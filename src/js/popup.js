@@ -739,7 +739,7 @@ class Article {
           // all retries failed
           return Promise.reject(error);
         } else {
-          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error);
+          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
         }
         await wait(1000);
       }

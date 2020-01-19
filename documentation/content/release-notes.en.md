@@ -8,8 +8,8 @@ type: "docs"
 # Release Notes
 
 ## Bid-O-Matic BE Version 0.3
-This BE Version is the first one, which is multilingual. It supports now besides German, also English language.
-Furthermore ebay.com support was tested as well. 
+This BE Version is the first one, which is multilingual. Besides German it now also supports English language.
+Furthermore ebay.com support was tested as well and should work without major issues. 
 
 Other major changes in this version:
 * For closed items (no tab open), a data update is performed in the background every minute.
@@ -19,7 +19,7 @@ Other major changes in this version:
 * Article images are now displayed on the overview page
 * Added option for compact display, this hides images and makes the table rows a bit narrower.
 * Added support for English.
-    * Language is automatically set by the browser display language.
+    * Language is automatically set by the browser display language and cannot be manually defined.
 * Article group field now allows selection from existing groups.
 * Unused article groups are automatically deleted after 7 days.
 * BE overview page opens automatically after an update, but only, 

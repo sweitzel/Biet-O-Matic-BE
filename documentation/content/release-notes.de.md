@@ -8,8 +8,8 @@ type: "docs"
 # Versions Übersicht
 
 ## Biet-O-Matic BE Version 0.3
-Diese BE Version ist die Erste, welche mehrsprachig ist. Es wird, nun neben Deutsch, auch eine Englischsprachige
-Benutzung ermöglicht. Ausserdem wurde ebay.com Unterstützung eingebaut. 
+Diese Version von BE ist die erste, welche mehrsprachig ist. Es wird, nun neben Deutsch, auch eine Englischsprachige
+Benutzung ermöglicht. Ausserdem wurde ebay.com Unterstützung getestet und sollte nun problemlos funktionieren. 
 
 Weitere größere Änderungen in dieser Version:
 * Für geschlossene Artikel (kein Tab offen) wird im Hintergrund jede Minute eine Datenaktualisierung durchgeführt.
@@ -30,7 +30,7 @@ Weitere größere Änderungen in dieser Version:
 
 ### Biet-O-Matic BE Version 0.3.1
 {{< hint info>}}
-Erschienen am Montag, 20.01.2020 
+Erschienen am Sonntag, 19.01.2020 
 {{< /hint >}}
 
 * Erste stabile 0.3 Version (für die wichtigsten Änderungen, siehe oben)
@@ -39,7 +39,7 @@ Erschienen am Montag, 20.01.2020
     * Anzeige der Zahlungsmethoden auf der Übersichtsseite, wenn man mit der Maus über die Preisspalte geht
     * "Keine Gruppe" umbenannt in "Sonstige Auktionen"
     * "Sonstige Auktionen" Gruppe wird vorne einsortiert
-    * Maximal Gebot kann nun gelöscht werden und wird auf 0 gesetzt, anstatt immer auf das Minimalgebot zu springen.
+    * Maximal-Gebot kann nun gelöscht werden und wird auf 0 gesetzt, anstatt immer auf das Minimalgebot zu springen.
     * Problem behoben wenn ein Artikel Tab geschlossen wurde, und dann wieder hergestellt.
 
 ## Biet-O-Matic BE Version 0.2
