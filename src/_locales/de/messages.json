@@ -1,13 +1,266 @@
 {
-  "appName": {
-    "message": "Biet-O-Matic BE",
-    "description": "Extension Name"
-  },
   "appDesc": {
-    "message": "Eine Browser Erweiterung um eBay Gebote abzugeben, auch wenn Du nicht am Rechner sitzt.",
-    "description": "Extension Short Description"
+    "message": "Eine Browser Erweiterung um eBay Gebote abzugeben, auch wenn Du nicht am Rechner sitzt."
+  },
+  "appName": {
+    "message": "Biet-O-Matic BE"
   },
   "appOpen": {
     "message": "Öffne Biet-O-Matic BE"
+  },
+  "cs_auctionAlreadyEnded": {
+    "message": "Auktion hat bereits geendet"
+  },
+  "cs_autobidDeactivatedBeforeBid": {
+    "message": "Fenster Automatikmodus wurde kurz vor Gebotsbestätigung deaktiviert"
+  },
+  "cs_autobidGroupDeactivatedBeforeBid": {
+    "message": "Gruppen Automatikmodus wurde kurz vor Gebotsbestätigung deaktiviert"
+  },
+  "cs_autobidInactiveForArticle": {
+    "message": "Automatikmodus für diesen Artikel ist nicht aktiv"
+  },
+  "cs_autobidInactiveForGroup": {
+    "message": "Automatikmodus für Gruppe $1 ist nicht aktiv"
+  },
+  "cs_autobidInactiveForWindow": {
+    "message": "Fenster Automatikmodus ist nicht aktiv"
+  },
+  "cs_bidFinished": {
+    "message": "Bietvorgang wurde $1ms vor Auktionsende abgeschlossen"
+  },
+  "cs_bidding": {
+    "message": "Bietvorgang"
+  },
+  "cs_biddingFailed": {
+    "message": "Auktion nicht erfolgreich. Gebot wurde nicht gesendet bzw. von eBay akzeptiert (z.B. wenn ein anderer Bieter ein gleichhohes Gebot etwas eher abgab)."
+  },
+  "cs_biddingOverbid": {
+    "message": "Auktion nicht erfolgreich. Sie wurden überboten."
+  },
+  "cs_biddingPrepare": {
+    "message": "Der Bietvorgang wird vorbereitet..."
+  },
+  "cs_biddingStatusUnknown": {
+    "message": "Finaler Auktions Status noch unbekannt."
+  },
+  "cs_biddingSuccess": {
+    "message": "Auktion erfolgreich. Artikel ersteigert."
+  },
+  "cs_bomAutoBidHint": {
+    "message": "Bitte prüfen sie auch, ob der Automatikmodus für die Gruppe und global ebenfalls aktiv sind."
+  },
+  "cs_couldNotCheckAutoBidEnabledOption": {
+    "message": "Konnte die autoBidEnabled Option nicht prüfen"
+  },
+  "cs_errorCannotFindBidButton": {
+    "message": "Kann den Biet-Knopf nicht auf der Artikelseite finden!"
+  },
+  "cs_errorCannotFindConfirmButton": {
+    "message": "Element #confirm_body konnte nicht auf der Artikelseite gefunden werden"
+  },
+  "cs_errorCannotFindModal": {
+    "message": "Element #MODAL_BODY konnte nicht auf der Artikelseite gefunden werden!"
+  },
+  "cs_errorCouldNotRecheckAutoBidEnableOption": {
+    "message": "Konnte die autoBidEnabled Option nicht erneut prüfen"
+  },
+  "cs_initialisation": {
+    "message": "Initialisierung"
+  },
+  "cs_phase1": {
+    "message": "Phase 1: Bietvorbereitung"
+  },
+  "cs_phase2": {
+    "message": "Phase 2: Gebotsabgabe"
+  },
+  "cs_phase3": {
+    "message": "Phase 3: Warte auf Zeitpunkt für Gebotsbestätigung"
+  },
+  "cs_phase4": {
+    "message": "Phase 4: Gebot wurde abgegeben"
+  },
+  "cs_phase4test": {
+    "message": "Phase 4: Test Bieten abgeschlossen"
+  },
+  "cs_problemWithBidding": {
+    "message": "Problem von eBay gemeldet"
+  },
+  "cs_testBidFinished": {
+    "message": "Test Bietvorgang (bis zur Bestätigung) wurde $1ms bevor die Auktion endete abgeschlossen"
+  },
+  "filePopup": {
+    "message": "popup.de.html"
+  },
+  "generic_active": {
+    "message": "aktiv"
+  },
+  "generic_articleAutoBid": {
+    "message": "Artikel Automatikmodus"
+  },
+  "generic_articleMaxBid": {
+    "message": "Artikel Maximalgebot"
+  },
+  "generic_autoBid": {
+    "message": "Automatikmodus"
+  },
+  "generic_buyNow": {
+    "message": "Sofortkauf"
+  },
+  "generic_cancel": {
+    "message": "Abbruch"
+  },
+  "generic_configuration": {
+    "message": "Einstellungen"
+  },
+  "generic_description": {
+    "message": "Beschreibung"
+  },
+  "generic_ended": {
+    "message": "beendet"
+  },
+  "generic_group": {
+    "message": "Gruppe"
+  },
+  "generic_group_autoBid": {
+    "message": "Gruppen Automatikmodus"
+  },
+  "generic_inactive": {
+    "message": "inaktiv"
+  },
+  "generic_internalError": {
+    "message": "Interner Fehler"
+  },
+  "generic_item": {
+    "message": "Artikel"
+  },
+  "generic_noGroup": {
+    "message": "Sonstige Auktionen"
+  },
+  "generic_overbid": {
+    "message": "überboten"
+  },
+  "generic_perfornmance": {
+    "message": "Leistung"
+  },
+  "generic_picture": {
+    "message": "Bild"
+  },
+  "generic_price": {
+    "message": "Artikel Preis"
+  },
+  "generic_purchased": {
+    "message": "gekauft"
+  },
+  "generic_search": {
+    "message": "Suche"
+  },
+  "generic_status": {
+    "message": "Status"
+  },
+  "generic_stillUnknown": {
+    "message": "noch unbekannt"
+  },
+  "generic_success": {
+    "message": "Erfolg"
+  },
+  "generic_unknown": {
+    "message": "Unbekannt"
+  },
+  "generic_unlimited": {
+    "message": "unbegrenzt"
+  },
+  "generic_updated": {
+    "message": "Aktualisiert"
+  },
+  "popup_activateArticleAutoBid": {
+    "message": "Aktiviert den Automatikmodus für diesen Artikel"
+  },
+  "popup_adjustedBidtime": {
+    "message": "Bietzeitpunkt wurde um $1s angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
+  },
+  "popup_articleAuctionEnded": {
+    "message": "Artikel Auktion ist bereits beendet"
+  },
+  "popup_articleAuctionEndsSoon": {
+    "message": "Artikel Auktion endet bald"
+  },
+  "popup_articleAuctionEndsVerySoon": {
+    "message": "Artikel Auktion endet in weniger als einer Minute"
+  },
+  "popup_articleRemove": {
+    "message": "Entfernt alle Ereignisse und Einstellungen für diesen Artikel"
+  },
+  "popup_articleTabOpenedForBidding": {
+    "message": "Artikel Tab wurde zum Bieten geöffnet (Tab=$1)"
+  },
+  "popup_auctionendtime": {
+    "message": "Auktions Endzeitpunkt"
+  },
+  "popup_autoBidActive1": {
+    "message": "Automatikmodus ist in einem anderen "
+  },
+  "popup_autoBidActive2": {
+    "message": "Browser Fenster"
+  },
+  "popup_autoBidActive3": {
+    "message": " aktiv"
+  },
+  "popup_autoBidDeactivated1": {
+    "message": "Automatikmodus deaktiviert. Er wurde in einem anderen "
+  },
+  "popup_autoBidDeactivated2": {
+    "message": "Browser Fenster"
+  },
+  "popup_autoBidDeactivated3": {
+    "message": "."
+  },
+  "popup_bidCollision": {
+    "message": "Bieten abgebrochen, da mit anderer Auktion kollidiert: $1"
+  },
+  "popup_buynowprice": {
+    "message": "Sofortkaufpreis"
+  },
+  "popup_closeArticleTab": {
+    "message": "Schließt den Artikel Tab"
+  },
+  "popup_deactivateArticleAutoBid": {
+    "message": "Deaktiviert den Automatikmodus für diesen Artikel"
+  },
+  "popup_enterMinAmount": {
+    "message": "Geben Sie minimal $1 ein"
+  },
+  "popup_hide_articleEvents": {
+    "message": "Verbirgt Artikel Ereignisprotokoll"
+  },
+  "popup_minIncreaseReached": {
+    "message": "Notwendige minimale Preiserhöhung wurde erreicht"
+  },
+  "popup_minimumbid": {
+    "message": "Minimal Erhöhungspreis"
+  },
+  "popup_numberbids": {
+    "message": "Anzahl der Gebote"
+  },
+  "popup_openArticleInTab": {
+    "message": "Öffnet den Artikel in einem neuen Tab"
+  },
+  "popup_paymentmethods": {
+    "message": "Zahlungsmethoden"
+  },
+  "popup_shippingcosts": {
+    "message": "Leferkosten"
+  },
+  "popup_shippingmethods": {
+    "message": "Lieferarten"
+  },
+  "popup_show_articleEvents": {
+    "message": "Zeigt Artikel Ereignisprotokoll"
+  },
+  "popup_changesMisc": {
+    "message": "$1: $2 sonstige Änderungen"
+  },
+  "popup_changesDiffError": {
+    "message": "$1: Kann Änderungen nicht anzeigen ($2)"
   }
 }

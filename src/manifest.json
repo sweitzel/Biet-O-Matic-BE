@@ -2,20 +2,21 @@
   "name": "__MSG_appName__",
   "short_name": "BOM",
   "description": "__MSG_appDesc__",
-  "default_locale": "de",
+  "default_locale": "en",
   "background": {
     "scripts": [
       "background.bundle.js"
     ]
   },
   "browser_action": {
-    "default_title": "Öffne Biet-O-Matic BE"
+    "default_title": "__MSG_appOpen__"
   },
   "permissions": [
     "https://*.ebay.com/*",
     "https://*.ebay.de/*",
-    "tabs",
-    "storage"
+    "activeTab",
+    "storage",
+    "power"
   ],
   "icons": {
     "48": "icon48.png",

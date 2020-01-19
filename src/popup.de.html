@@ -5,6 +5,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui"/>
+  <meta name="google" content="notranslate" />
 </head>
 <body>
 
@@ -12,21 +13,23 @@
   <div style="margin-bottom: 2em;">
     <fieldset>
       <legend>Optionen</legend>
-      <label for="inpAutoBid" style="display: inline-block;white-space: nowrap;margin-right: 30px">
-        <input id="inpAutoBid" name="autoBid"
-               title="Sollen Gebote für Auktionen in diesem Browser Fenster automatisch abgegeben werden?"
-               type="checkbox" style="width: 30px; height: 30px;vertical-align: middle;"/>
-        <span id="lblAutoBid">Automatikmodus</span>
-      </label>
-      <div id="autoBidMessage" style="display: inline;">Keine Info</div>
-      <!--
-            <label for="inpPrepareBidSecs" style="display: inline-block;white-space: nowrap;margin-right: 30px">
-              <input id="inpPrepareBidSecs" name="prepareBidSecs"
-                     title="Wieviel Sekunden vor Ablauf der Auktion soll das Bieten vorbereitet werden?" type="number"
-                     step="1" min="5" max="60" style="width: 30px;vertical-align: middle;"/>
-              <span>Vorbereitungszeit</span>
-            </label>
-       -->
+      <div style="position: relative;">
+        <div>
+          <label for="inpAutoBid" class="ui-button" style="display: inline-block;white-space: nowrap;margin-right: 30px;"
+                 title="Konfiguriert den Automatikmodus für das aktuelle Browser Fenster.">
+            <input id="inpAutoBid" name="autoBid" type="checkbox" style="display: none"/>
+            <span id="lblAutoBid" class="translate">Automatikmodus </span>
+          </label>
+        </div>
+        <div style="position: absolute;right: 0;top: 0;">
+          <label for="inpCompact" class="ui-button" style="display: inline-block;white-space: nowrap;"
+                 title="Wechselt zwischen normaler und kompakter Ansicht.">
+            <input id="inpCompact" name="autoBid" type="checkbox" style="display: none"/>
+            <span id="lblCompact" class="translate">Kompakte Ansicht </span>
+          </label>
+        </div>
+      </div>
+      <div id="autoBidMessage" style="display: inline;">Keine Information</div>
     </fieldset>
   </div>
 
@@ -83,8 +86,8 @@
     <div id="right">
       <a href="https://www.github.com/sweitzel/Biet-O-Matic-BE" title="Source Code" target="_blank"
          class="button-zoom fab fa-github fa-lg fa-fw" aria-label="Source Code"></a>
-      <a href="/doc/de/index.html" title="Documentation" target="_blank"
-         class="button-zoom far fa-question-circle fa-lg fa-fw" aria-label="Documentation"></a>
+      <a href="/doc/de/index.html" title="Dokumentation" target="_blank"
+         class="button-zoom far fa-question-circle fa-lg fa-fw" aria-label="Dokumentation"></a>
     </div>
   </div>
 </footer>

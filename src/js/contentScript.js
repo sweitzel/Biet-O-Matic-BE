@@ -11,16 +11,8 @@
  */
 
 import browser from "webextension-polyfill";
-import $ from 'jquery';
+import EbayParser from "./EbayParser.js";
 import "../css/contentScript.css";
-
-// auction states as communicated to the overview page
-const auctionEndStates = {
-  ended: 0,
-  purchased: 1,
-  overbid: 2,
-  unknown: null
-};
 
 class EbayArticle {
   constructor() {
@@ -29,35 +21,31 @@ class EbayArticle {
     this.perfInfo = [];
   }
 
+  // return the information to be shared with the popup
+  get() {
+    const result = {};
+    Object.keys(this).sort().forEach(key => {
+      if (key === 'perfInfo' || key === 'ebayParser') return;
+      result[key] = this[key];
+    });
+    return result;
+  }
+
   /*
    * Initialize the EbayArticle object
    * - check if the page is in expected format
    * - parse the page
    */
   async init(oldInfo) {
-    // first we check if the page is a expected Article Page
-    const body = document.getElementById("Body");
-    if (body == null) {
-      console.info("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
-      throw new Error("Biet-O-Mat: skipping on this page; no Body element");
-    }
-    const itemType = body.getAttribute("itemtype");
-    if (itemType == null) {
-      console.info("Biet-O-Mat: skipping on this page; no itemtype in body element");
-      throw new Error("Biet-O-Mat: skipping on this page; no itemtype in body element");
-    }
-    if (itemType !== "https://schema.org/Product") {
-      let msg = `Biet-O-Mat: skipping on this page; unexpected itemtype in body element: ${itemType}`;
-      console.info(msg);
-      throw new Error(msg);
-    }
-    if (oldInfo.auctionEnded) {
-      throw new Error("Biet-O-Mat: skipping on this page; bidding already performed.");
-    }
-
     // parse article information
-    let info = EbayArticle.parsePage();
-
+    let info;
+    try {
+      this.ebayParser = new EbayParser(window.location.href);
+      this.ebayParser.init(oldInfo);
+      info = this.ebayParser.parsePage();
+    } catch (e) {
+      throw new Error("EbayParser failed: " + e);
+    }
     // check if the same article is already handled by another tab
     const result = await browser.runtime.sendMessage({
       action: 'getArticleInfo',
@@ -67,9 +55,13 @@ class EbayArticle {
     // the tab is open in another window
     if (typeof result !== 'undefined' || result.hasOwnProperty('tabId')) {
       if (result.hasOwnProperty('data') && result.data.tabId != null && result.tabId !== result.data.tabId) {
-        throw new Error(`Biet-O-Matic: Stopping execution on this page, already active in another tab (${result.data.tabId}).`);
+        throw new Error(`Stopping execution on this page, already active in another tab (${result.data.tabId}).`);
       }
     }
+
+    if (info.articleId == null)
+      return Promise.reject("Parsing page information failed: articleId null");
+
     // assign the determined info to this Article instance
     Object.assign(this, info);
 
@@ -83,7 +75,7 @@ class EbayArticle {
       // return ebayArticleInfo back to Popup script
       if (request.action === "GetArticleInfo") {
         console.log("Biet-O-Matic: Event.GetArticleInfo received");
-        return Promise.resolve({detail: this});
+        return Promise.resolve({detail: this.get()});
       } else if (request.action === "UpdateArticleMaxBid") {
         // receive updated MaxBid info from Popup - update the document
         console.debug("Biet-O-Matic: onMessage(UpdateArticleMaxBid) request=%O, sender=%O", request, sender);
@@ -106,27 +98,49 @@ class EbayArticle {
       console.log("Biet-O-Matic: Do not extend page, no bid button found.");
       return;
     }
-    // add button right of bid button
+
+    // add button below (de)/right (com) of bid button
     let buttonDiv = document.getElementById("BomAutoBidDiv");
     if (buttonDiv != null) buttonDiv.remove();
-    buttonDiv = document.createElement("div");
+
+    buttonDiv = document.createElement('div');
     buttonDiv.id = "BomAutoBidDiv";
-    buttonDiv.style.width = '280px';
-    buttonDiv.style.height = '18px';
+
+    if (this.articlePlatform === 'ebay.com')
+      buttonDiv.style.width = '8.7rem';
+    else
+      buttonDiv.style.width = '280px';
     buttonDiv.style.align = 'center';
     buttonDiv.style.marginTop = '10px';
+
+    const div = document.createElement("div");
+    div.style.height = '30px';
     let buttonInput = document.createElement("input");
-    buttonInput.id ="BomAutoBid";
+    buttonInput.id = "BomAutoBid";
     buttonInput.classList.add('tgl', 'tgl-skewed');
     buttonInput.type = 'checkbox';
     buttonInput.disabled = true;
-    buttonDiv.appendChild(buttonInput);
+    div.appendChild(buttonInput);
     let buttonLabel = document.createElement("label");
     buttonLabel.classList.add('tgl-btn');
-    buttonLabel.setAttribute('data-tg-off', "B-O-M: Automatisch bieten aus");
-    buttonLabel.setAttribute('data-tg-on', "B-O-M: Automatisch bieten an");
+    let offText = EbayArticle.getTranslation('generic_autoBid', '.Auto-Bid') + ' ' +
+      EbayArticle.getTranslation('generic_inactive', '.inactive');
+    let onText = EbayArticle.getTranslation('generic_autoBid', '.Auto-Bid') + ' ' +
+      EbayArticle.getTranslation('generic_active', '.active');
+    buttonLabel.setAttribute('data-tg-off', offText);
+    buttonLabel.setAttribute('data-tg-on', onText);
     buttonLabel.setAttribute('for', 'BomAutoBid');
-    buttonDiv.appendChild(buttonLabel);
+    div.appendChild(buttonLabel);
+
+    const span = document.createElement('span');
+    span.id = 'BomAutoBidHint';
+    span.innerText = EbayArticle.getTranslation('cs_bomAutoBidHint',
+      '.Please ensure group and global auto-bid are also enabled.');
+    span.style.fontSize = 'small';
+    span.style.display = 'none';
+
+    buttonDiv.appendChild(div);
+    buttonDiv.appendChild(span);
 
     //mainContent.appendChild(button);
     bidButton.parentNode.insertBefore(buttonDiv, bidButton.nextSibling);
@@ -135,7 +149,7 @@ class EbayArticle {
     browser.storage.sync.get(this.articleId).then((result) => {
       if (Object.keys(result).length === 1) {
         let storInfo = result[this.articleId];
-        console.debug("Biet-O-Mat: extendPage() Found info for Article %s in storage: %O", this.articleId, result);
+        console.debug("Biet-O-Matic: extendPage() Found info for Article %s in storage: %O", this.articleId, result);
         this.updateMaxBidInfo(storInfo);
       }
     });
@@ -150,35 +164,29 @@ class EbayArticle {
     const maxBidInput = document.getElementById('MaxBidId');
     // id=BomAutoBid defined by us
     const autoBidInput = document.getElementById('BomAutoBid');
-    if (!info.hasOwnProperty('maxBid') && info.hasOwnProperty('articleMaxBid'))
-      info.maxBid = info.articleMaxBid;
-    if (!info.hasOwnProperty('autoBid') && info.hasOwnProperty('articleAutoBid'))
-      info.autoBid = info.articleAutoBid;
 
     if (maxBidInput != null) {
-      if (info.maxBid != null) {
+      if (info.articleMaxBid != null) {
         try {
-          if (typeof info.maxBid === 'string')
-            info.maxBid = Number.parseFloat(info.maxBid);
-          maxBidInput.value = info.maxBid.toLocaleString('de-DE',
+          if (typeof info.articleMaxBid === 'string')
+            info.articleMaxBid = Number.parseFloat(info.articleMaxBid.toString());
+          maxBidInput.value = info.articleMaxBid.toLocaleString('de-DE',
             {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
         } catch (e) {
-          console.warn("Biet-O-Matic: updateMaxBidInfo() Failed to parse, info.maxBid=%s (%s)",
-            info.maxBid, typeof info.maxBid);
-          maxBidInput.value = info.maxBid.toString();
+          console.warn("Biet-O-Matic: updateMaxBidInfo() Failed to parse, info.articleMaxBid=%s (%s)",
+            info.articleMaxBid, typeof info.articleMaxBid);
+          maxBidInput.value = info.articleMaxBid.toString();
         }
       } else {
-        info.maxBid = Number.parseFloat(maxBidInput.value);
+        info.articleMaxBid = this.articleMaxBid;
       }
       if (autoBidInput != null) {
-        if (info.autoBid != null) {
-          autoBidInput.checked = info.autoBid;
+        if (info.articleAutoBid != null) {
+          autoBidInput.checked = info.articleAutoBid;
         }
       }
-      // update in ebayArticleInfo, it might have been updated by popup
-      this.articleMaxBid = info.maxBid;
-      this.articleAutoBid = info.autoBid;
-      this.activateAutoBidButton(info.maxBid);
+      Object.assign(this, info);
+      this.activateAutoBidButton(info.articleMaxBid, null);
     }
   }
 
@@ -188,8 +196,9 @@ class EbayArticle {
    * - the value is higher than the minimum or current price of the article
    */
   activateAutoBidButton(maxBidValue, minBidValue = null) {
-    const buttonInput = document.getElementById('BomAutoBid');
-    if (buttonInput == null) {
+    const bomAutoBid = document.getElementById('BomAutoBid');
+    const bomAutoBidHint = document.getElementById('BomAutoBidHint');
+    if (bomAutoBid == null) {
       console.warn("activateAutoBidButton() ButtonInput invalid - should not happen!?");
       return;
     }
@@ -200,7 +209,7 @@ class EbayArticle {
       maxBidValue = maxBidValue.replace(/,/, '.');
       maxBidValue = Number.parseFloat(maxBidValue);
     }
-    console.debug("Biet-O-Matic: activateAutoBidButton(), maxBidValue=%s (%s), minBidValue=%s (%s)",
+    console.debug("Biet-O-Matic: activateAutoBidButton() maxBidValue=%s (%s), minBidValue=%s (%s)",
       maxBidValue, typeof maxBidValue,  minBidValue, typeof minBidValue);
     //let isMaxBidEntered = (Number.isNaN(maxBidValue) === false);
     const isMinBidLargerOrEqualBidPrice = (minBidValue >= this.articleBidPrice);
@@ -210,21 +219,27 @@ class EbayArticle {
     if (isMinBidLargerOrEqualBidPrice) {
       //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
       //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
-      buttonInput.disabled = !isMaxBidLargerOrEqualMinBid;
+      bomAutoBid.disabled = !isMaxBidLargerOrEqualMinBid;
       // set tooltip for button to minBidValue
       let t = document.querySelector('.tgl-btn');
-      if (buttonInput.disabled) {
-        t.title = `Geben sie minimal ${minBidValue} ein`;
-        buttonInput.checked =  false;
+      if (bomAutoBid.disabled) {
+        t.title = EbayArticle.getTranslation('popup_enterMinAmount', '.Enter at least $1', minBidValue.toString());
+        bomAutoBid.checked =  false;
       } else {
-        t.title = "Minimale Erhöhung erreicht";
+        t.title = EbayArticle.getTranslation('popup_minIncreaseReached', '.Minimum reached');
       }
     } else if (isMaxBidLargerThanBidPrice === true) {
       //console.debug("Enable bid button: isMaxBidLargerThanBidPrice=%s", isMaxBidLargerThanBidPrice);
-      buttonInput.disabled = false;
+      bomAutoBid.disabled = false;
     } else {
-      buttonInput.disabled = true;
-      buttonInput.checked = false;
+      bomAutoBid.disabled = true;
+      bomAutoBid.checked = false;
+    }
+    // show autoBid hint if autoBid enabled
+    if (bomAutoBid.checked) {
+      bomAutoBidHint.style.display = 'block';
+    } else {
+      bomAutoBidHint.style.display = 'none';
     }
   }
 
@@ -235,16 +250,19 @@ class EbayArticle {
    * - #BomAutoBid: AutoBid
    */
   async monitorChanges() {
-    const maxBidInput = await EbayArticle.waitFor('#MaxBidId', 2000);
+    const maxBidInput = await EbayArticle.waitFor('#MaxBidId', 2000)
+      .catch(() => {
+        throw new Error("monitorChanges() cannot find MaxBidInput button, aborting");
+      });
     const bomAutoBid = await EbayArticle.waitFor('#BomAutoBid', 2000)
-      .catch(e => {
-        throw new Error("Biet-O-Matic: monitorChanges() cannot find BomAutoBid button, aborting");
+      .catch(() => {
+        throw new Error("monitorChanges() cannot find BomAutoBid button, aborting");
       });
     // max bid input changed?
     if (maxBidInput == null) {
       return;
     } else {
-      maxBidInput.addEventListener('change', (e) => {
+      maxBidInput.addEventListener('change', () => {
         const maxBidInputNew = document.getElementById('MaxBidId');
         const bomAutoBidNew = document.getElementById('BomAutoBid');
         if (maxBidInputNew != null) {
@@ -259,7 +277,7 @@ class EbayArticle {
             minBidValue = maxBidInputNew.getAttribute('aria-label')
               .replace(/\n/g, "")
               .replace(/\s+/g, " ");
-            minBidValue = EbayArticle.parsePriceString(minBidValue).price;
+            minBidValue = EbayParser.parsePriceString(minBidValue).price;
             this.articleMinimumBid = minBidValue;
           }
           // check if bid > buy-now price (sofortkauf), then we update the maxBid with buyPrice
@@ -291,9 +309,9 @@ class EbayArticle {
             action: 'ebayArticleMaxBidUpdated',
             articleId: this.articleId,
             detail: {
-              maxBid: maxBidInputValue,
-              autoBid: bomAutoBidNew.checked,
-              minBid: minBidValue
+              articleMaxBid: maxBidInputValue,
+              articleAutoBid: bomAutoBidNew.checked,
+              articleMinimumBid: minBidValue
             }
           }).catch((e) => {
             console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
@@ -303,14 +321,21 @@ class EbayArticle {
     }
     // inform popup about autoBid changes
     if (bomAutoBid != null) {
-      bomAutoBid.addEventListener('change', (e) => {
+      bomAutoBid.addEventListener('change', () => {
         const bomAutoBidNew = document.getElementById('BomAutoBid');
+        const bomAutoBidHint = document.getElementById('BomAutoBidHint');
         if (bomAutoBidNew != null) {
+          // show autoBid hint if autoBid enabled
+          if (bomAutoBidNew.checked) {
+            bomAutoBidHint.style.display = 'inline';
+          } else {
+            bomAutoBidHint.style.display = 'none';
+          }
           browser.runtime.sendMessage({
             action: 'ebayArticleMaxBidUpdated',
             articleId: this.articleId,
             detail: {
-              autoBid: bomAutoBidNew.checked
+              articleAutoBid: bomAutoBidNew.checked
             }
           }).catch((e) => {
             console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
@@ -336,7 +361,7 @@ class EbayArticle {
               console.debug("Biet-O-Matic: Mutation received: %d seconds left", timeLeftInSeconds);
               this.doBid()
                 .catch(e => {
-                  console.info("Biet-O-Matic: doBid() was aborted: %s", e.message);
+                  console.info("Biet-O-Matic: doBid() was aborted: " + e.message);
                   EbayArticle.sendArticleLog(this.articleId, e);
                 });
             }
@@ -344,15 +369,15 @@ class EbayArticle {
             let newN = mutation.target;
             oldN=oldN[0];
             if (typeof oldN !== 'undefined' && oldN.textContent !== newN.textContent) {
-              let info = EbayArticle.parsePageRefresh();
+              let info = this.ebayParser.parsePageRefresh();
               Object.assign(this, info);
-              this.activateAutoBidButton(info.articleMaxBid, info.articleMinimumBid);
+              this.activateAutoBidButton(this.articleMaxBid, this.articleMinimumBid);
               // send info to extension popup about new price
               browser.runtime.sendMessage({
                 action: 'ebayArticleUpdated',
                 detail: this
               }).catch((e) => {
-                console.warn(`Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: ${e.message}`);
+                console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: " + e);
               });
             } else {
               // send trigger to extension popup, so it can refresh the date (timeleft)
@@ -360,7 +385,7 @@ class EbayArticle {
                 action: 'ebayArticleRefresh',
                 articleId: this.articleId
               }).catch((e) => {
-                console.warn("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed - reloading page!: %s", e.message);
+                console.warn("Biet-O-Matic: sendMessage(ebayArticleRefresh) failed - reloading page!: " + e);
                 location.reload();
               });
             }
@@ -374,338 +399,6 @@ class EbayArticle {
   }
 
   /*
-   * Parse information from Ebay Article page
-   */
-  static parsePage() {
-    let result = {};
-    // DOM Element Parsing
-    const parseInfoArray = new Map([
-      ['articleId', ['#descItemNumber']],
-      ['articleDescription', ['#itemTitle']],
-      ['articleState', ['#vi-itm-cond']],
-      ['articleEndTime', [
-        '#bb_tlft > span.vi-tm-left',  // normal running article
-        '#bb_tlft']                    // ended article
-      ],
-      ['articleBidPrice', [
-        '#prcIsum_bidPrice',           // normal running article
-        'div.vi-price-np > span',      // ended auction
-      ]],
-      ['articleBuyPrice', [
-        '#prcIsum'                     // sofortkauf
-      ]],
-      ['articlePaymentMethods', ['#payDet1']],
-      ['articleShippingCost', ['#fshippingCost']],
-      ['articleShippingMethods', ['#fShippingSvc']],
-      ['articleAuctionState', ['#msgPanel']],
-      ['articleBidCount', ['#qty-test']],
-      ['articleMinimumBid', ['#MaxBidId']]
-    ]);
-    for (let item of parseInfoArray) {
-      let info = EbayArticle.parseInfoEntry(item[0], item[1]);
-      result = Object.assign({}, result, info);
-    }
-    return result;
-  }
-
-  /*
- * When the mutation observer is called, the script will check for changed values
- * - maxBid
- * - minBid
- * - bidCount
- */
-  static parsePageRefresh() {
-    let result = {};
-    // DOM Element Parsing
-    const parseInfoArray = new Map([
-      ['articleId', ['#descItemNumber']],
-      ['articleBidPrice', [
-        '#prcIsum_bidPrice',           // normal running article
-        '#mainContent > div:nth-child(1) > table > tbody > tr:nth-child(6) > td > div > div:nth-child(2) > div.u-flL.w29.vi-price-np > span', // ended auction
-      ]],
-      ['articleBidCount', ['#qty-test']],
-      ['articleMinimumBid', ['#MaxBidId']],
-      ['articleAuctionState', ['#msgPanel']],
-    ]);
-
-    for (let item of parseInfoArray) {
-      let info = EbayArticle.parseInfoEntry(item[0], item[1]);
-      result = Object.assign({}, result, info);
-    }
-    return result;
-  }
-
-  /*
- * Parse price from text
- * returns {currency: "EUR", price: 0.01}
- */
-  static parsePriceString(price) {
-    let currency = null;
-    if (price == null) return null;
-    price = price
-      .replace(/\n/g, "")
-      .replace(/\s+/g, " ");
-    // use regular expression to parse info, e.g.
-    // US $1,000.12
-    // GBP 26.00
-    // EUR 123,00
-    const regex = /([A-Z]{2,3}(?:\s[$]?))([0-9,]+)(?:.|,)([0-9]{2})/;
-    let result = [];
-    if (price.match(regex)) {
-      result = price.match(regex);
-      let p1 = result[2].replace(/,/, '');
-      let p2 = result[3];
-      price = parseFloat(`${p1}.${p2}`).toFixed(2);
-      currency = result[1].trim();
-      if (currency === "US $")
-        currency = "USD";
-    }
-    return {
-      price: Number.parseFloat(price.toString()),
-      currency: currency
-    };
-  }
-
-  /*
-   * parse a specific DOM element from the current page
-   * returns {key: value} which can be assigned to the instance or used otherwise
-   */
-  static parseInfoEntry(key, value = []) {
-    const result = {};
-    for (let v of value) {
-      const domEntry = document.querySelector(v);
-      if (domEntry != null) {
-        let value = null;
-        if (key === "articleEndTime") {
-          value = EbayArticle.parseEndTime(domEntry);
-        } else if (key === "articleBidPrice") {
-          // attempt to get price lazily from the content attribute
-          let price = domEntry.getAttribute("content");
-          let currency = null;
-          if (price != null && typeof price !== 'undefined') {
-            // this is the normal method for articles
-            value = parseFloat(price);
-          } else {
-            let p = EbayArticle.parsePriceString(domEntry.textContent.trim());
-            if (p != null) {
-              currency = p.currency;
-              value = p.price;
-            }
-          }
-          // get currency from itemprop=priceCurrency
-          if (currency == null) {
-            currency = document.querySelectorAll('[itemprop="priceCurrency"]');
-            if (currency.length >= 1) {
-              result.articleCurrency = currency[0].getAttribute("content");
-            }
-          } else {
-            // determined above
-            result.articleCurrency = currency;
-          }
-        } else if (key === "articleBuyPrice") {
-          // attempt to get price lazily from the content attribute
-          let price = domEntry.getAttribute("content");
-          if (price != null && typeof price !== 'undefined') {
-            value = parseFloat(price);
-          } else {
-            value = EbayArticle.parsePriceString(domEntry.textContent.trim()).price;
-          }
-          // get currency from itemprop=priceCurrency if not already defined from bidPrice
-          if (!result.hasOwnProperty('articleCurrency')) {
-            let currency = document.querySelectorAll('[itemprop="priceCurrency"]');
-            if (currency.length >= 1) {
-              result.articleCurrency = currency[0].getAttribute("content");
-            }
-          }
-        } else if (key === "articleDescription") {
-          // some articles have long description, separated by <wbr>, concat the strings
-          value = "";
-          for (let child of domEntry.childNodes) {
-            if (child.nodeName === '#text') {
-              value += child.textContent.trim();
-            }
-          }
-        } else if (key === "articleMinimumBid") {
-          // the MinBidId input has a attribute which lists the minimum bid
-          // that will be used in the UI to indicate if the maxBid is high enough
-          value = domEntry.getAttribute('aria-label')
-            .replace(/\n/g, "")
-            .replace(/\s+/g, " ");
-          //console.debug("Minimum Bid: %O", value);
-          value = EbayArticle.parsePriceString(value).price;
-        } else if (key === "articleBidCount") {
-          //console.debug("articleBidCount=%s", domEntry.textContent.trim());
-          value = parseInt(domEntry.textContent.trim(), 10);
-        } else if (key === "articleAuctionState") {
-          try {
-            // attempt to sanitize the html
-            value = EbayArticle.cleanupHtmlString(domEntry.outerHTML);
-          } catch (e) {
-            console.log("Biet-O-Matic: cleanupHtmlString() Internal error: %s", e.message);
-            value = domEntry.outerHTML;
-          }
-          result.articleAuctionStateText = $(value)[0].textContent.trim()
-            .replace(/\n/g, '')
-            .replace(/\s+/g, ' ')
-            .replace(/[\s\|]+$/g, '');
-        } else {
-          value = domEntry.textContent.trim();
-          // replace newline and multiple spaces
-          value = value.replace(/\n/g, "");
-          value = value.replace(/\s+/g, " ");
-        }
-        result[key] = value;
-        break;
-      } else {
-        console.debug("Biet-O-Matic: parseInfoEntry() No value found for key %s, selector=%s", key, v);
-      }
-    }
-    return result;
-  }
-
-  /*
- * Convert Ebay Time String (articleEndTime) to Date()
- * German: "(01. Dez. 2019\n							17:29:13 MEZ)"
- * English: 1575217753000 (Unix Epoch stored in attribute timems) (only on ebay.com right now)
- */
-  static parseEndTime(domValue) {
-    // ebay.com has unix epoch time, yeah!
-    //<span class="timeMs" timems="1575217753000">Today 5:29PM</span>
-    let timems = domValue.querySelector('span[timems]');
-    if ( timems != null) {
-      return parseInt(timems.getAttribute('timems'), 10);
-    }
-    // ebay.de still only has ugly date string which needs to be parsed
-    let months = {
-      'Jan' : 0,
-      'Feb' : 1,
-      'Mär' : 2,
-      'Apr' : 3,
-      'Mai' : 4,
-      'Jun' : 5,
-      'Jul' : 6,
-      'Aug' : 7,
-      'Sep' : 8,
-      'Okt' : 9,
-      'Nov' : 10,
-      'Dez' : 11
-    };
-    let text = domValue.textContent.trim();
-    text = text.replace(/\n/g, ' ');
-    // domValue.innerText:
-    //   normal Article: "Restzeit:↵4T 00Std ↵(08. Dez. 2019 17:30:42 MEZ)"
-    //   ended Article: "01. Dez. 2019 12:35:50 MEZ"
-    let regex = /^[(]?([0-9]{2})\.\s(.+)\.\s([0-9]{4})\s+([0-9]{2}):([0-9]{2}):([0-9]{2})\s+([A-Z]{3})[)]?$/i;
-    if (regex.test(text)) {
-      let m = text.match(regex);
-      // new Date(year, monthIndex [, day [, hour [, minutes [, seconds [, milliseconds]]]]]);
-      let date = new Date(parseInt(m[3], 10), months[m[2]],
-        parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10), parseInt(m[6],10));
-      //console.debug("Biet-O-Matic: Input Date=%O, regexMatch=%O, date=%O", text, m, date);
-      return date.valueOf();
-    } else {
-      console.warn("Biet-O-Matic: Unable to parse date from Input Date=%O", text);
-    }
-    return null;
-  }
-
-  //region Status HTML Cleanup
-  /*
-   * parse html string via jquery and only keep whitelisted elements
-   * http://booden.net/ContentCleaner.aspx
-   * - elements: div, span
-   * - tags: class, style, id
-   * - a href add target _blank
-   */
-  static cleanupHtmlString(html) {
-    //Extension for getting the tagName
-    $.fn.tagName = function () {
-      if (!this.get(0).tagName) return "";
-      return this.get(0).tagName.toLowerCase();
-    };
-    //Extension for removing comments
-    $.fn.removeComments = function () {
-      this.each(
-        function (i, objNode) {
-          let objChildNode = objNode.firstChild;
-          while (objChildNode) {
-            if (objChildNode.nodeType === 8) {
-              const next = objChildNode.nextSibling;
-              objNode.removeChild(objChildNode);
-              objChildNode = next;
-            } else {
-              if (objChildNode.nodeType === 1) {
-                //recursively down the tree
-                $(objChildNode).removeComments();
-              }
-              objChildNode = objChildNode.nextSibling;
-            }
-          }
-        }
-      );
-    };
-
-    const tagsAllowed = "|div|span|a|strong|br|";
-    const attributesAllowed = [];
-    attributesAllowed.div = "|id|class|style|";
-    attributesAllowed.span = "|id|class|style|";
-    attributesAllowed.a = "|class|href|name|target|";
-    //console.log("Before: %s", $(jqHtml).html());
-    try {
-      html = html.replace(/(\r\n|\n|\r)/gm, '');
-      html = html.replace(/\t+/gm, '');
-      let jqHtml = $(html);
-      $(jqHtml).removeComments();
-      EbayArticle.clearUnsupportedTagsAndAttributes($(jqHtml), tagsAllowed, attributesAllowed);
-      //console.log("After2: %s", $(jqHtml)[0].outerHTML);
-      return $(jqHtml)[0].outerHTML;
-    } catch(e) {
-      console.warn("Biet-O-Matic: Failed to cleanup status: %s", e.message);
-      return html;
-    }
-  }
-
-  static clearUnsupportedTagsAndAttributes(obj, tagsAllowed, attributesAllowed, emptyTagsAllowed = '|div|br|hr|') {
-    $(obj).children().each(function () {
-      //recursively down the tree
-      const el = $(this);
-      EbayArticle.clearUnsupportedTagsAndAttributes(el, tagsAllowed, attributesAllowed, emptyTagsAllowed);
-      try {
-        const tag = el.tagName();
-        // add target to links
-        if (tag === 'a') {
-          if (!el.get(0).attributes.target) {
-            el.attr('target', '_blank');
-          }
-        }
-        if (tagsAllowed.indexOf("|" + tag + "|") < 0) {
-          if (tag === "style" || tag === "script")
-            el.remove();
-          else
-            el.replaceWith(el.html());
-        } else {
-          if (el.html().replace(/^\s+|\s+$/g, '') === "" && emptyTagsAllowed.indexOf("|" + tag + "|") < 0)
-            el.remove();
-          else {
-            let attrs = el.get(0).attributes;
-            for (let i = 0; i < attrs.length; i++) {
-              try {
-                if (attributesAllowed[tag] == null ||
-                  attributesAllowed[tag].indexOf("|" + attrs[i].name.toLowerCase() + "|") < 0) {
-                  el.removeAttr(attrs[i].name);
-                }
-              } catch (e) {} //Fix for IE, catch unsupported attributes like contenteditable and dataFormatAs
-            }
-          }
-        }
-      } catch (e) {
-        throw new Error(e.message);
-      }
-    });
-  }
-  //endregion
-
-  /*
    * Send log information to popup - it will be persisted under the storage
    * - messageObject { component: s, message: s, level: s}
    * TODO: use HTML for good/bad indication
@@ -714,8 +407,8 @@ class EbayArticle {
     const message = {};
     message.timestamp = Date.now();
     message.message = JSON.stringify(messageObject);
-    message.component = "Unbekannt";
-    message.level = "Interner Fehler";
+    message.component = EbayArticle.getTranslation('generic_unknown', '.Unknown');
+    message.level = EbayArticle.getTranslation('generic_internalError', '.Internal Error');
     if (messageObject.hasOwnProperty('message'))
       message.message = messageObject.message;
     if (messageObject.hasOwnProperty('component'))
@@ -744,16 +437,14 @@ class EbayArticle {
    */
   async doBid() {
     let simulate = false;
-    let perfSnapshot = [];
     try {
-      this.storePerfInfo("Initialisierung");
+      this.storePerfInfo(EbayArticle.getTranslation('cs_initialisation', '.Initialization'));
       // if end time reached, abort directly
       if ((this.hasOwnProperty('auctionEnded') && this.auctionEnded) || this.endTime <= Date.now()) {
-        let t = Date.now() - this.endTime;
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: `Auktion bereits beendet.`
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_auctionAlreadyEnded', '.Auction has already ended.')
         };
       }
       /*
@@ -773,38 +464,42 @@ class EbayArticle {
       }
       // check window/group autoBid status
       let autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
-      if (autoBidInfo == null || typeof autoBidInfo === 'undefined') {
+      if (autoBidInfo == null || typeof autoBidInfo === 'undefined' || !autoBidInfo.hasOwnProperty('autoBidEnabled') ) {
         throw {
-          component: "Bietvorgang",
-          level: "Interner Fehler",
-          message: "Konnte autoBidEnabled Option nicht prüfen"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+          message: EbayArticle.getTranslation('cs_couldNotCheckAutoBidEnabledOption',
+            '.Could not check autoBidEnabled Option.')
         };
       }
       // ensure window autoBid is enabled
       if (autoBidInfo.autoBidEnabled === false) {
         console.debug("Biet-O-Matic: doBid() abort, Window autoBid is off");
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Automatisches bieten für Fenster inaktiv"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidInactiveForWindow',
+            '.Auto-bid is inactive for this window')
         };
       }
       // ensure Group autoBid is enabled
       if (autoBidInfo.groupAutoBid === false) {
         console.debug("Biet-O-Matic: doBid() abort, Group %s autoBid is off", autoBidInfo.groupName);
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: `Automatisches bieten für Gruppe ${autoBidInfo.groupName} inaktiv`
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidInactiveForGroup',
+            '.Auto-bid is inactive for group $1', autoBidInfo.groupName)
         };
       }
       // ensure article autoBid is checked
       if (autoBidInfo.articleAutoBid === false) {
         console.debug("Biet-O-Matic: doBid() abort, Article autoBid is off");
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Automatisches bieten für diesen Artikel inaktiv"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidInactiveForArticle',
+            '.Auto-bid is inactive for this article.')
         };
       }
       // enable test mode if specified by popup
@@ -812,32 +507,53 @@ class EbayArticle {
         console.debug("Biet-O-Matic: Enable simulated bidding.");
         simulate = true;
       }
+
+      // check bid-lock. When another article auction is still running for the same group, we cannot peform bid
+      let bidLockInfo = await browser.runtime.sendMessage({action: 'getBidLockState', articleId: this.articleId});
+      if (bidLockInfo == null || typeof bidLockInfo === 'undefined' || !bidLockInfo.hasOwnProperty('bidIsLocked')) {
+        throw {
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+          message: EbayArticle.getTranslation('cs_couldNotCheckBidLock',
+            '.Could not check if bidding is locked')
+        };
+      }
+      if (bidLockInfo.bidIsLocked) {
+        console.debug("Biet-O-Matic: doBid() abort, bidding is locked");
+        throw {
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: bidLockInfo.message
+        };
+      }
+
       // set bidInfo to ensure the bidding is not executed multiple times
       if (bidInfo == null) {
         // bid not yet running (or not anymore after page refresh)
         bidInfo = {
-          maxBid: this.articleMaxBid,
-          endTime: this.articleEndTime,
+          articleMaxBid: this.articleMaxBid,
+          articleEndTime: this.articleEndTime,
           started: Date.now()
         };
         window.sessionStorage.setItem(`bidInfo:${this.articleId}`, JSON.stringify(bidInfo));
       }
 
-      this.storePerfInfo("Phase1: Gebotsvorbereitung");
+      this.storePerfInfo(EbayArticle.getTranslation('cs_phase1', '.Phase 1: Bidding preparation.'));
       console.info("Biet-O-Matic: Performing bid for article %s", this.articleId);
       EbayArticle.sendArticleLog(this.articleId, {
-        component: "Bietvorgang",
+        component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
         level: "Info",
-        message: "Bietvorgang wird vorbereitet...",
+        message: EbayArticle.getTranslation('cs_biddingPrepare', '. Bidding is beeing prepared'),
       });
       // press bid button
       const bidButton = document.getElementById('bidBtn_btn');
       if (bidButton == null) {
         console.warn("Biet-O-Matic: Article %s - Unable to get Bid Button!", this.articleId);
         throw {
-          component: "Bietvorgang",
-          level: "Interner Fehler",
-          message: "Kann den Bieten-Knopf nicht auf der Artikel Seite finden!"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+          message: EbayArticle.getTranslation('cs_errorCannotFindBidButton',
+            '.Cannot find the bidding button on the article page!')
         };
       }
 
@@ -857,16 +573,16 @@ class EbayArticle {
       /*
        * Phase 2: Initiate the Bid
        */
-      this.storePerfInfo("Phase2: Gebot abgeben");
+      this.storePerfInfo(EbayArticle.getTranslation('cs_phase2', '.Phase 2: Submitting bid'));
       bidButton.click();
       // wait for modal to open: vilens-modal-wrapper
       const modalBody = await EbayArticle.waitFor('#MODAL_BODY', 5000)
         .catch((e) => {
           console.warn("Biet-O-Matic: Waiting for Bidding Modal timed out: %s", e.toString());
           throw {
-            component: "Bietvorgang",
-            level: "Interner Fehler",
-            message: "Element #MODAL_BODY konnte innerhalb von 5s nicht gefunden werden!"
+            component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+            level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+            message: EbayArticle.getTranslation('cs_errorCannotFindModal', '.Element #MODAL_BODY not found!')
           };
         });
       // modal close button
@@ -878,20 +594,21 @@ class EbayArticle {
       if (statusMsg != null) {
         console.log("Biet-O-Matic: Bidding failed: Error reported by eBay: %s", statusMsg.textContent);
         throw {
-          component: "Bietvorgang",
-          level: "Problem beim bieten",
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
           message: statusMsg.textContent
         };
       }
 
       // get confirm button
       const confirmButton = await EbayArticle.waitFor('#confirm_button', 2000)
-        .catch((e) => {
+        .catch(() => {
           console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
           throw {
-            component: "Bietvorgang",
-            level: "Fehler beim bieten",
-            message: "Element #confirm_body konnte innerhalb von 2s nicht gefunden werden!"
+            component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+            level: EbayArticle.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
+            message: EbayArticle.getTranslation('cs_errorCannotFindConfirmButton',
+              'Element #confirm_body could not be found!')
           };
         });
 
@@ -907,7 +624,6 @@ class EbayArticle {
         action: 'ebayArticleGetAdjustedBidTime',
         articleId: this.articleId,
       });
-      console.log("XXX result = %O", ebayArticleGetAdjustedBidTimeResult);
       // result format {"articleEndTime":1578180835000,"adjustmentReason":"Bietzeit um 6s angepasst, da Gefahr der Überschneidung mit Artikel 223821015319."}
       if (ebayArticleGetAdjustedBidTimeResult == null || !ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('articleEndTime')) {
         console.log("Biet-O-Matic: Unable to get ebayArticleGetAdjustedBidTime result!");
@@ -915,14 +631,14 @@ class EbayArticle {
         if (ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('adjustmentReason')) {
           modifiedEndTime = ebayArticleGetAdjustedBidTimeResult.articleEndTime;
           EbayArticle.sendArticleLog(this.articleId, {
-            component: "Bietvorgang",
+            component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
             level: "Info",
             message: ebayArticleGetAdjustedBidTimeResult.adjustmentReason,
           });
         }
       }
 
-      this.storePerfInfo("Phase3: Warten auf Bietzeitpunkt");
+      this.storePerfInfo(EbayArticle.getTranslation('cs_phase3', '.Waiting for bid time'));
       const wakeUpInMs = (modifiedEndTime - Date.now()) - 2500;
       await EbayArticle.wait(wakeUpInMs);
 
@@ -930,25 +646,28 @@ class EbayArticle {
       autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
       if (autoBidInfo == null || typeof autoBidInfo === 'undefined' || !autoBidInfo.hasOwnProperty('autoBidEnabled')) {
         throw {
-          component: "Bietvorgang",
-          level: "Interner Fehler",
-          message: "Konnte autoBidEnabled Option nicht erneut prüfen"
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_internalError', '.Internal Error'),
+          message: EbayArticle.getTranslation('cs_errorCouldNotRecheckAutoBidEnableOption',
+            '.Could not recheck autoBidEnabled Option')
         };
       }
-      if (autoBidInfo.hasOwnProperty('autoBidEnabled') && autoBidInfo.autoBidEnabled === false) {
+      if (autoBidInfo.autoBidEnabled === false) {
         console.info("Biet-O-Matic: doBid() abort, Window autoBid is now off.");
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Automatisches bieten wurde kurz vor der Gebot Bestätigung deaktiviert."
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidDeactivatedBeforeBid',
+            '.Auto-Bid was deactivated before the bid was submitted.')
         };
       }
-      if (autoBidInfo.hasOwnProperty('grouAutoBid') && autoBidInfo.groupAutoBid === false) {
+      if (autoBidInfo.groupAutoBid === false) {
         console.info("Biet-O-Matic: doBid() abort, Group autoBid is now off.");
         throw {
-          component: "Bietvorgang",
-          level: "Abbruch",
-          message: "Automatisches bieten für die Artikel Gruppe wurde kurz vor der Gebot Bestätigung deaktiviert."
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
+          message: EbayArticle.getTranslation('cs_autobidGroupDeactivatedBeforeBid',
+            '.Group Auto-Bid was deactivated before the bid was submitted.')
         };
       }
 
@@ -957,25 +676,27 @@ class EbayArticle {
         // close modal
         if (closeButton != null) closeButton.click();
         console.info("Biet-O-Matic: Test bid performed for Article %s", this.articleId);
-        this.storePerfInfo("Phase3: Testgebot beendet");
+        this.storePerfInfo(EbayArticle.getTranslation('cs_phase4test', '.Phase 4: Test bid ended.'));
         // send info to popup about (almost) successful bid
         let t = this.articleEndTime - Date.now();
         EbayArticle.sendArticleLog(this.articleId, {
-          component: "Bietvorgang",
-          level: "Erfolg",
-          message: `Test-Bietvorgang (bis zur Bestätigung) ${t}ms vor Ablauf der Auktion abgeschlossen.`,
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_success', '.Success'),
+          message: EbayArticle.getTranslation('cs_testBidFinished',
+            '.Test bid ended $1 ms before auction has ended.', t.toString())
         });
       } else {
         // confirm the bid
         confirmButton.click();
         console.info("Biet-O-Matic: Bid submitted for Article %s", this.articleId);
-        this.storePerfInfo("Phase3: Gebot wurde abgegeben");
+        this.storePerfInfo(EbayArticle.getTranslation('cs_phase4', '.Phase 4: Bid submitted.'));
         // send info to popup
         const t = this.articleEndTime - Date.now();
         EbayArticle.sendArticleLog(this.articleId, {
-          component: "Bietvorgang",
-          level: "Erfolg",
-          message: `Bietvorgang ${t}ms vor Ablauf der Auktion abgeschlossen.`,
+          component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayArticle.getTranslation('generic_success', '.Success'),
+          message: EbayArticle.getTranslation('cs_bidFinished',
+            '.Bid performed $1 ms before auction has ended.', t.toString()),
         });
       }
       // finally also send performance info to popup
@@ -986,10 +707,10 @@ class EbayArticle {
         bidInfo.bidPerformed = Date.now();
         window.sessionStorage.setItem(`bidInfo:${this.articleId}`, JSON.stringify(bidInfo));
       }
-    } catch (err) {
+    } catch (e) {
       // pass error through, will be forwarded to popup
-      //console.log("Biet-O-Matic: doBid() aborted: %s", err.message);
-      throw err;
+      //console.log("Biet-O-Matic: doBid() aborted: " + e);
+      throw e;
     } finally {
       //console.debug("Biet-O-Matic: doBid() reached the end.");
     }
@@ -1057,9 +778,9 @@ class EbayArticle {
     let timeLeft = this.articleEndTime - this.perfInfo[this.perfInfo.length - 1].date;
     result += `timeLeft = ${timeLeft}ms (${this.articleEndTime} - ${this.perfInfo[this.perfInfo.length - 2].date})`;
     EbayArticle.sendArticleLog(this.articleId, {
-      component: "Bietvorgang",
-      level: "Performance",
-      message: result,
+      component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
+      level: EbayArticle.getTranslation('generic_perfornmance', '.Performance'),
+      message: result
     });
   }
 
@@ -1078,7 +799,7 @@ class EbayArticle {
    * Note: We also send the minimal article info parsed by handleReload
    *       So the popup has the latest state information without refreshing
    */
-  static async sendAuctionEndState(ebayArticleInfo, simulate = false) {
+  static async sendAuctionEndState(ebayArticleInfo) {
     await browser.runtime.sendMessage({
       action: 'ebayArticleSetAuctionEndState',
       articleId: ebayArticleInfo.articleId,
@@ -1093,55 +814,18 @@ class EbayArticle {
    * - reload when a modal was closed  -> resume bidding
    */
   static async handleReload() {
-    const ebayArticleInfo = EbayArticle.parsePageRefresh();
+    const ebayParser = new EbayParser();
+    const ebayArticleInfo = ebayParser.parsePageRefresh();
     if (!ebayArticleInfo.hasOwnProperty('articleId')) {
       console.debug("Biet-O-Matic: handleReload() Aborting, no articleId found: %s", JSON.stringify(ebayArticleInfo));
       return ebayArticleInfo;
     }
     // determine auction state - if any yet
-    // TODO: think of a better way, to support languages or be robust against changing strings
-    let currentState = auctionEndStates.unknown;
-    if (ebayArticleInfo.hasOwnProperty('articleAuctionStateText')) {
-      if (ebayArticleInfo.articleAuctionStateText.includes('Dieses Angebot wurde beendet')) {
-        currentState = auctionEndStates.ended;
-      } else if (ebayArticleInfo.articleAuctionStateText.includes('Sie waren der Höchstbietende')) {
-        currentState = auctionEndStates.purchased;
-      } else if (ebayArticleInfo.articleAuctionStateText.includes('Sie wurden überboten')) {
-        currentState = auctionEndStates.overbid;
-      } else if (ebayArticleInfo.articleAuctionStateText.includes('Mindestpreis wurde noch nicht erreicht')) {
-        // Sie sind derzeit Höchstbietender, aber der Mindestpreis wurde noch nicht erreicht.
-        // its not really overbid, but we will not win the auction due to defined minimum price
-        currentState = auctionEndStates.overbid;
-      }
-      console.debug("Biet-O-Matic: handleReload() state=%s (%d)", ebayArticleInfo.articleAuctionStateText, currentState);
-    }
-
+    let currentState = EbayParser.getAuctionEndState(ebayArticleInfo);
     // info related to previous bidding
-    const bidInfo = JSON.parse(window.sessionStorage.getItem(`bidInfo:${ebayArticleInfo.articleId}`));
+    const bidInfo = JSON.parse(window.sessionStorage.getItem("bidInfo:" + ebayArticleInfo.articleId));
     // info from sync storage
     const articleStoredInfo = await browser.storage.sync.get(ebayArticleInfo.articleId);
-
-    /*
-     * retrieve settings from popup
-     * if simulation is on, then we define bid status:
-     * - if endPrice > bidPrice: overbid
-     * - if endPrice <= bidprice: purchased
-     */
-    // retrieve settings from popup
-    // if simulation is on, then we define successful bid status randomly with 33% chance (ended, overbid, purchased)
-    const settings = await browser.runtime.sendMessage({
-      action: 'getWindowSettings',
-    });
-    let simulate = false;
-    if (settings != null && typeof settings !== 'undefined' && settings.hasOwnProperty('simulation')) {
-      simulate = settings.simulation;
-      if (currentState !== auctionEndStates.unknown && simulate) {
-        if (bidInfo != null && ebayArticleInfo.articleBidPrice > bidInfo.maxBid)
-          currentState = auctionEndStates.overbid;
-        else if (bidInfo != null && ebayArticleInfo.articleBidPrice <= bidInfo.maxBid)
-          currentState = auctionEndStates.purchased;
-      }
-    }
 
     /*
      * Retrieve stored article info from popup
@@ -1149,6 +833,7 @@ class EbayArticle {
      * - if auctionEndState from stored result is incomplete (e.g. state.unknown), then send updated state
      * The popup can then use the result to decide e.g. to stop the automatic bidding
      */
+
     if (articleStoredInfo != null && typeof articleStoredInfo !== 'undefined' && articleStoredInfo.hasOwnProperty(ebayArticleInfo.articleId)) {
       const data = articleStoredInfo[ebayArticleInfo.articleId];
       /*
@@ -1156,12 +841,13 @@ class EbayArticle {
        * the auction end state
        */
       if (data.hasOwnProperty('auctionEndState') &&
-        (currentState !== auctionEndStates.unknown && data.auctionEndState === auctionEndStates.unknown)) {
+        (currentState.id !== EbayParser.auctionEndStates.unknown.id &&
+          data.auctionEndState === EbayParser.auctionEndStates.unknown.id)) {
         // send updated end state
-        ebayArticleInfo.auctionEndState = currentState;
-        await EbayArticle.sendAuctionEndState(ebayArticleInfo, simulate)
+        ebayArticleInfo.auctionEndState = currentState.id;
+        await EbayArticle.sendAuctionEndState(ebayArticleInfo)
           .catch(e => {
-            console.warn(`Biet-O-Matic: handleReload() Sending Auction End State failed: ${e.message}`);
+            console.warn("Biet-O-Matic: handleReload() Sending Auction End State failed: " + e);
           });
       }
     }
@@ -1175,14 +861,16 @@ class EbayArticle {
         ebayArticleInfo.articleId, JSON.stringify(bidInfo));
       // go back to previous page (?)
       // remove bidinfo if the auction for sure ended
-      if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.endTime <= Date.now()) {
-        ebayArticleInfo.auctionEndState = currentState;
+      if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.articleEndTime <= Date.now()) {
+        ebayArticleInfo.auctionEndState = currentState.id;
         console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s (%d)",
-          ebayArticleInfo.articleAuctionStateText, currentState);
-        await EbayArticle.sendAuctionEndState(ebayArticleInfo, simulate).catch(e => {
-          console.warn(`Sending initial auction end state failed: ${e.message}`);
-        });
-        window.sessionStorage.removeItem(`bidInfo:${ebayArticleInfo.articleId}`);
+          ebayArticleInfo.articleAuctionStateText, currentState.id);
+        await EbayArticle.sendAuctionEndState(ebayArticleInfo)
+          .catch(e => {
+            console.warn("Sending initial auction end state failed: " + e);
+          });
+        console.debug("Biet-O-Matic: Setting auctionEnded now. sendAuctionEndState finished");
+        window.sessionStorage.removeItem("bidInfo:" + ebayArticleInfo.articleId);
         // set this, so the script will not trigger parsing further down
         ebayArticleInfo.auctionEnded = true;
       } else {
@@ -1196,11 +884,34 @@ class EbayArticle {
     return ebayArticleInfo;
   }
 
+  //region i18n
+  static getTranslation(i18nKey, defaultText = "", params = null) {
+    let translatedText = browser.i18n.getMessage(i18nKey, params);
+    // use provided default text, if specified
+    if (translatedText === "") {
+      if (defaultText !== "") {
+        return defaultText;
+      } else {
+        return i18nKey;
+      }
+    } else {
+      return translatedText;
+    }
+  }
+  //endregion
+
   toString () {
     let str = '';
+    String.prototype.trunc =
+      function(n){
+        return this.substr(0,n-1)+(this.length>n?'...':'');
+      };
     for (let p in this) {
       if (this.hasOwnProperty(p)) {
-        str += p + '::' + this[p] + '\n';
+        let v = null;
+        if (this[p] != null)
+          v  = (this[p] || '').toString().trunc(64);
+        str += `${p}=${v} (${typeof this[p]})\n`;
       }
     }
     return str;
@@ -1213,14 +924,12 @@ class EbayArticle {
 
 (function () {
   'use strict';
-
-  // check if the contentScript was already loaded (each Tab will get its own window object)
-  // return value will be passed back to executeScript
-  if (window.hasRun === true) {
-    console.debug("Biet-O-Mat: RELOADED EXTENSION, window=%O", window);
-    return true;
+  // check if the contentScript was already loaded
+  if (document.getElementById('BomAutoBid') != null) {
+    console.debug("Biet-O-Matic: RELOADED EXTENSION, window=%O", window);
+    // return value will be passed back to executeScript
+    return false;
   }
-  window.hasRun = true;
 
   EbayArticle.handleReload().then((reloadInfo) => {
     const ebayArticle = new EbayArticle();
@@ -1228,26 +937,19 @@ class EbayArticle {
       .then(() => {
         try {
           console.debug("Biet-O-Matic: Initialized - Article Info: %s", ebayArticle.toString());
-          // send info to extension popup directly after initialization
-          browser.runtime.sendMessage({
-            action: 'ebayArticleUpdated',
-            detail: ebayArticle
-          }).catch(e => {
-            console.error(`Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: ${e.message}`);
-          });
           ebayArticle.extendPage();
-          ebayArticle.monitorChanges().catch(e => {
-            console.warn(`Biet-O-Matic: monitorChanges() failed: ${e.message}`);
-          });
+          ebayArticle.monitorChanges()
+            .catch(e => {
+              console.warn("Biet-O-Matic: monitorChanges() failed: " + e);
+            });
         } catch (e) {
-          console.warn(`Biet-O-Matic: Internal Error while post-initializing: ${e.message}`);
+          console.warn("Biet-O-Matic: Internal Error while post-initializing: " + e);
         }
       })
       .catch(e => {
-        console.error(`Biet-O-Matic: Article Init failed: ${e.message}`);
+        console.error("Biet-O-Matic: Article Init failed: " + e);
       });
   }).catch(e => {
-    console.warn(`Biet-O-Matic: handleReload() failed: ${e.message}`);
+    console.warn("Biet-O-Matic: handleReload() failed: " + e);
   });
-
 })();

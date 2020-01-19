@@ -1,0 +1,266 @@
+{
+  "appDesc": {
+    "message": "A browser extension to perform automated bids for eBay items, also when you are away from your computer"
+  },
+  "appName": {
+    "message": "Bid-O-Matic BE"
+  },
+  "appOpen": {
+    "message": "Open Bid-O-Matic BE"
+  },
+  "cs_auctionAlreadyEnded": {
+    "message": "Auction has already ended"
+  },
+  "cs_autobidDeactivatedBeforeBid": {
+    "message": "Global Auto-Bid was deactivated short before the bid confirmation"
+  },
+  "cs_autobidGroupDeactivatedBeforeBid": {
+    "message": "Group Auto-Bid was deactivated short before the bid confirmation"
+  },
+  "cs_autobidInactiveForArticle": {
+    "message": "Auto-bid is inactive for this item"
+  },
+  "cs_autobidInactiveForGroup": {
+    "message": "Auto-bid is inactive for group $1"
+  },
+  "cs_autobidInactiveForWindow": {
+    "message": "Global Auto-Bid is inactive"
+  },
+  "cs_bidFinished": {
+    "message": "Bid process has been completed $1ms before the auction ended"
+  },
+  "cs_bidding": {
+    "message": "Bidding"
+  },
+  "cs_biddingFailed": {
+    "message": "Auction not successful. Your bid was not received or accepted by eBay (e.g. when another bidder placed a higher bid before yours.)"
+  },
+  "cs_biddingOverbid": {
+    "message": "Auction was not successful. You were overbid."
+  },
+  "cs_biddingPrepare": {
+    "message": "Bidding process is being prepared..."
+  },
+  "cs_biddingStatusUnknown": {
+    "message": "Final auction end state is still unknown."
+  },
+  "cs_biddingSuccess": {
+    "message": "Auction was successful. Item purchased."
+  },
+  "cs_bomAutoBidHint": {
+    "message": "Please ensure group and global auto-bid are also enabled."
+  },
+  "cs_couldNotCheckAutoBidEnabledOption": {
+    "message": "Could not check autoBidEnabled option"
+  },
+  "cs_errorCannotFindBidButton": {
+    "message": "Can not find the bid button on the item page!"
+  },
+  "cs_errorCannotFindConfirmButton": {
+    "message": "Element #confirm_body could not be found in the item page"
+  },
+  "cs_errorCannotFindModal": {
+    "message": "Element #MODAL_BODY could not be found in the item page"
+  },
+  "cs_errorCouldNotRecheckAutoBidEnableOption": {
+    "message": "Could not re-check autoBidEnabled option"
+  },
+  "cs_initialisation": {
+    "message": "Initialization"
+  },
+  "cs_phase1": {
+    "message": "Phase 1: Preparing the bidding process"
+  },
+  "cs_phase2": {
+    "message": "Phase 2: Submitting bid"
+  },
+  "cs_phase3": {
+    "message": "Phase 3: Waiting for bid-confirm time"
+  },
+  "cs_phase4": {
+    "message": "Phase 4: Bid has been submitted"
+  },
+  "cs_phase4test": {
+    "message": "Phase 4: Test bid ended"
+  },
+  "cs_problemWithBidding": {
+    "message": "Problem reported by ebay"
+  },
+  "cs_testBidFinished": {
+    "message": "Test bid process (till confirmation) has been completed $1ms before the auction ended"
+  },
+  "filePopup": {
+    "message": "popup.en.html"
+  },
+  "generic_active": {
+    "message": "active"
+  },
+  "generic_articleAutoBid": {
+    "message": "Item Auto-Bid"
+  },
+  "generic_articleMaxBid": {
+    "message": "Item Maximum Bid"
+  },
+  "generic_autoBid": {
+    "message": "Auto-Bid"
+  },
+  "generic_buyNow": {
+    "message": "Buy It Now"
+  },
+  "generic_cancel": {
+    "message": "Cancel"
+  },
+  "generic_configuration": {
+    "message": "Config"
+  },
+  "generic_description": {
+    "message": "Description"
+  },
+  "generic_ended": {
+    "message": "ended"
+  },
+  "generic_group": {
+    "message": "Group"
+  },
+  "generic_group_autoBid": {
+    "message": "Group Auto-Bid"
+  },
+  "generic_inactive": {
+    "message": "inactive"
+  },
+  "generic_internalError": {
+    "message": "Internal Error"
+  },
+  "generic_item": {
+    "message": "Item"
+  },
+  "generic_noGroup": {
+    "message": "Other Auctions"
+  },
+  "generic_overbid": {
+    "message": "overbid"
+  },
+  "generic_perfornmance": {
+    "message": "Performance"
+  },
+  "generic_picture": {
+    "message": "Picture"
+  },
+  "generic_price": {
+    "message": "Price"
+  },
+  "generic_purchased": {
+    "message": "purchased"
+  },
+  "generic_search": {
+    "message": "Search"
+  },
+  "generic_status": {
+    "message": "Status"
+  },
+  "generic_stillUnknown": {
+    "message": "still unknown"
+  },
+  "generic_success": {
+    "message": "Success"
+  },
+  "generic_unknown": {
+    "message": "Unknown"
+  },
+  "generic_unlimited": {
+    "message": "unlimited"
+  },
+  "generic_updated": {
+    "message": "Updated"
+  },
+  "popup_activateArticleAutoBid": {
+    "message": "Activates item auto-bid"
+  },
+  "popup_adjustedBidtime": {
+    "message": "Adjusted bid-time by $1s due to risk of colliding with item $2"
+  },
+  "popup_articleAuctionEnded": {
+    "message": "Item auction has already ended"
+  },
+  "popup_articleAuctionEndsSoon": {
+    "message": "Item auction ends soon"
+  },
+  "popup_articleAuctionEndsVerySoon": {
+    "message": "Item auction ends in less then a minute"
+  },
+  "popup_articleRemove": {
+    "message": "Removes all events and configuration for this item"
+  },
+  "popup_articleTabOpenedForBidding": {
+    "message": "Item tab has been opened for bidding (tab=$1)"
+  },
+  "popup_auctionendtime": {
+    "message": "Auction End Time"
+  },
+  "popup_autoBidActive1": {
+    "message": "Auto-Bid is active in another "
+  },
+  "popup_autoBidActive2": {
+    "message": "Browser Window"
+  },
+  "popup_autoBidActive3": {
+    "message": "."
+  },
+  "popup_autoBidDeactivated1": {
+    "message": "Auto-Bid deactivated. It was activated in another "
+  },
+  "popup_autoBidDeactivated2": {
+    "message": "Browser Window"
+  },
+  "popup_autoBidDeactivated3": {
+    "message": "."
+  },
+  "popup_bidCollision": {
+    "message": "Bidding aborted because it collided with another article: $1"
+  },
+  "popup_buynowprice": {
+    "message": "Buy-It-Now Price"
+  },
+  "popup_closeArticleTab": {
+    "message": "Closes the item tab"
+  },
+  "popup_deactivateArticleAutoBid": {
+    "message": "Deactivates item auto-bid"
+  },
+  "popup_enterMinAmount": {
+    "message": "Enter at least $1"
+  },
+  "popup_hide_articleEvents": {
+    "message": "Hide item events"
+  },
+  "popup_minIncreaseReached": {
+    "message": "Required minimum price increase reached"
+  },
+  "popup_minimumbid": {
+    "message": "Minimum Bid"
+  },
+  "popup_numberbids": {
+    "message": "Number of Bids"
+  },
+  "popup_openArticleInTab": {
+    "message": "Opens the item in a new tab"
+  },
+  "popup_paymentmethods": {
+    "message": "Payment Methods"
+  },
+  "popup_shippingcosts": {
+    "message": "Shipping Cost"
+  },
+  "popup_shippingmethods": {
+    "message": "Shipping Methods"
+  },
+  "popup_show_articleEvents": {
+    "message": "Show item events"
+  },
+  "popup_changesMisc": {
+    "message": "$1: $2 other changes"
+  },
+  "popup_changesDiffError": {
+    "message": "$1: Cannot determine changes ($2)"
+  }
+}

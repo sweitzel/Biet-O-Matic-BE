@@ -151,7 +151,7 @@ tfoot input {
   margin-left: 10px;
 }
 .footer .fa-heart:after {
-  content: "Spenden";
+  content: "Sponsor";
   margin-left: 5px;
   color: #000;
   font-size: x-small;
@@ -199,28 +199,69 @@ tfoot input {
 .row-group td {
   background-color: #e6e6e6;
   color: #757575;
-  cursor: pointer;
-}
-.row-group td:hover {
-   cursor: pointer;
 }
 
-.groupAutoBidEnabled {
+.autoBidEnabled {
   color: #3f563f;
   text-shadow: 1px 1px 2px #9cfda7;
   user-select: none;
 }
-.groupAutoBidEnabled::after {
-  content: " aktiv";
-}
-.groupAutoBidDisabled {
+.autoBidDisabled {
   color: #820000;
   text-shadow: 1px 1px 2px #e88b88;
   user-select: none;
 }
-.groupAutoBidDisabled::after {
-  content: " inaktiv";
+.translate::before {
+  content: attr(data-i18n-before);
 }
+.translate::after {
+  content: attr(data-i18n-after);
+}
+
+div.polaroid {
+  box-shadow: 5px 5px 5px -5px rgba(0,0,0,0.1);
+  border-radius: 5px;
+  text-align: center;
+  overflow: hidden;
+  position: relative;
+  margin: auto;
+}
+div.container {
+  width: 100%;
+  padding: 2px;
+  position: absolute;
+  bottom: 0;
+  background: #ffffff;
+  opacity: 0.8;
+}
+
+
+@-o-keyframes fadeIt {
+  0%   { background-color: #FFFFFF; }
+  100% { background-color: #eefd00; }
+}
+@keyframes fadeIt {
+  0%   { background-color: #FFFFFF; }
+  100% { background-color: #eefd00; }
+}
+.updated{
+  background-image:none !important;
+  -o-animation: fadeIt 5s ease-in-out;
+  animation: fadeIt 5s ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+/*region simple rotation to indicate article update */
+.loading-spinner {
+  animation: rotate 1.5s linear infinite;
+}
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/*endregion*/
+
 
 /* raleway-regular - latin_latin-ext */
 /*

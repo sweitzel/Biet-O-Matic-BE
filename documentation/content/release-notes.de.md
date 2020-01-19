@@ -6,6 +6,42 @@ type: "docs"
 ---
 
 # Versions Übersicht
+
+## Biet-O-Matic BE Version 0.3
+Diese Version von BE ist die erste, welche mehrsprachig ist. Es wird, nun neben Deutsch, auch eine Englischsprachige
+Benutzung ermöglicht. Ausserdem wurde ebay.com Unterstützung getestet und sollte nun problemlos funktionieren. 
+
+Weitere größere Änderungen in dieser Version:
+* Für geschlossene Artikel (kein Tab offen) wird im Hintergrund jede Minute eine Datenaktualisierung durchgeführt.
+    * Die Aktualisierungsvorgang wird visualisiert (drehendes '+')
+    * Eine Aktualisierung findet nur statt, wenn für das aktuelle Fenster der Automatikmodus aktiv ist.
+* Änderungen an Artikelinformationen werden in der Tabelle farblich (gelb) hervorgehoben. 
+* Artikel Bilder werden jetzt auf der Übersichtsseite angezeigt
+* Option für kompakte Anzeige hinzugefügt, dies blendet Bilder aus und macht die Tabellenzeilen etwas schmaler.
+* Unterstützung für Englisch hinzugefügt.
+    * Die Sprache wird automatisch über die Browser Anzeigesprache festgelegt.
+* Artikel Gruppen Feld erlaubt jetzt Auswahl aus bereits existierenden Gruppen.
+* Unbenutzte Artikel Gruppen werden nach 7 Tagen automatisch gelöscht.
+* Die BE Übersichtsseite öffnet sich nach einem Update automatisch, aber nur,
+  wenn der Automatikmodus für das Fenster vor dem Update aktiv war.
+  Dies stellt sicher, dass in Abwesenheit weiterhin automatisch geboten werden kann, nachdem ein BE Update statt fand.
+* Biet-Sperre wurde eingeführt, um sicherzustellen, das nicht mehrere Artikel aus einer Gruppe ersteigert werden,
+  wenn die Auktionen dicht beieinander enden (10s), siehe auch [Funktionen]({{< relref "/manual/features#vermeidung-von-doppelkufen-auktions-kollosion" >}})
+* Wenn der Browser es unterstützt, wird BE verhindern, dass der Computer in den Schlafmodus wechselt. Aber nur wenn die Biet-Automatik aktiv ist.
+
+### Biet-O-Matic BE Version 0.3.2
+{{< hint info>}}
+Erschienen am Sonntag, 19.01.2020 
+{{< /hint >}}
+
+* Erste stabile 0.3 Version (für die wichtigsten Änderungen, siehe oben)
+* Kleinere Anpassungen:
+    * Anzeige der Zahlungsmethoden auf der Übersichtsseite, wenn man mit der Maus über die Preisspalte geht
+    * "Keine Gruppe" umbenannt in "Sonstige Auktionen"
+    * "Sonstige Auktionen" Gruppe wird vorne einsortiert
+    * Maximal-Gebot kann nun gelöscht werden und wird auf 0 gesetzt, anstatt immer auf das Minimalgebot zu springen.
+    * Problem behoben wenn ein Artikel Tab geschlossen wurde, und dann wieder hergestellt.
+
 ## Biet-O-Matic BE Version 0.2
 Dieser Versionszweig hat mit der vorhergehenden Version nicht mehr viel gemeinsam. Sowohl der Quellcode, als auch die
 Nutzung der BE wurde erneuert.
@@ -40,27 +76,11 @@ Hervozuheben sind besonders folgende Änderungen:
     * Um zu sicher zu stellen, dass B-O-M BE auch in Zukunft gepflegt und erweitert wird, ist nun die Spendenmöglichkeit
     integriert. Aktuell ist dies durch die GitHub-Plattform möglich, wo verschiedene Spendenhöhen möglich sind.
 
-### Biet-O-Matic BE Version 0.2.3
-{{< hint info>}}
-Erschienen am Montag, XX.01.2020 
-{{< /hint >}}
-
-Hinzugefügt: 
-* Artikel Gruppen Feld erlaubt jetzt Auswahl aus bereits existierenden Gruppen
-* Unbenutzte Artikel Gruppen werden nach 7 Tagen automatisch gelöscht
-* BE Übersichtsseite öffnet sich nach einem Update automatisch, aber nur wenn Automatikmodus für das Fenster aktiv war.
-  Dies stellt sicher, das in Abwesenheit weiterhin automatisch geboten werden kann, nachdem ein BE Update statt fand.
-
-Behoben:
-* Maximal Gebot kann nun gelöscht werden und wird auf 0 gesetzt anstatt immer auf das Minimalgebot zu springen.
-* Problem behoben wenn ein Artikel Tab geschlossen wurde, und dann wieder hergestellt.
-
 ### Biet-O-Matic BE Version 0.2.2
 {{< hint info>}}
 Erschienen am Montag, 06.01.2020 
 {{< /hint >}} 
 * Erste stabile 0.2 Version
-
 
 ## Biet-O-Matic BE Version 0.1
 Hierbei handelt es sich um die ersten Prototyp Versionen, welche im Dezember 2019 erschienen sind. Diese Versionen
