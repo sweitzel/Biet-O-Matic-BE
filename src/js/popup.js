@@ -564,7 +564,7 @@ AutoBid.beWindowId = null;
 
 class OptionCompactView {
   static getState() {
-    const info = {enabled: false};
+    const info = {compactViewEnabled: false};
     let result = JSON.parse(window.sessionStorage.getItem('settings'));
     if (result != null) {
       Object.assign(info, result);
@@ -573,25 +573,25 @@ class OptionCompactView {
   }
 
   static setState(compactViewEnabled) {
-    Popup.updateSetting('enabled', compactViewEnabled);
+    Popup.updateSetting('compactViewEnabled', compactViewEnabled);
     // local cache which should be used to check the option state
-    OptionCompactView.enabled = compactViewEnabled;
+    OptionCompactView.compactViewEnabled = compactViewEnabled;
     OptionCompactView.renderState();
   }
 
   static toggleState() {
     const state = OptionCompactView.getState();
-    OptionCompactView.setState(!state.enabled);
+    OptionCompactView.setState(!state.compactViewEnabled);
   }
 
   static renderState() {
     const lblCompact = $('#lblCompact');
     const info = OptionCompactView.getState();
-    OptionCompactView.jq.prop('checked', info.enabled);
+    OptionCompactView.jq.prop('checked', info.compactViewEnabled);
     // local cache which should be used to check the option state
-    OptionCompactView.enabled = info.enabled;
+    OptionCompactView.compactViewEnabled = info.compactViewEnabled;
     let state = '';
-    if (info.enabled) {
+    if (info.compactViewEnabled) {
       state += Popup.getTranslation('generic_active', '.active');
     } else {
       state += Popup.getTranslation('generic_inactive', '.inactive');
@@ -604,7 +604,7 @@ class OptionCompactView {
     OptionCompactView.jq.on('click', e => {
       e.stopPropagation();
       OptionCompactView.setState(OptionCompactView.jq.is(':checked'));
-      ArticlesTable.setCompact(OptionCompactView.enabled);
+      ArticlesTable.setCompact(OptionCompactView.compactViewEnabled);
     });
   }
 
@@ -709,6 +709,11 @@ class Article {
    * Request article info from specific tab
    */
   static async getInfoFromTab(tab, calledFrom) {
+    async function wait(ms) {
+      return new Promise(resolve => {
+        setTimeout(resolve, ms);
+      });
+    }
     console.debug("Biet-O-Matic: getInfoFromTab(%d) called from %s", tab.id, calledFrom);
     /*
      * Check if the tab is for an supported eBay article before we attempt to parse info from it
@@ -720,7 +725,7 @@ class Article {
     }
     console.debug("Biet-O-Matic: Injecting contentScript on tab %d = %s", tab.id, tab.url);
     // inject content script, it will only inject itself if not already loaded
-    await browser.tabs.executeScript(tab.id, {file: 'contentScript.bundle.js'})
+    await browser.tabs.executeScript(tab.id, {file: 'contentScript.bundle.js', runAt: 'document_end'})
       .catch(e => {
         throw new Error(`getInfoFromTab(${tab.id}) executeScript failed: ${e.message}`);
       });
@@ -734,10 +739,9 @@ class Article {
           // all retries failed
           return Promise.reject(error);
         } else {
-          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
+          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error);
         }
-        await setTimeout(() => {
-        }, 1000);
+        await wait(1000);
       }
     } while (retryCount++ < 3);
   }
@@ -1376,7 +1380,11 @@ class ArticlesTable {
     if ($(selector).length === 0)
       throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
     $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation('generic_noGroup', ".No Group");
-    ArticlesTable.setCompact(OptionCompactView.enabled);
+    try {
+      ArticlesTable.setCompact(OptionCompactView.getState().compactViewEnabled);
+    } catch(e) {
+      console.log("Biet-O-Matic: ArticlesTable constructor cannot set compact mode: " + e);
+    }
     this.DataTable = ArticlesTable.init(selector);
     this.addSearchFields();
     this.registerEvents();
@@ -1588,7 +1596,7 @@ class ArticlesTable {
     let storedInfo = await browser.storage.sync.get(null);
     Object.keys(storedInfo).forEach(articleId => {
       if (!/^[0-9]+$/.test(articleId)) {
-        console.log("Biet-O-Matic: Skipping invalid stored articleId=%s", articleId);
+        console.debug("Biet-O-Matic: Skipping invalid stored articleId=%s", articleId);
         return;
       }
       let info = storedInfo[articleId];
@@ -1867,7 +1875,7 @@ class ArticlesTable {
     a.text = data;
     a.target = '_blank';
 
-    if (OptionCompactView.enabled) {
+    if (OptionCompactView.compactViewEnabled) {
       div.appendChild(a);
     } else {
       div.classList.add('polaroid');
@@ -2190,30 +2198,35 @@ class ArticlesTable {
       //console.log("renderArticleEndTime returning data=%s (type=%s)", data, type);
       return data;
     }
-    let span = document.createElement('span');
-    span.textContent = Popup.getTranslation('generic_unlimited', '.unlimited');
-    if (data != null && typeof data !== 'undefined') {
-      const timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: Popup.locale, addSuffix: true});
-      const date = new Intl.DateTimeFormat('default', {
-        'dateStyle': 'medium',
-        'timeStyle': 'medium'
-      }).format(new Date(data));
-      span.textContent = `${date} (${timeLeft})`;
-      if (data - Date.now() < 0) {
-        // ended
-        span.classList.add('auctionEnded');
-        span.title = Popup.getTranslation('popup_articleAuctionEnded', '.Article Auction already ended');
-      } else if (data - Date.now() < 60000) {
-        // ends within 1 minute
-        span.classList.add('auctionEndsVerySoon');
-        span.title = Popup.getTranslation('popup_articleAuctionEndsVerySoon', '.Article Auction ends in less then a minute.');
-      } else if (data - Date.now() < 600000) {
-        // ends within 10 minutes
-        span.classList.add('auctionEndsSoon');
-        span.title = Popup.getTranslation('popup_articleAuctionEndsSoon', '.Article Auction ends soon.');
+    try {
+      let span = document.createElement('span');
+      span.textContent = Popup.getTranslation('generic_unlimited', '.unlimited');
+      if (data != null && typeof data !== 'undefined') {
+        const timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: Popup.locale, addSuffix: true});
+        const date = new Intl.DateTimeFormat('default', {
+          'dateStyle': 'medium',
+          'timeStyle': 'medium'
+        }).format(new Date(data));
+        span.textContent = `${date} (${timeLeft})`;
+        if (data - Date.now() < 0) {
+          // ended
+          span.classList.add('auctionEnded');
+          span.title = Popup.getTranslation('popup_articleAuctionEnded', '.Article Auction already ended');
+        } else if (data - Date.now() < 60000) {
+          // ends within 1 minute
+          span.classList.add('auctionEndsVerySoon');
+          span.title = Popup.getTranslation('popup_articleAuctionEndsVerySoon', '.Article Auction ends in less then a minute.');
+        } else if (data - Date.now() < 600000) {
+          // ends within 10 minutes
+          span.classList.add('auctionEndsSoon');
+          span.title = Popup.getTranslation('popup_articleAuctionEndsSoon', '.Article Auction ends soon.');
+        }
       }
+      return span.outerHTML;
+    } catch(e) {
+      console.log("Biet-O-Matic: renderArticleEndTime(%s) failed: %s", row.data().articleId, e);
+      return data;
     }
-    return span.outerHTML;
   }
 
   /*
@@ -3072,12 +3085,14 @@ class ArticlesTable {
      * Toggle Group autobid
      */
     this.DataTable.on('click', 'tr.row-group', e => {
-      const name = $(e.currentTarget).data('name');
-      Group.toggleState(name)
-        .then(() => Group.renderState('spanGroupAutoBid', name))
-        .catch(e => {
-          console.log("Biet-O-Matic: Failed to toggle group %s autoBid state: %s", name, e.message);
-        });
+      if (e.target.id === 'spanGroupAutoBid') {
+        const name = $(e.currentTarget).data('name');
+        Group.toggleState(name)
+          .then(() => Group.renderState('spanGroupAutoBid', name))
+          .catch(e => {
+            console.log("Biet-O-Matic: Failed to toggle group %s autoBid state: %s", name, e.message);
+          });
+      }
     });
   }
 

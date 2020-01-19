@@ -44,7 +44,7 @@ class EbayArticle {
       this.ebayParser.init(oldInfo);
       info = this.ebayParser.parsePage();
     } catch (e) {
-      throw new Error("Biet-O-Matic: EbayParser failed: " + e);
+      throw new Error("EbayParser failed: " + e);
     }
     // check if the same article is already handled by another tab
     const result = await browser.runtime.sendMessage({
@@ -55,7 +55,7 @@ class EbayArticle {
     // the tab is open in another window
     if (typeof result !== 'undefined' || result.hasOwnProperty('tabId')) {
       if (result.hasOwnProperty('data') && result.data.tabId != null && result.tabId !== result.data.tabId) {
-        throw new Error(`Biet-O-Matic: Stopping execution on this page, already active in another tab (${result.data.tabId}).`);
+        throw new Error(`Stopping execution on this page, already active in another tab (${result.data.tabId}).`);
       }
     }
 
@@ -141,7 +141,7 @@ class EbayArticle {
     browser.storage.sync.get(this.articleId).then((result) => {
       if (Object.keys(result).length === 1) {
         let storInfo = result[this.articleId];
-        console.debug("Biet-O-Mat: extendPage() Found info for Article %s in storage: %O", this.articleId, result);
+        console.debug("Biet-O-Matic: extendPage() Found info for Article %s in storage: %O", this.articleId, result);
         this.updateMaxBidInfo(storInfo);
       }
     });
@@ -242,10 +242,13 @@ class EbayArticle {
    * - #BomAutoBid: AutoBid
    */
   async monitorChanges() {
-    const maxBidInput = await EbayArticle.waitFor('#MaxBidId', 2000);
+    const maxBidInput = await EbayArticle.waitFor('#MaxBidId', 2000)
+      .catch(() => {
+        throw new Error("monitorChanges() cannot find MaxBidInput button, aborting");
+      });
     const bomAutoBid = await EbayArticle.waitFor('#BomAutoBid', 2000)
       .catch(() => {
-        throw new Error("Biet-O-Matic: monitorChanges() cannot find BomAutoBid button, aborting");
+        throw new Error("monitorChanges() cannot find BomAutoBid button, aborting");
       });
     // max bid input changed?
     if (maxBidInput == null) {
@@ -684,7 +687,7 @@ class EbayArticle {
         EbayArticle.sendArticleLog(this.articleId, {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
           level: EbayArticle.getTranslation('generic_success', '.Success'),
-          message: EbayArticle.getTranslation('cs_bidFinished ',
+          message: EbayArticle.getTranslation('cs_bidFinished',
             '.Bid performed $1 ms before auction has ended.', t.toString()),
         });
       }
@@ -913,14 +916,12 @@ class EbayArticle {
 
 (function () {
   'use strict';
-
-  // check if the contentScript was already loaded (each Tab will get its own window object)
-  // return value will be passed back to executeScript
-  if (window.hasRun === true) {
-    console.debug("Biet-O-Mat: RELOADED EXTENSION, window=%O", window);
-    return true;
+  // check if the contentScript was already loaded
+  if (document.getElementById('BomAutoBid') != null) {
+    console.debug("Biet-O-Matic: RELOADED EXTENSION, window=%O", window);
+    // return value will be passed back to executeScript
+    return false;
   }
-  window.hasRun = true;
 
   EbayArticle.handleReload().then((reloadInfo) => {
     const ebayArticle = new EbayArticle();
@@ -929,9 +930,10 @@ class EbayArticle {
         try {
           console.debug("Biet-O-Matic: Initialized - Article Info: %s", ebayArticle.toString());
           ebayArticle.extendPage();
-          ebayArticle.monitorChanges().catch(e => {
-            console.warn("Biet-O-Matic: monitorChanges() failed: " + e);
-          });
+          ebayArticle.monitorChanges()
+            .catch(e => {
+              console.warn("Biet-O-Matic: monitorChanges() failed: " + e);
+            });
         } catch (e) {
           console.warn("Biet-O-Matic: Internal Error while post-initializing: " + e);
         }

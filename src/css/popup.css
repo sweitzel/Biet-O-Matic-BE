@@ -199,10 +199,6 @@ tfoot input {
 .row-group td {
   background-color: #e6e6e6;
   color: #757575;
-  cursor: pointer;
-}
-.row-group td:hover {
-   cursor: pointer;
 }
 
 .autoBidEnabled {
