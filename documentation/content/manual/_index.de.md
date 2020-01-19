@@ -24,6 +24,14 @@ Interval nicht ausreicht (beispielsweise bei einem ungenauen Zeitgeber der Hardw
 BE hat übrigens keine technische Möglichkeit die Zeit selbständig zu korrigieren - hierzu fehlen im Browser die
 Berechtigungen. 
 
+### Deaktiviere Computer-Standby
+Wenn BE automatisch auf Auktionen bieten soll, ist es wichtig, dass der Computer, der das Gebot abgeben soll aktiv ist.
+Einige Computer gehen automatisch in den Ruhezustand, wenn sie "inaktiv" sind, also überprüfen Sie bitte Ihre Computer
+Einstellungen. BE verfügt über keine technischen Möglichkeiten, den Computer aus dem Schlafmodus aufzuwecken.
+
+Bei einigen Browsern wird BE versuchen, den Ruhezustand des Computers zu verhindern,
+am sichersten ist es jedoch, den Computer entsprechend zu konfigurieren.
+
 ## Erweiterungs Verwaltung 
 ### Installation
 Die Installation der BE erfolgt über den Browser Erweiterungs Store. Hierbei ist nichts spezielles zu beachten.

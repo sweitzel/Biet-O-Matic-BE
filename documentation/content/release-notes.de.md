@@ -12,7 +12,7 @@ Diese BE Version ist die Erste, welche mehrsprachig ist. Es wird, nun neben Deut
 Benutzung ermöglicht. Ausserdem wurde ebay.com Unterstützung eingebaut. 
 
 Weitere größere Änderungen in dieser Version:
-* Für geschlossene Artikel wird im Hintergrund jede Minute eine Datenaktualisierung durchgeführt.
+* Für geschlossene Artikel (kein Tab offen) wird im Hintergrund jede Minute eine Datenaktualisierung durchgeführt.
     * Die Aktualisierungsvorgang wird visualisiert (drehendes '+')
     * Eine Aktualisierung findet nur statt, wenn für das aktuelle Fenster der Automatikmodus aktiv ist.
 * Änderungen an Artikelinformationen werden in der Tabelle farblich (gelb) hervorgehoben. 
@@ -22,21 +22,23 @@ Weitere größere Änderungen in dieser Version:
     * Die Sprache wird automatisch über die Browser Anzeigesprache festgelegt.
 * Artikel Gruppen Feld erlaubt jetzt Auswahl aus bereits existierenden Gruppen.
 * Unbenutzte Artikel Gruppen werden nach 7 Tagen automatisch gelöscht.
-* BE Übersichtsseite öffnet sich nach einem Update automatisch, aber nur, 
+* Die BE Übersichtsseite öffnet sich nach einem Update automatisch, aber nur,
   wenn der Automatikmodus für das Fenster vor dem Update aktiv war.
   Dies stellt sicher, dass in Abwesenheit weiterhin automatisch geboten werden kann, nachdem ein BE Update statt fand.
-
+* Biet-Sperre wurde eingeführt, um sicherzustellen, das nicht mehrere Artikel aus einer Gruppe ersteigert werden,
+  wenn die Auktionen dicht beieinander enden (10s), siehe auch [Funktionen]({{< relref "/manual/features#vermeidung-von-doppelkufen-auktions-kollosion" >}})
 
 ### Biet-O-Matic BE Version 0.3.1
 {{< hint info>}}
 Erschienen am Montag, 20.01.2020 
 {{< /hint >}}
 
-* Erste stabile 0.3 Version
+* Erste stabile 0.3 Version (für die wichtigsten Änderungen, siehe oben)
 * Kleinere Anpassungen:
+    * Auf einigen Browsern wird BE verhindern das der Computer in den Schlafmodus wechselt, wenn die Biet-Automatik aktiv ist.
     * Anzeige der Zahlungsmethoden auf der Übersichtsseite, wenn man mit der Maus über die Preisspalte geht
-    * "Keine Gruppe" umbenannt in "Sonstige Artikel"
-    * "Keine Gruppe" wird vorne einsortiert
+    * "Keine Gruppe" umbenannt in "Sonstige Auktionen"
+    * "Sonstige Auktionen" Gruppe wird vorne einsortiert
     * Maximal Gebot kann nun gelöscht werden und wird auf 0 gesetzt, anstatt immer auf das Minimalgebot zu springen.
     * Problem behoben wenn ein Artikel Tab geschlossen wurde, und dann wieder hergestellt.
 

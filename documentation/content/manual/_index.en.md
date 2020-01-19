@@ -23,6 +23,13 @@ function is built in and active by default. However, it can happen that the prec
 By the way, BE has no technical possibility to correct the time on its own - the browser does not have the necessary
 authorizations for this.
 
+### Deactivate Computer Standby
+When BE should perform automated bidding, it is important that the computer which is intended to perform the bidding
+will be running. Some computers will automatically go to sleep when they are "inactive", so please check your computer
+settings. BE has no technical means to wakeup the computer from it.
+
+On some browsers BE will try to prevent computer sleep, however the safest is to configure your computer accordingly.
+
 ## Extension Management
 ### Installation
 The BE is installed using the browser extension store. There is nothing special to note here.

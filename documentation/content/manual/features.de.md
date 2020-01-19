@@ -80,6 +80,47 @@ Der Einzige Unterschied zum Normalen bieten ist, das das Gebot kurz vor Ablauf d
 
 Die Simulation führt allerdings nicht zur Deaktivierung der Biet-Automatik, da kein "gekaufter" Status simuliert wird.
 
+## Bietvorgang
+BE wird auf einen Artikel automatisch bieten, wenn sowohl der Automatikmodus für den Artikel, die Gruppe in der sich
+der Artikel befindet, sowie der Globale Automatikmodus, aktiv geschalten sind. 
+
+Sollte der Artikel nicht geöffnet sein, öffnet BE eine Minute vor Auktionsende den Artikel in einem neuen Browser-Tab.
+Falls der Tab bereits offen ist, lädt BE diesen Tab eine Minute vor Auktionsende neu.
+
+Der Bietvorgang läuft weitgehend eigenständig im Artikel Browser Tab wie folgt ab:
+* Über ein von eBay ausgelöstes regelmäßiges Ereignis wird der Bietvorgang 30 Sekunden vor Ablauf der Auktion gestartet
+* Es wird geprüft ob alle drei Biet-Automatiken aktiviert sind und ob Auktions-Kollisionen vorliegen
+* Es wird der korrigierte Bietzeitpunkt ermittelt
+* Es wird das Maximal Gebot gesendet
+* Dies öffnet ein neues Unterfenster (Modal), in welchem eBay eine Bestätigung des Gebots erwartet
+* BE wartet bis zum Bietzeitpunkt mit der Bestätigung des Gebots
+
+{{< hint info >}}
+Hinweis: Stellen sie sicher das ihr Rechner nicht in den Ruhezustand / Standby Modus geht. BE kann den Rechner
+nicht wecken und somit dann auch nicht automatisch bieten.
+{{< /hint >}}
+
+### Vermeidung von Doppelkäufen (Auktions-Kollosion)
+> Dieser Abschnitt trifft nur zu, wenn die Option "Auf alle Artikel in der Gruppe bieten" inaktiv ist. 
+> Diese Option wird in der nächsten Version hinzugefügt.
+
+Standardmäßig soll aus jeder Gruppe nur ein Artikel ersteigert werden. Dies wird dadurch gewährleistet, dass wenn ein 
+Artikel ein erfolgreichen Auktionsstatus zurückmeldet, die Gruppen Bietautomatik deaktiviert wird.
+
+Dies ist allerdings problematisch, wenn mehrere Artikel Auktionen zu einem ähnlichen Zeitpunkt enden.
+Um zu verhindern, das mehrere Artikel einer Gruppe ersteigert werden, wird folgende Programmlogik angewendet:
+
+* Der Bietzeitpunkt, d.h. Bestätigung des Gebots wird angepasst, so daß immer mindestens 10 Sekunden zwischen zwei 
+  Auktionen liegen.
+* Es wird eine Bietsperre verhängt, wenn eine Auktion welche innerhalb 10s vor der eigenen Auktion endete noch keinen 
+  abgeschloßenen Auktionsstatus hat. 
+  
+{{{< hint info >}}
+Die beschriebene Programmlogik kann somit zu erfolglosen Auktionen führen: Wenn zwei Auktionen innerhalb des
+gleichen 10 Sekunden Fensters enden, wird für den zweiten Artikel u.U kein Gebot abgegeben werden, selbst wenn
+die erste Auktion nicht erfolgreich war. 
+{{{< /hint >}}
+
 ## eBay Artikel Seite
 Beim Ladevorgang der eBay Artikelseite, erweitert BE diese durch einen Knopf, welcher den Automatikmodus für diesen
 Artikel aktivieren kann.

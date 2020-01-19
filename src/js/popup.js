@@ -933,7 +933,8 @@ class Article {
           return `${description}: ${messages.join('; ')}`;
         } else {
           if (numberOfDifferences > 0) {
-            return `${description}: ${numberOfDifferences} sonstige Änderungen`;
+            return Popup.getTranslation('popup_changesMisc', '.$1: $2 other changes',
+              [description, numberOfDifferences.toString()]);
           } else {
             return null;
           }
@@ -946,7 +947,8 @@ class Article {
       }
     } catch (e) {
       console.warn(`getDiffMessage(${description}) failed: ${e.message}`);
-      return `${description}: Kann die Unterschiede nicht anzeigen!`;
+      return Popup.getTranslation('popup_changesDiffError', '.$1: Cannot determine changes ($2)',
+        [description, e.message]);
     }
   }
 

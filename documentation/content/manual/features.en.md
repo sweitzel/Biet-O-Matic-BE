@@ -77,6 +77,45 @@ The only difference to the normal bid is that the bid is not confirmed shortly b
 
 The simulation will not lead to deactivation of the auto-bid, as no purchased end-state will be simulated.
 
+## Bidding Procedure
+BE will bid on an item automatically if both the automatic mode for the item, the group in which the article is located
+and the global automatic mode are active. 
+
+If the article is not open, one minute before the auction ends BE opens the article in a new browser tab.
+If the tab is already open, BE will reload the tab one minute before the auction ends.
+
+The bidding process runs largely independently in the article browser tab as follows:
+* A regular event triggered by eBay starts the bidding process 30 seconds before the auction ends
+* It is checked whether all three auto-bid modes are activated and whether there are any auction collisions
+* The corrected bidding time is determined
+* The maximum bid is sent
+* This opens a new sub window (modal), in which eBay expects a confirmation of the bid
+* BE waits until the bidding time to confirm the bid
+
+{{< hint info >}}
+Note: Make sure that your computer does not go into sleep / standby mode. BE can put the computer
+and therefore do not automatically bid.
+{{< /hint >}}
+
+### Avoidance of double purchases (auction collision)
+> This section is only relevant if the option "Bid all items of this group" is inactive. The option will come in the next version.
+
+By default, only one item from each group should be auctioned. This is ensured by the the program logic that if for an 
+article a successful auction status is reported, the group auto-bid is deactivated.
+
+However, this is problematic if multiple item auctions end at a similar time.
+To prevent multiple items in a group from bidding, the following program logic is used:
+
+* The bidding time, i.e. confirmation of the bid, is adjusted so that there are always at least 10 seconds between two 
+  auctions.
+* A bid-lock is imposed if an auction which has finished within 10s of the current auction 
+  has an still undetermined auction status. 
+  
+{{< hint info >}}
+The described program logic can lead to unsuccessful auctions because no bid was submitted in case two auctions end
+in the same 10 second time window.
+{{< /hint >}}
+
 ## eBay Item Page
 When loading the eBay item page, BE enhances it with a button that enables the auto-bid mode for this item.
 The maximum bid input field is also monitored in the background, and this value is checked and saved if necessary. 

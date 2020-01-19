@@ -47,6 +47,9 @@
   "cs_biddingSuccess": {
     "message": "Auction was successful. Item purchased."
   },
+  "cs_bomAutoBidHint": {
+    "message": "Please ensure group and global auto-bid are also enabled."
+  },
   "cs_couldNotCheckAutoBidEnabledOption": {
     "message": "Could not check autoBidEnabled option"
   },
@@ -212,6 +215,9 @@
   "popup_autoBidDeactivated3": {
     "message": "."
   },
+  "popup_bidCollision": {
+    "message": "Bidding aborted because it collided with another article: $1"
+  },
   "popup_buynowprice": {
     "message": "Buy-It-Now Price"
   },
@@ -251,11 +257,10 @@
   "popup_show_articleEvents": {
     "message": "Show item events"
   },
-  "test": {
-    "message": "This is a test $1s"
+  "popup_changesMisc": {
+    "message": "$1: $2 other changes"
   },
-  "popup_bidCollision":{
-    "message": "Bidding aborted because it collided with another article: $1"
+  "popup_changesDiffError": {
+    "message": "$1: Cannot determine changes ($2)"
   }
-
 }

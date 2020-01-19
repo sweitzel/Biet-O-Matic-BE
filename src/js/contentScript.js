@@ -107,11 +107,11 @@ class EbayArticle {
       buttonDiv.style.width = '8.7rem';
     else
       buttonDiv.style.width = '280px';
-    buttonDiv.style.height = '18px';
+    buttonDiv.style.height = '30px';
     buttonDiv.style.align = 'center';
     buttonDiv.style.marginTop = '10px';
     let buttonInput = document.createElement("input");
-    buttonInput.id ="BomAutoBid";
+    buttonInput.id = "BomAutoBid";
     buttonInput.classList.add('tgl', 'tgl-skewed');
     buttonInput.type = 'checkbox';
     buttonInput.disabled = true;
@@ -127,7 +127,14 @@ class EbayArticle {
     buttonLabel.setAttribute('for', 'BomAutoBid');
     buttonDiv.appendChild(buttonLabel);
 
+    const span = document.createElement('span');
+    span.id = 'BomAutoBidHint';
+    span.innerText = EbayArticle.getTranslation('cs_bomAutoBidHint', '.Please ensure group and global auto-bid are also enabled.');
+    span.style.fontSize = 'small';
+    span.style.display = 'none';
+
     //mainContent.appendChild(button);
+    bidButton.parentNode.insertBefore(span, bidButton.nextSibling);
     bidButton.parentNode.insertBefore(buttonDiv, bidButton.nextSibling);
 
     // complement with info from sync storage
@@ -181,8 +188,9 @@ class EbayArticle {
    * - the value is higher than the minimum or current price of the article
    */
   activateAutoBidButton(maxBidValue, minBidValue = null) {
-    const buttonInput = document.getElementById('BomAutoBid');
-    if (buttonInput == null) {
+    const bomAutoBid = document.getElementById('BomAutoBid');
+    const bomAutoBidHint = document.getElementById('BomAutoBidHint');
+    if (bomAutoBid == null) {
       console.warn("activateAutoBidButton() ButtonInput invalid - should not happen!?");
       return;
     }
@@ -203,21 +211,27 @@ class EbayArticle {
     if (isMinBidLargerOrEqualBidPrice) {
       //console.debug("Enable bid button: (isMinBidLargerOrEqualBidPrice(%s) && isMaxBidLargerOrEqualMinBid(%s) = %s",
       //  isMinBidLargerOrEqualBidPrice, isMaxBidLargerOrEqualMinBid, isMinBidLargerOrEqualBidPrice && isMaxBidLargerOrEqualMinBid);
-      buttonInput.disabled = !isMaxBidLargerOrEqualMinBid;
+      bomAutoBid.disabled = !isMaxBidLargerOrEqualMinBid;
       // set tooltip for button to minBidValue
       let t = document.querySelector('.tgl-btn');
-      if (buttonInput.disabled) {
+      if (bomAutoBid.disabled) {
         t.title = EbayArticle.getTranslation('popup_enterMinAmount', '.Enter at least $1', minBidValue.toString());
-        buttonInput.checked =  false;
+        bomAutoBid.checked =  false;
       } else {
         t.title = EbayArticle.getTranslation('popup_minIncreaseReached', '.Minimum reached');
       }
     } else if (isMaxBidLargerThanBidPrice === true) {
       //console.debug("Enable bid button: isMaxBidLargerThanBidPrice=%s", isMaxBidLargerThanBidPrice);
-      buttonInput.disabled = false;
+      bomAutoBid.disabled = false;
     } else {
-      buttonInput.disabled = true;
-      buttonInput.checked = false;
+      bomAutoBid.disabled = true;
+      bomAutoBid.checked = false;
+    }
+    // show autoBid hint if autoBid enabled
+    if (bomAutoBid.checked) {
+      bomAutoBidHint.style.display = 'block';
+    } else {
+      bomAutoBidHint.style.display = 'none';
     }
   }
 
@@ -298,7 +312,14 @@ class EbayArticle {
     if (bomAutoBid != null) {
       bomAutoBid.addEventListener('change', () => {
         const bomAutoBidNew = document.getElementById('BomAutoBid');
+        const bomAutoBidHint = document.getElementById('BomAutoBidHint');
         if (bomAutoBidNew != null) {
+          // show autoBid hint if autoBid enabled
+          if (bomAutoBidNew.checked) {
+            bomAutoBidHint.style.display = 'block';
+          } else {
+            bomAutoBidHint.style.display = 'none';
+          }
           browser.runtime.sendMessage({
             action: 'ebayArticleMaxBidUpdated',
             articleId: this.articleId,

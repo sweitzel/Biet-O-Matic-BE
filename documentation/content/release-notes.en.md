@@ -5,86 +5,85 @@ weight: 2
 type: "docs"
 ---
 
-# Versions Übersicht
+# Release Notes
 
 ## Biet-O-Matic BE Version 0.3
-Diese BE Version ist die Erste, welche mehrsprachig ist. Es wird, nun neben Deutsch, auch eine Englischsprachige
-Benutzung ermöglicht. Ausserdem wurde ebay.com Unterstützung eingebaut. 
+This BE Version is the first one, which is multilingual. It supports now besides German, also English language.
+Furthermore ebay.com support was tested as well. 
 
-Weitere größere Änderungen in dieser Version:
-* Für geschlossene Artikel wird im Hintergrund jede Minute eine Datenaktualisierung durchgeführt.
-    * Die Aktualisierungsvorgang wird visualisiert (drehendes '+')
-    * Eine Aktualisierung findet nur statt, wenn für das aktuelle Fenster der Automatikmodus aktiv ist.
-* Änderungen an Artikelinformationen werden in der Tabelle farblich (gelb) hervorgehoben. 
-* Artikel Bilder werden jetzt auf der Übersichtsseite angezeigt
-* Option für kompakte Anzeige hinzugefügt, dies blendet Bilder aus und macht die Tabellenzeilen etwas schmaler.
-* Unterstützung für Englisch hinzugefügt.
-    * Die Sprache wird automatisch über die Browser Anzeigesprache festgelegt.
-* Artikel Gruppen Feld erlaubt jetzt Auswahl aus bereits existierenden Gruppen.
-* Unbenutzte Artikel Gruppen werden nach 7 Tagen automatisch gelöscht.
-* BE Übersichtsseite öffnet sich nach einem Update automatisch, aber nur, 
-  wenn der Automatikmodus für das Fenster vor dem Update aktiv war.
-  Dies stellt sicher, dass in Abwesenheit weiterhin automatisch geboten werden kann, nachdem ein BE Update statt fand.
-
+Other major changes in this version:
+* For closed items (no tab open), a data update is performed in the background every minute.
+    * The update process is visualized (rotating '+')
+    * An update only takes place if automatic mode is active for the current window.
+* Changes to item information are highlighted by color (yellow) in the table. 
+* Article images are now displayed on the overview page
+* Added option for compact display, this hides images and makes the table rows a bit narrower.
+* Added support for English.
+    * Language is automatically set by the browser display language.
+* Article group field now allows selection from existing groups.
+* Unused article groups are automatically deleted after 7 days.
+* BE overview page opens automatically after an update, but only, 
+  if the auto-bid mode was active for the window before the update.
+  This ensures that automatic bidding can continue in absence after a BE update has taken place.
+* Bid-Lock implemented to ensure that not multiple items from the same group are purchased,
+  if the auctions for the items end close to each other (10s), also see [Features]({{< relref "/manual/features#avoidance-of-double-purchases-auction-collision" >}})
 
 ### Biet-O-Matic BE Version 0.3.1
 {{< hint info>}}
-Erschienen am Montag, 20.01.2020 
-{{< /hint >}}
+Published on Sunday, 19.01.2020 
+{{{< /hint >}}
 
-* Erste stabile 0.3 Version
-* "Keine Gruppe" umbenannt in "Sonstige Artikel"
-* "Keine Gruppe" wird vorne einsortiert
-* Maximal Gebot kann nun gelöscht werden und wird auf 0 gesetzt, anstatt immer auf das Minimalgebot zu springen.
-* Problem behoben wenn ein Artikel Tab geschlossen wurde, und dann wieder hergestellt.
+* First stable 0.3 version (for major changes, see above)
+* Minor adjustments:
+    * On some browsers, BE will prevent the computer from entering sleep mode when auto-bid is active.
+    * Display of payment methods on the overview page when the mouse is moved over the price column
+    * "No group" renamed "Other Auctions"
+    * "Other Auctions" group is placed at the front of the list
+    * Maximum bid can now be deleted and is set to 0 instead of always jumping to the minimum bid.
+    * Fixed problem when an item tab was closed and then restored.
 
 ## Biet-O-Matic BE Version 0.2
-Dieser Versionszweig hat mit der vorhergehenden Version nicht mehr viel gemeinsam. Sowohl der Quellcode, als auch die
-Nutzung der BE wurde erneuert.
+This version branch has not much in common with the previous version. Both the source code and the
+Use of BE was renewed.
 
-Hervozuheben sind besonders folgende Änderungen:
+The following changes are particularly noteworthy:
 
-* Unterstüztung von Biet-Gruppen:  
-    * Artikel können jetzt in Gruppen untergliedert werden. Hierzu wurde einen neue Spalte in die Artikel Tabelle der
-    BE Übersichtsseite hinzugefügt. Hier kann jetzt ein beliebiger Name eingegeben werden um Ordnung in die 
-    verschiedenen Artikel zu bringen.
-    * Jede Gruppe verfügt über einen eigenen "Automatikmodus"-Schalter. Dieser muss zusätzlich zum Artikel- und 
-    Fensterschalter aktiv sein, damit BE für Artikel aus der Gruppe automatisch bietet.
-    * Der Gruppen Schalter lässt sich durch Maus-Klick auf die Gruppenzeile an- oder ausschalten. 
-* Tab Verwaltung:
-    * Tabs können jetzt über ein neues Symbol in der Übersichtsseite vom Benutzer geschlossen und wieder geöffnet werden.
-    * BE öffnet Artikel Tabs automatisch 60 Sekunden vor Auktionsende, falls die Automatik-Funktion für diesen Artikel
-    aktiviert ist (Fenster+Gruppe+Artikel).
-* Sitzungssynchonisation:
-    * BE speichert Informationen zentral[^1] so, daß es auf diese wieder von jedem anderen Rechner wieder zugreifen kann.
-    * Eingegebene Maximal Gebote, Gruppenzugehörigkeit oder Automatikmodus Einstellungen (Artikel und Gruppe) werden
-      ebenfalls gespeichert
-    * Es kann nur ein Browser-Fenster den Automatikmodus zur gleichen Zeit aktiv halten.
-     Sobald im aktuellen Fenster der Automatikmodus aktiviert wird, deaktiviert er sich in anderen Fenstern - auch auf
-     anderen Rechnern.
-* Erweiterte Ereignisprotokollierung:
-    * BE sichert nun zusätzlich zu den Biet-Ereignissen auch Änderungen an Artikel Parametern. Biespielsweise wird ein
-    Protokoll angelegt, falls sich der Artikelpreis aktualisiert hat, oder auch das Maximalgebot vom Nutzer geändert wurde.
-* Anpassung der Handhabung von Artikeln welche nah beeinander enden:
-    * Es wird nun sichergestellt, das Auktionen innerhalb der gleichen Gruppe immer mindestens 15 Sekunden auseinander
-    liegen. Es muss allerdings noch ausgetestet werden ob dies ausreicht, oder aber auch zu viel sein könnte.
-* Verknüpfung zur Spenden Seite
-    * Um zu sicher zu stellen, dass B-O-M BE auch in Zukunft gepflegt und erweitert wird, ist nun die Spendenmöglichkeit
-    integriert. Aktuell ist dies durch die GitHub-Plattform möglich, wo verschiedene Spendenhöhen möglich sind.
+* Support for bidding groups:  
+    * Articles can now be divided into groups. A new column has been added to the article table of the
+    BE overview page added. You can now enter any name you like here to create order in the 
+    different articles.
+    * Each group has its own "automatic mode" switch. This must be activated in addition to the article and 
+    window switch must be active for BE to bid automatically for items from the group.
+    * The group switch can be switched on or off by clicking on the group line with the mouse. 
+* Tab Management:
+    * Tabs can now be closed and reopened by the user via a new icon in the overview page.
+    * BE opens item tabs automatically 60 seconds before the auction ends if the automatic function for this item
+    is activated (Window+Group+Article).
+* Session synchronization:
+    * BE stores information centrally [^1] so that it can access it again from any other computer.
+    * Entered maximum bids, group membership or automatic mode settings (item and group) are
+      also stored
+    * Only one browser window can keep the automatic mode active at the same time.
+     As soon as automatic mode is activated in the current window, it is deactivated in other windows - even on
+     other computers.
+* Extended event logging:
+    * BE now saves changes to article parameters in addition to bidding events. For example, a
+    Log created if the item price has been updated or the maximum bid has been changed by the user.
+* Adjustment of the handling of items which end close to each other:
+    * Now ensures that auctions within the same group are always at least 15 seconds apart.
+    lie. However, it still has to be tested whether this is sufficient or could be too much.
+* Link to the donation page
+    * To ensure that B-O-M BE will be maintained and expanded in the future, the donation option
+    integrated. Currently this is possible through the GitHub platform, where different donation levels are possible.
 
 ### Biet-O-Matic BE Version 0.2.2
 {{< hint info>}}
-Erschienen am Montag, 06.01.2020 
-{{< /hint >}} 
-* Erste stabile 0.2 Version
+Published on Monday, 06.01.2020 
+{{{< /hint >}} 
+* First stable 0.2 release
 
 ## Biet-O-Matic BE Version 0.1
-Hierbei handelt es sich um die ersten Prototyp Versionen, welche im Dezember 2019 erschienen sind. Diese Versionen
-wurden nur einem eingeschränkten Nutzerkreis zur Verfügung gestellt um erste Meinungen und Testerfahrungen einzusammeln
-und für die erste stabile Version aufzubereiten.
+These are the first prototype versions, which were released in December 2019. These versions
+were only made available to a limited circle of users to collect first opinions and test experiences
+and prepare it for the first stable release.
 
-Diese Version erforderte noch, daß Artikel Tabs offen gehalten wurden, damit darauf geboten werden konnte.
-Davon abgesehen, konnten mit dieser Version bereits erste Biet-Erfolge vermeldet werden.
-
-[^1]: Diese Funktion erfordert, dass im Browser die Sitzungs Synchroniserung (mit Account) aktiviert ist.
-Ansonsten werden die BE Informationen nicht auf anderen Browsern verfügbar sein.

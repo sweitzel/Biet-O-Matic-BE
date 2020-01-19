@@ -47,6 +47,9 @@
   "cs_biddingSuccess": {
     "message": "Auktion erfolgreich. Artikel ersteigert."
   },
+  "cs_bomAutoBidHint": {
+    "message": "Bitte prüfen sie auch, ob der Automatikmodus für die Gruppe und global ebenfalls aktiv sind."
+  },
   "cs_couldNotCheckAutoBidEnabledOption": {
     "message": "Konnte die autoBidEnabled Option nicht prüfen"
   },
@@ -212,6 +215,9 @@
   "popup_autoBidDeactivated3": {
     "message": "."
   },
+  "popup_bidCollision": {
+    "message": "Bieten abgebrochen, da mit anderer Auktion kollidiert: $1"
+  },
   "popup_buynowprice": {
     "message": "Sofortkaufpreis"
   },
@@ -251,7 +257,10 @@
   "popup_show_articleEvents": {
     "message": "Zeigt Artikel Ereignisprotokoll"
   },
-  "popup_bidCollision":{
-    "message": "Bieten abgebrochen, da mit anderer Auktion kollidiert: $1"
+  "popup_changesMisc": {
+    "message": "$1: $2 sonstige Änderungen"
+  },
+  "popup_changesDiffError": {
+    "message": "$1: Kann Änderungen nicht anzeigen ($2)"
   }
 }
