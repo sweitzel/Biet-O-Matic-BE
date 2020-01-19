@@ -32,7 +32,7 @@ Other major changes in this version:
 ### Bid-O-Matic BE Version 0.3.2
 {{< hint info>}}
 Published on Sunday, 19.01.2020 
-{{{< /hint >}}
+{{< /hint >}}
 
 * First stable 0.3 version (for major changes, see above)
 * Minor adjustments:
