@@ -120,11 +120,6 @@ var options = {
 };
 
 // always include source-map
-options.devtool = "inline-source-map";
-/*
-if (env.NODE_ENV === "development") {
-  options.devtool = "source-map";
-}
-*/
+options.devtool = "source-map";
 
 module.exports = options;
