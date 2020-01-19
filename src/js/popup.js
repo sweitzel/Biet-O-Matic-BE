@@ -734,7 +734,7 @@ class Article {
           // all retries failed
           return Promise.reject(error);
         } else {
-          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error);
+          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
         }
         await setTimeout(() => {
         }, 1000);
@@ -888,7 +888,8 @@ class Article {
           this.articleAuctionState = info.articleAuctionState;
         }
         result.modifiedForStorage++;
-        result.modified.push(key);
+        if (key !== 'articleMaxBid' && key !== 'articleAutoBid' && key !== 'articleGroup')
+          result.modified.push(key);
       }
     }
 
@@ -1075,12 +1076,12 @@ class Article {
       // || article.articleEndTime < Date.now();
       articles[article.articleId] = {
         articleEndTime: article.articleEndTime,
+        row: row
       };
       // handover existing auction end states
       if (article.hasOwnProperty('auctionEndState')) {
         articles[article.articleId].auctionEndState = article.auctionEndState;
-      }
-      if (article.hasOwnProperty('article.articleAuctionStateText')) {
+      } else if (article.hasOwnProperty('articleAuctionStateText')) {
         // determine auctionEndState from text
         const auctionEndState = EbayParser.getAuctionEndState({auctionEndStateText: article.auctionEndStateText});
         articles[article.articleId].auctionEndState = auctionEndState.id;
@@ -1104,17 +1105,35 @@ class Article {
       // skip if endTime of that article is not within 10s of this article
       const timeDiff =  Math.abs(this.articleEndTime - articles[key].articleEndTime);
       if (timeDiff > 10000) continue;
-      // if we reach our article, we can abort.
+      // if we reach our article, we can abort the loop
       if (this.articleId === key) break;
       // if article has an final auctionEndState (!= unknown), then we can continue
       if (articles[key].hasOwnProperty('auctionEndState') && articles[key].auctionEndState !== EbayParser.auctionEndStates.unknown.id) {
-        console.log("Article %s has an final auctionEndState: %s", articles[key].auctionEndState);
+        console.debug("Biet-O-Matic: getBidLockState(%s) Article %s has an final auctionEndState: %s",
+          this.articleId, key, articles[key].auctionEndState);
+        continue;
+      }
+      //console.log("XXX3 article=%s info=%O\nrowdata=%s", key, articles[key], articles[key].row.data().toString());
+
+      // if the auction price is higher than the maxBid, then we can continue (wont win this auction)
+      if (articles[key].row.data().articleMaxBid < articles[key].row.data().articleBidPrice) {
+        console.debug("Biet-O-Matic: getBidLockState(%s) Article %s is going to overbid, it is safe to continue.",
+          this.articleId, key);
+        // todo user can manually increase the maxBid when the tab is open, then this wouldnt work reliably as
+        //   we would not see the maxBid increase here
         continue;
       }
 
-      // if article has an auctionEndState of unknown, then try to get an updated state
+      /*
+       * reload article info (will become active later, in one of the next calls)
+       * - if the article price went higher than the maxBid, then auction will fail and we do not need to block
+       * - if the article now has a final auction state, we do not need to block (handle successful auction too)
+       */
+      this.popup.table.refreshArticle(articles[key].row);
+
       result.bidIsLocked = true;
       result.message = Popup.getTranslation('popup_bidCollision', '.Cannot perform bidding, another auction is still running: $1', [key.toString()]);
+      break;
     }
     return result;
   }
@@ -1207,16 +1226,17 @@ class Article {
       // sort the array on every iteration, because we modify the articleEndTimes
       const keys = Object.keys(articles).sort(sorter);
       const key = keys[i];
-      if (previous != null && (articles[previous].articleEndTime - articles[key].articleEndTime) < 15000) {
-        const diff = (articles[key].articleEndTime - (articles[previous].articleEndTime - 10 * 1000)) / 1000;
+      const minDiffMs = 10000;
+      if (previous != null && (articles[previous].articleEndTime - articles[key].articleEndTime) < minDiffMs) {
+        const diff = (articles[key].articleEndTime - (articles[previous].articleEndTime - minDiffMs)) / 1000;
         articles[key].adjustmentReason = Popup.getTranslation('popup_adjustedBidtime',
           '.Bid time was adjusted by $1s, due to collision with item $2', [diff.toString(10), previous.toString()]);
         // todo adjust the bidding preparation time (currently hardcoded to 30s)
-        // leave 5s buffer (twice the biddingTime)
+        // leave 5s buffer
         if (articles[previous].articleEndTime < (Date.now() + 5000)) {
           console.warn(`Biet-O-Matic: Failed to adjust Article ${key} bidding time, would be too close to its end time!`);
         } else {
-          articles[key].articleEndTime = articles[previous].articleEndTime - 15000;
+          articles[key].articleEndTime = articles[previous].articleEndTime - minDiffMs;
         }
       }
       previous = key;
@@ -2271,12 +2291,18 @@ class ArticlesTable {
 
   /*
    * Refresh Article information
-   * this should be called only by the Window with Auto-Bid enabled, e.g. every 5 minutes
+   * - this should be called only by the Window with Auto-Bid enabled, e.g. every 5 minutes
+   * - also called by getBidLockState to update auction state info
+   * - prevent duplicate execution by refreshArticleLock
    */
   refreshArticle(row) {
     if (typeof row === 'undefined' || row.length !== 1)
       return;
     const article = row.data();
+    if (Popup.checkAlreadyRunning('refreshArticle', article.articleId)) {
+      console.log("Biet-O-Matic: refreshArticle(%s) Skip refreshing (already running)", article.articleId);
+      return;
+    }
     console.debug("Biet-O-Matic: refreshArticle(%s) Refreshing", article.articleId);
     // add class to indicate update to the user
     const cell = this.DataTable.cell("#" + article.articleId, 'articleDetailsControl:name');
@@ -2293,6 +2319,9 @@ class ArticlesTable {
       })
       .catch(e => {
         console.warn(`Biet-O-Matic: refreshArticle(${article.articleId}) Failed to refresh: ${e}`);
+      })
+      .finally(() => {
+        delete Popup.alreadyRunning.refreshArticle[article.articleId];
       });
   }
 
@@ -3360,6 +3389,16 @@ class Popup {
     return false;
   }
 
+  // can be used to ensure that a certain function is executed only once at a time
+  static checkAlreadyRunning(name, key) {
+    if (Popup.alreadyRunning.hasOwnProperty(name) && Popup.alreadyRunning[name].hasOwnProperty(key)) {
+      return true;
+    } else {
+      Popup.alreadyRunning[name] = {};
+    }
+    Popup.alreadyRunning[name][key] = Date.now();
+    return false;
+  }
 
   //region i18n
   static getTranslation(i18nKey, defaultText = "", params = null) {
@@ -3382,6 +3421,7 @@ class Popup {
 
 // static class-var declaration outside the class
 Popup.rateLimit = {};
+Popup.alreadyRunning = {};
 
 //region Favicon Handling
 class Favicon {
