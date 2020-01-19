@@ -29,7 +29,7 @@ Other major changes in this version:
   if the auctions for the items end close to each other (10s), also see [Features]({{< relref "/manual/features#avoidance-of-double-purchases-auction-collision" >}})
 * If the browser supports it, BE will prevent the computer from entering sleep mode when global auto-bid is active.
 
-### Bid-O-Matic BE Version 0.3.1
+### Bid-O-Matic BE Version 0.3.2
 {{< hint info>}}
 Published on Sunday, 19.01.2020 
 {{{< /hint >}}
