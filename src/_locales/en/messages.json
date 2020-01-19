@@ -3,10 +3,10 @@
     "message": "A browser extension to perform automated bids for eBay items, also when you are away from your computer"
   },
   "appName": {
-    "message": "Biet-O-Matic BE"
+    "message": "Bid-O-Matic BE"
   },
   "appOpen": {
-    "message": "Open Biet-O-Matic BE"
+    "message": "Open Bid-O-Matic BE"
   },
   "cs_auctionAlreadyEnded": {
     "message": "Auction has already ended"

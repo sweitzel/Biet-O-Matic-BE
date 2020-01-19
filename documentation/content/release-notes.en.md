@@ -7,7 +7,7 @@ type: "docs"
 
 # Release Notes
 
-## Biet-O-Matic BE Version 0.3
+## Bid-O-Matic BE Version 0.3
 This BE Version is the first one, which is multilingual. It supports now besides German, also English language.
 Furthermore ebay.com support was tested as well. 
 
@@ -28,7 +28,7 @@ Other major changes in this version:
 * Bid-Lock implemented to ensure that not multiple items from the same group are purchased,
   if the auctions for the items end close to each other (10s), also see [Features]({{< relref "/manual/features#avoidance-of-double-purchases-auction-collision" >}})
 
-### Biet-O-Matic BE Version 0.3.1
+### Bid-O-Matic BE Version 0.3.1
 {{< hint info>}}
 Published on Sunday, 19.01.2020 
 {{{< /hint >}}
@@ -42,7 +42,7 @@ Published on Sunday, 19.01.2020
     * Maximum bid can now be deleted and is set to 0 instead of always jumping to the minimum bid.
     * Fixed problem when an item tab was closed and then restored.
 
-## Biet-O-Matic BE Version 0.2
+## Bid-O-Matic BE Version 0.2
 This version branch has not much in common with the previous version. Both the source code and the
 Use of BE was renewed.
 
@@ -76,13 +76,13 @@ The following changes are particularly noteworthy:
     * To ensure that B-O-M BE will be maintained and expanded in the future, the donation option
     integrated. Currently this is possible through the GitHub platform, where different donation levels are possible.
 
-### Biet-O-Matic BE Version 0.2.2
+### Bid-O-Matic BE Version 0.2.2
 {{< hint info>}}
 Published on Monday, 06.01.2020 
 {{{< /hint >}} 
 * First stable 0.2 release
 
-## Biet-O-Matic BE Version 0.1
+## Bid-O-Matic BE Version 0.1
 These are the first prototype versions, which were released in December 2019. These versions
 were only made available to a limited circle of users to collect first opinions and test experiences
 and prepare it for the first stable release.

@@ -7,7 +7,7 @@ weight: 101
 ---
 
 # Privacy
-B-O-M BE has been designed to minimize the impact on the data belonging to the BE users:
+Bid-O-Matic BE (short just BE) has been designed to minimize the impact on the data belonging to the BE users:
 
 ## Internet Communication
 > B-O-M BE does not send any personal, statistical or eBay-platform specific data to servers on the Internet!
