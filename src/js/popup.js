@@ -52,9 +52,12 @@ class Group {
       return {};
   }
 
-  // returns the state of group autoBid: true|false
+  /*
+   * returns the state of group autoBid: true|false
+   * and sets the group cache
+   */
   static async getState(name) {
-    // name=null -> name=Keine Gruppe
+    // name=null -> name=Other Auctions
     if (name == null || typeof name === 'undefined')
       name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
     let result = await browser.storage.sync.get('GROUPS');
@@ -62,13 +65,25 @@ class Group {
       const groupInfo = result.GROUPS;
       //console.debug("Biet-O-Matic: Group.getState(%s:%s) : %s", name, typeof name, JSON.stringify(groupInfo));
       if (groupInfo.hasOwnProperty(name)) {
-        return groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === true;
+        const state = groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === true;
+        if (!Popup.cachedGroups.hasOwnProperty(name)) Popup.cachedGroups[name] = {};
+        Popup.cachedGroups[name].autoBid = state;
+        return state;
       } else {
         // no value for this group stored yet
         return false;
       }
     } else {
       // no groups stored at all
+      return false;
+    }
+  }
+
+  // return cached group state or false if not cached
+  static getStateCached(name) {
+    if (Popup.cachedGroups.hasOwnProperty(name)) {
+      return Popup.cachedGroups[name].autoBid;
+    } else {
       return false;
     }
   }
@@ -132,7 +147,7 @@ class Group {
         });
       })
       .catch(e => {
-        // its expected to fail, e.g. due to table pagination
+        // its expected to fail sometimes, e.g. due to table pagination
         console.debug("Biet-O-Matic: Group.renderState(%s) failed (Probably not found): %s", name, e.message);
       });
   }
@@ -2024,6 +2039,14 @@ class ArticlesTable {
     spanGroupAutoBid.setAttribute('name', groupName);
     spanGroupAutoBid.textContent = Popup.getTranslation('generic_group_autoBid', ".Group Auto-Bid ") + ' ';
     spanGroupAutoBid.style.float = 'right';
+    // set cached state, to avoid flicker
+    if (Group.getStateCached(groupName)) {
+      spanGroupAutoBid.classList.add('autoBidEnabled');
+      spanGroupAutoBid.setAttribute('data-i18n-after', Popup.getTranslation('generic_active', '.active'));
+    } else {
+      spanGroupAutoBid.classList.add('autoBidDisabled');
+      spanGroupAutoBid.setAttribute('data-i18n-after', Popup.getTranslation('generic_inactive', '.inactive'));
+    }
     td.appendChild(spanGroupAutoBid);
     // renderState will asynchronously add a class toggling enabled/disabled state
     Group.renderState(spanGroupAutoBid.id, groupName);
@@ -2306,13 +2329,24 @@ class ArticlesTable {
         openerTabId: this.popup.tabId
       }).then(tab => {
         article.tabId = tab.id;
-        row.invalidate('data').draw(false);
+        // redraw tab status cell
+        const cell = this.DataTable.cell("#" + article.articleId, 'articleButtons:name');
+        if (cell !== 'undefined' && cell.length === 1) {
+          cell.invalidate('data').draw(false);
+        } else {
+          row.invalidate('data').draw(false);
+        }
       });
     } else {
       console.debug("Biet-O-Matic: toggleArticleTab(%s) Closing tab %d", article.articleId, article.tabId);
       browser.tabs.remove(article.tabId).then(() => {
         article.tabId = null;
-        row.invalidate('data').draw(false);
+        const cell = this.DataTable.cell("#" + article.articleId, 'articleButtons:name');
+        if (cell !== 'undefined' && cell.length === 1) {
+          cell.invalidate('data').draw(false);
+        } else {
+          row.invalidate('data').draw(false);
+        }
       });
     }
   }
@@ -3103,7 +3137,7 @@ class ArticlesTable {
         Group.toggleState(name)
           .then(() => Group.renderState('spanGroupAutoBid', name))
           .catch(e => {
-            console.log("Biet-O-Matic: Failed to toggle group %s autoBid state: %s", name, e.message);
+            console.log("Biet-O-Matic: Failed to toggle group '%s' autoBid state: %s", name, e.message);
           });
       }
     });
