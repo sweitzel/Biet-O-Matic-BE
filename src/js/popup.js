@@ -3283,6 +3283,7 @@ class Popup {
   /*
    * register events:
    * - getWindowSettings: from content script to retrieve the settings for this window (e.g. autoBidEnabled)
+   * - pingPopup: from background script to identify popup tabs (required without tabs permission)
    * - browserAction clicked
    * - inputAutoBid clicked
    */
@@ -3297,6 +3298,9 @@ class Popup {
             return Promise.resolve(JSON.parse(window.sessionStorage.getItem('settings')));
           }
           break;
+        case 'pingPopup':
+          console.debug("Biet-O-Matic: Browser Event pingPopup received from %O", sender);
+          return Promise.resolve("pong");
       }
     });
 

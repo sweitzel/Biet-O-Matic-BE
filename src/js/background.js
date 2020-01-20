@@ -11,6 +11,8 @@ import browser from "webextension-polyfill";
 
 class BomBackground {
   constructor() {
+    // object of popup tabs, key is the windowId, value the tab object
+    this.popupTab = {};
     this.registerEvents();
   }
 
@@ -25,53 +27,93 @@ class BomBackground {
      *   This calls the openBomTab with tabs.tab as parameter.
      *   If the browser action is clicked from the overview or eBay tab, then
      */
-    browser.browserAction.onClicked.addListener(this.browserActionClickedHandler);
+    browser.browserAction.onClicked.addListener(tab => {
+      this.browserActionClickedHandler(tab)
+        .then()
+        .catch(e => {console.log("Biet-O-Matic: BrowserActionClicked error: %s", e)});
+    });
 
     //runtime extension install listener
     browser.runtime.onInstalled.addListener(this.runtimeOnInstalledHandler);
   }
 
   /*
-   * Activate the BE overview window, when the Browser Action button is clicked
-   * - when the button is clicked from an ebay tab or the overview page, will simply toggle the window autoBid
-   * - when clicked from ebay tab, then the overview page gets activated
+   * Return existing popup tab
+   * - scans for "zombie" popup tab if needed
+   * - closes duplicate popup tabs
+   * - returns null if no popup tab yet
    */
-  async browserActionClickedHandler(tab) {
-     // query tab for specified or current window with extension URL
-    let tabs = await browser.tabs.query({
-      windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
-      url: browser.runtime.getURL('*')
-    });
-    for (let i = 0; i < tabs.length; i++) {
-      if (i > 0) {
-        await browser.tabs.remove(tabs[i].id);
-        console.debug("Closed additional BOM instance (tab=%d)", tabs[i].id);
-        continue;
+  async getPopupTab(windowId) {
+    let result = null;
+    if (this.popupTab.hasOwnProperty(windowId)) {
+      const tab = this.popupTab[windowId];
+      if (tab != null) {
+        // check if popup responds to ping (might be closed in the meanwhile)
+        try {
+          const tabInfo = await browser.tabs.get(tab.id);
+          result = tab;
+          console.debug("Biet-O-Matic: Checking tab %s succeeded", tab.id);
+        } catch (e) {
+          console.debug("Biet-O-Matic: Checking tab %s failed: %s", tab.id, e);
+          this.popupTab[windowId] = null;
+        }
       }
+    }
+    // find "zombie" popup tab
+    const tabs = await browser.tabs.query({windowId: windowId});
+    for (const iTab of tabs) {
+      try {
+        const response = await browser.tabs.sendMessage(iTab.id, {action: "pingPopup"});
+        if (response === "pong") {
+          console.debug("Biet-O-Matic: Pinging tab %s succeeded", iTab.id);
+          if (this.popupTab.hasOwnProperty(windowId) && this.popupTab[windowId] != null) {
+            // close duplicate popup tab
+            if (this.popupTab[windowId].id !== iTab.id) {
+              console.log("Biet-O-Matic: Closing duplicate tab %d", iTab.id);
+              browser.tabs.remove(iTab.id);
+            } else {
+              // this is the open tab, nothing to do
+            }
+          } else {
+            // the zombie should be reused as popup tab
+            this.popupTab[windowId] = iTab;
+            result = iTab;
+          }
+        }
+      } catch (e) {
+        console.debug("Biet-O-Matic: Pinging tab %s failed: %s", iTab.id, e.message);
+      }
+    }
+    return result;
+  }
+
+  async browserActionClickedHandler(tab) {
+    console.log("browserActionClickedHandler called from tab=%O", tab);
+    let popupTab = await this.getPopupTab(tab.windowId);
+    if (popupTab == null) {
+      console.info("Biet-O-Matic: browserActionClickedHandler() no open tabs, creating new.");
+      popupTab = await browser.tabs.create({
+        url: browser.runtime.getURL(BomBackground.getPopupFileName()),
+        windowId: tab.windowId,
+        pinned: true,
+        index: 0
+      });
+    } else {
       // if open, ensure it is pinned (user might have accidentally un-pinned it)
       const params = {};
       params.pinned = true;
       // do not activate BOM overview tab if the current tab is an ebay tab - this could cause confusion
-      if (tab != null && tab.url.startsWith(browser.runtime.getURL("")) === false && /^https?:\/\/.*\.ebay\.(de|com)\/itm/.test(tab.url) === false) {
+      if (tab.url.startsWith(browser.runtime.getURL("")) === false && /^https?:\/\/.*\.ebay\.(de|com)\/itm/.test(tab.url) === false) {
         params.highlighted = true;
         params.active = true;
       }
       // autoDiscardable not supported by all browsers, so we check it exists
-      if ('autoDiscardable' in tabs[i]) {
+      if ('autoDiscardable' in tab) {
         params.autoDiscardable = false;
       }
-      await browser.tabs.update(tabs[i].id, params)
-        .then(console.debug("openBomTab(): tab with id %d updated, params=%s", tabs[i].id, JSON.stringify(params)))
-        .catch(e => console.warn(`openBomTab() failed to update tab err=${e.message}`));
-    }
-    // if no BOM tab is open, create one
-    if (tabs.length === 0) {
-      await browser.tabs.create({
-        url: browser.runtime.getURL(BomBackground.getPopupFileName()),
-        windowId: (tab && 'windowId' in tab) ? tab.windowId : browser.windows.WINDOW_ID_CURRENT,
-        pinned: true,
-        index: 0
-      });
+      await browser.tabs.update(popupTab.id, params)
+        .then(console.debug("openBomTab(): tab with id %s updated, params=%s", popupTab.id, JSON.stringify(params)))
+        .catch(e => console.warn("openBomTab() failed to update tab err: " + e));
     }
   }
 
@@ -120,7 +162,7 @@ class BomBackground {
         if (autoBid.id.split(':')[1] !== currentWindow.id.toString()) {
           console.debug("Biet-O-Matic: checkAutoBidEnabledForThisWindow() autoBid for different id: stored=%s, ours=%s",
             autoBid.id.split(':')[1], currentWindow.id);
-        } else if ((Date.now() - autoBid.timestamp) > 5*60*1000) {
+        } else if ((Date.now() - autoBid.timestamp) > 5 * 60 * 1000) {
           // entry not older than 5 minutes
           console.debug("Biet-O-Matic: checkAutoBidEnabledForThisWindow() autoBid too old (%ss)",
             (Date.now() - autoBid.timestamp) / 1000);
@@ -141,8 +183,6 @@ class BomBackground {
       return "popup.en.html";
     }
   }
-
 }
 
-
-let bom = new BomBackground();
+const bom = new BomBackground();
