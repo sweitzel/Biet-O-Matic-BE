@@ -7,10 +7,57 @@ type: "docs"
 
 # Manual
 
+## Quickstart
+
+After Biet-O-Matic BE (hereinafter referred to as BE only) is added to the Browser, it is also directly ready for
+use without further configuration. It should only be ensured that you are already logged in to the ebay platform
+as this login is done by BE.
+
+Basic steps:
+
+* Open BE by activating the BE icon (auction hammer on yellow background)
+    * The icon is usually visible in the browser menu bar, where the address entry is also located.
+* The BE overview page opens "pinned" to the far left in the overview of open tabs
+    * The pinned icon contains a white 'B' on a red background when the automatic bidding mode is inactive for the current window,
+    * or a white 'B' on a green background if the automatic bidding mode is activated for the window.
+    * Note: The overview page must remain open for automatic bidding to work.
+* Open an eBay item in a new browser tab
+    * You can define a maximum bid directly on the article page.
+      This would also save the article and it remains in the overview table, even if the article tab is closed.
+    * Or you define the parameters for the article on the BE overview page:
+        * Article Group: Moves the article to a group you specify.
+        * Item Maximum Bid: Defines the maximum bid that BE will submit for the item just before the auction ends.
+        * Item Auto-Bid Mode: Activates the auto-bid mode for the item. If it is inactive, BE will not automatically bid on this item.
+* For an item to be auctioned, a maximum bid must be entered and the item must be have auto-bid enabled.
+
+In addition, the group auto-bid mode and the auto-bid mode for the window have to be active:
+
+### Group Auto-Bid Mode
+The user can define per article group whether articles from this group are to be auctioned automatically.
+The group auto-bid is inactive by default and must be activated for each desired group by clicking on the Group Auto-Bid toggle button.
+
+### Window Auto-Bid Mode
+The window auto-bid mode determines whether BE should bid for items automatically at all.
+This is a kind of "emergency stop" switch, by which you can make sure, that no unintentional bidding on auctions
+is done by BE.
+
+> Only one window at a time can activate the Window auto-bid mode.
+> BE automatically deactivates the Window auto-bid mode in other windows if the user activates it in the current window.
+
+This also ensures the support of several computers. You can therefore use BE on different computers (e.g. to correct maximum bids),
+but only one of the computers will automatically place bids.
+
+For more information please have a look at the function documentation (see menu on the left).
+
 ## Requirements
 
 ### Supported eBay platforms
-Only www.ebay.de and www.ebay.com are supported.
+{{< hint info >}}
+Only www.ebay.de and www.ebay.com are supported by Bid-O-Matic BE.
+{{< /hint >}}
+
+Even though only ebay.com and ebay.de are supported by BE, you can still use this extension.
+It is possible to perform national and international shopping via ebay.com.
 
 ### Accurate System Clock
 BE uses the system clock to execute tasks at certain times. It is especially important that the maximum bid is received
@@ -71,4 +118,4 @@ However, it is possible to do this using the "Storage Area Explorer" extension.
 
 > To help support analyze problems, it can be helpful to export this data for analysis manually in the support request.
 
-{{< image src="be_export.de.png" alt="Data export" >}}
+![Data Export](/be_export.de.png)

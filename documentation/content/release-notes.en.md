@@ -31,7 +31,7 @@ Other major changes in this version:
 
 ### Bid-O-Matic BE Version 0.3.2
 {{< hint info>}}
-Published on Sunday, 19.01.2020 
+Published on Sunday, 2020-01-19 
 {{< /hint >}}
 
 * First stable 0.3 version (for major changes, see above)
@@ -78,11 +78,13 @@ The following changes are particularly noteworthy:
 
 ### Bid-O-Matic BE Version 0.2.2
 {{< hint info>}}
-Published on Monday, 06.01.2020 
-{{{< /hint >}} 
+Published on Monday, 2020-01-06
+{{< /hint >}} 
 * First stable 0.2 release
 
 ## Bid-O-Matic BE Version 0.1
 These are the first prototype versions, which were released in December 2019. These versions
 were only made available to a limited circle of users to collect first opinions and test experiences
 and prepare it for the first stable release.
+
+[^1]: This requires that the browser synchronisation feature has been activated.

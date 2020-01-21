@@ -19,7 +19,7 @@ Gruppen können verwendet werden, um verschiedene Artikel nach Themen zu gruppie
 > Alternativ können sie kleinere Gruppen erstellen. Im Extremfall also nur ein Artikel pro Gruppe, um alle Artikel
 > zu ersteigern. 
  
-{{< image src="features_be_gruppe.de.png" alt="Gruppen" >}}
+{{< image src="/features_be_gruppe.de.png" alt="Gruppen" >}}
 
 * Artikel können jederzeit in Gruppen zugewiesen werden
 * Gruppen haben einen Schalter für den Gruppen-Automatikmodus
@@ -35,7 +35,7 @@ Zu diesem Zeitpunkt ist der Artikel aber noch nicht gespeichert - dies geschieht
 oder auch eine Gruppenzuweisung vornimmt. Nachdem der Artikel gespeichert wurde, kann auch der Tab geschlossen werden
 und der Artikel bleibt in der Tabelle.
 
-{{< image src="features_be_artikel_maxbid.de.gif" alt="Artikel Gebot definieren" >}}
+{{< image src="/features_be_artikel_maxbid.de.gif" alt="Artikel Gebot definieren" >}}
 
 * Das gewünschte Maximalgebot für einen Artikel kann direkt in der Überssichtstabelle eingegeben werden.
   Der aktualisierte Wert wird auch dem eBay Artikel Tab mitgeteilt.
@@ -56,7 +56,7 @@ Der Artikel Automatikmodus wird automatisch deaktiviert, wenn der Artikel Preis 
 
 BE erzeugt drei Arten von Protokollen:
 #### Artikel bezogenes Ereignisprotokoll
-{{< image src="features_be_artikelprotokoll.de.gif" alt="Artikel Ereignisprotokoll" >}}
+{{< image src="/features_be_artikelprotokoll.de.gif" alt="Artikel Ereignisprotokoll" >}}
 Dies ist das für den Benutzer wichtigste Protokoll, das es in relativ lesbarer Form aufzeichnet, was BE bzgl. Bietvorgang
 oder Änderungen gemacht, bzw. festgestellt hat.
 #### Übersichtsseite Ereignisprotokoll
@@ -126,7 +126,7 @@ Beim Ladevorgang der eBay Artikelseite, erweitert BE diese durch einen Knopf, we
 Artikel aktivieren kann.
 Im Hintergrund wird auch das Maximalgebot Eingabefeld überwacht, und dieser Wert gegebenenfalls geprüft und gespeichert. 
 
-{{< image src="features_be_artikelseite.de.gif" alt="Artikelseite" >}}
+{{< image src="/features_be_artikelseite.de.gif" alt="Artikelseite" >}}
 
 * Eine Veränderung des Maximalgebots oder der Automatikfunktion werden an die Übersichtsseite weitergeleitet
 * Bei Eingabe eines Wertes welcher niedriger als der Minimalerhöhungspreis ist, wird die Eingabe automatisch auf den

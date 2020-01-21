@@ -18,7 +18,7 @@ but it also allows you to bid automatically for different items simultaneously w
 > Alternatively you can create smaller groups. In the extreme case, only one article per group, in order to be able to
 > to auction off. 
  
-{{< image src="features_be_gruppe.de.png" alt="Groups" >}}
+{{< image src="/features_be_gruppe.de.png" alt="Groups" >}}
 
 * Items can be assigned to groups at any time
 * Groups have a switch for the group auto-bid mode
@@ -33,7 +33,7 @@ opened in the same window. At this point, however, the item is not yet saved - t
 places a maximum bid, or also makes a group assignment. After the item has been saved, the tab can also be closed
 and the item will remain in the table.
 
-{{< image src="features_be_artikel_maxbid.de.gif" alt="Define item maximum bid" >}}
+{{< image src="/features_be_artikel_maxbid.de.gif" alt="Define item maximum bid" >}}
 
 * The desired maximum bid for an item can be entered directly in the overview table.
   The updated value is also communicated back to the eBay item tab.
@@ -54,7 +54,7 @@ The item auto-bid mode is automatically deactivated if the item price goes above
 BE generates three types of logs:
 
 #### Article related Event Log
-{{< image src="features_be_artikelprotokoll.de.gif" alt="Item Event Log" >}}
+{{< image src="/features_be_artikelprotokoll.de.gif" alt="Item Event Log" >}}
 This is the most important log for the user, which it records in a human readable form.
 It logs what BE has done during the bidding process, or updates received for the item information.
 
@@ -120,7 +120,7 @@ in the same 10 second time window.
 When loading the eBay item page, BE enhances it with a button that enables the auto-bid mode for this item.
 The maximum bid input field is also monitored in the background, and this value is checked and saved if necessary. 
 
-{{< image src="features_be_artikelseite.de.gif" alt="Item Page" >}}
+{{< image src="/features_be_artikelseite.de.gif" alt="Item Page" >}}
 
 * A change of the maximum bid or the auto-bid inputs are forwarded to the overview page
 * When entering a value which is lower than the minimum increase price, the entry is automatically adjusted to the

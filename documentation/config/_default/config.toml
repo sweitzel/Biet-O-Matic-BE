@@ -1,6 +1,9 @@
 # hugo server --minify
 
 baseURL = 'http://localhost'
+relativeURLs  = true
+uglyurls = true
+
 theme = 'book'
 disableKinds = ['taxonomy', 'taxonomyTerm']
 DefaultContentLanguage = 'fr'
