@@ -9,6 +9,8 @@ bookToc: true
 Willkommen bei der Biet-O-Matic Browser Erweiterung, im folgenden einfach "BE" genannt.   
 Bitte verwenden sie die Navigationsmenü links, um die gewünschten Informationen abzurufen.
 
+Falls sie schnellstmöglich einsteigen wollen, können sie direkt zum [Schnellstart Kapitel]({{< relref "/manual#schnellstart" >}}) springen.
+
 ## Ursprung
 Vorab: Biet-O-Matic BE und das [Original B-O-M Programm](https://www.bid-o-matic.org/hp/) haben bis auf den Namen, wenig gemeinsam:
 * anderer Autor

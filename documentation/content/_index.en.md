@@ -9,6 +9,8 @@ bookToc: true
 Welcome to the Biet-O-Matic Browser extension, in the following simply called "BE".
 Please use the navigation menu on the left to access the desired information.
 
+If you want, you can skip to a [Quick-Start Guide]({{< relref "/manual#quick-start" >}}) which gives important information about the basic usage of BE.
+
 ## Origin
 First of all: Biet-O-Matic BE and the [Original B-O-M Program](https://www.bid-o-matic.org/hp/) have little in common except for the name:
 

@@ -5,7 +5,9 @@ relativeURLs  = true
 uglyurls = true
 
 theme = 'book'
-disableKinds = ['taxonomy', 'taxonomyTerm']
+
+disableKinds = ['taxonomy', 'taxonomyTerm', 'category', 'sitemap', 'RSS', '404', 'robotsTXT']
+
 DefaultContentLanguage = 'fr'
 #disableLanguages = ['fr']
 

@@ -7,7 +7,7 @@ type: "docs"
 
 # Manual
 
-## Quickstart
+## Quick-Start
 
 After Biet-O-Matic BE (hereinafter referred to as BE only) is added to the Browser, it is also directly ready for
 use without further configuration. It should only be ensured that you are already logged in to the ebay platform
