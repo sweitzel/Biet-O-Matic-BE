@@ -29,6 +29,15 @@ Weitere größere Änderungen in dieser Version:
   wenn die Auktionen dicht beieinander enden (10s), siehe auch [Funktionen]({{< relref "/manual/features#vermeidung-von-doppelkufen-auktions-kollosion" >}})
 * Wenn der Browser es unterstützt, wird BE verhindern, dass der Computer in den Schlafmodus wechselt. Aber nur wenn die Biet-Automatik aktiv ist.
 
+### Biet-O-Matic BE Version 0.3.3
+{{< hint info>}}
+Erschienen am Dienstag, 21.01.2020 
+{{< /hint >}}
+
+* Behebt Problem beim öffnen der BE Übersichtsseite. Diese konnte u.U. mehrfach geöffnet werden.
+* Behebt Problem mit flackern des Knopfes für den Gruppen Automatikmodus
+* Dokumentation aktualisert, Schnellstart Anleitung hinzugefügt 
+
 ### Biet-O-Matic BE Version 0.3.2
 {{< hint info>}}
 Erschienen am Sonntag, 19.01.2020 
