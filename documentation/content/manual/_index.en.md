@@ -30,7 +30,7 @@ Basic Usage:
 	* NOTE that the "Place bid" display on the item page will reflect the state of the "bid active" status of that item via an overlay from BE  
 {{< image src="/bid_overlay.en.png" alt="Overview Page/Tab" >}}	  
     * Or you enter the bid for the item directly on the BE overview page:
-        * Group: By default, all items appear in "Group". Simply enter a new group name next to an item and it will move to a new group with the name you specify.
+        * Group: By default, all items appear in the default group titled "Other Auctions". Simply enter a new group name next to an item and it will move to a new group with the name you specify.
         * Your Maximum Bid: Defines the maximum bid that BE will submit for the item just before the auction ends.
         * Item "Active" Mode: Activates the auto-bid mode for the item. If it is inactive, BE will not automatically bid on this item!
 	* NOTE that if you do not enter a maximum bid value on the BE overview page OR on the item page itself closing the item tab will remove it from the BE overview.
