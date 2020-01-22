@@ -40,7 +40,7 @@ import "../css/popup.css";
 
 /*
  * All functions related to Auction Groups
- * Group information is stored in browser sync storage under key GROUPS: { 'name': { autoBid: false }, ...]
+ * Group information is stored in browser sync storage under key GROUPS: { 'name': { autoBid: true, bidAll: true }, ...]
  */
 class Group {
   // returns the groups from sync.storage
@@ -53,87 +53,88 @@ class Group {
   }
 
   /*
-   * returns the state of group autoBid: true|false
+   * returns the state of group {autoBid: true|false, bidAll: true|false}
    * and sets the group cache
    */
   static async getState(name) {
+    const result = {autoBid: true, bidAll: true};
     // name=null -> name=Other Auctions
     if (name == null || typeof name === 'undefined')
       name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
-    let result = await browser.storage.sync.get('GROUPS');
-    if (Object.keys(result).length === 1) {
-      const groupInfo = result.GROUPS;
+    const storedResult = await browser.storage.sync.get('GROUPS');
+    if (Object.keys(storedResult).length === 1) {
+      const groupInfo = storedResult.GROUPS;
       //console.debug("Biet-O-Matic: Group.getState(%s:%s) : %s", name, typeof name, JSON.stringify(groupInfo));
       if (groupInfo.hasOwnProperty(name)) {
-        const state = groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === true;
+        Object.assign(result, groupInfo[name]);
         if (!Popup.cachedGroups.hasOwnProperty(name)) Popup.cachedGroups[name] = {};
-        Popup.cachedGroups[name].autoBid = state;
-        return state;
-      } else {
-        // no value for this group stored yet
-        return true;
+        Popup.cachedGroups[name] = result;
       }
-    } else {
-      // no groups stored at all
-      return false;
     }
+    return result;
   }
 
   // return cached group state or false if not cached
   static getStateCached(name) {
+    const result = {autoBid: true, bidAll: true};
     if (Popup.cachedGroups.hasOwnProperty(name)) {
-      return Popup.cachedGroups[name].autoBid;
-    } else {
-      return false;
+      Object.assign(result, Popup.cachedGroups[name]);
     }
+    return result;
   }
 
   /*
    * Set group autoBid state
    * Also creates the group if its not existing yet
    */
-  static async setState(name, autoBid = false) {
+  static async setState(name, autoBid = false, bidAll = false) {
     // name=null -> name=Keine Gruppe
     if (name == null || typeof name === 'undefined')
       name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
-    let result = await browser.storage.sync.get('GROUPS');
-    const groupInfo = {};
-    if (Object.keys(result).length === 1)
-      Object.assign(groupInfo, result.GROUPS);
+    const groupInfo = await Group.getAll();
 
     // check if the autoBid needs to be updated
-    if (groupInfo.hasOwnProperty(name) && groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === autoBid)
-      return;
+    if (groupInfo.hasOwnProperty(name)) {
+      const autoBidUnchanged = groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === autoBid;
+      const bidAllUnchanged = groupInfo[name].hasOwnProperty('bidAll') && groupInfo[name].bidAll === bidAll;
+      if (autoBidUnchanged && bidAllUnchanged)
+        return;
+    }
 
-    groupInfo[name] = {autoBid: autoBid, timestamp: Date.now()};
+    groupInfo[name] = {autoBid: autoBid, bidAll: bidAll, timestamp: Date.now()};
     Popup.cachedGroups[name] = groupInfo[name];
-    //console.log("group.setState %s", JSON.stringify(groupInfo));
 
     // store the info back to the storage
     await browser.storage.sync.set({GROUPS: groupInfo});
   }
 
-  static async toggleState(name) {
+  static async toggleAutoBid(name) {
     if (typeof name === 'undefined')
       return false;
-    let state = await Group.getState(name);
-    await Group.setState(name, !state);
-    return !state;
+    const state = await Group.getState(name);
+    await Group.setState(name, !state.autoBid, state.bidAll);
+  }
+
+  static async toggleBidAll(name) {
+    if (typeof name === 'undefined')
+      return false;
+    const state = await Group.getState(name);
+    await Group.setState(name, state.autoBid, !state.bidAll);
   }
 
   /*
    * Add the proper class to the group name span
    * requires a bit waiting, because the function will be called before the actual elements will be added
    */
-  static renderState(id, name) {
+  static renderAutoBid(id, name) {
     Group.waitFor(`#${id}[name="${name}"]`, 1000)
       .then(spanGroupAutoBid => {
         if (spanGroupAutoBid == null || spanGroupAutoBid.length !== 1) {
-          console.warn("Biet-O-Matic: Group.renderState, could not find group span");
+          console.warn("Biet-O-Matic: Group.renderAutoBid, could not find group span");
           return;
         }
-        Group.getState(name).then(autoBid => {
-          if (autoBid) {
+        Group.getState(name).then(state => {
+          if (state.autoBid) {
             spanGroupAutoBid.addClass('autoBidEnabled');
             spanGroupAutoBid.removeClass('autoBidDisabled');
             $(spanGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_active', '.active'));
@@ -148,7 +149,31 @@ class Group {
       })
       .catch(e => {
         // its expected to fail sometimes, e.g. due to table pagination
-        console.debug("Biet-O-Matic: Group.renderState(%s) failed (Probably not found): %s", name, e.message);
+        console.debug("Biet-O-Matic: Group.renderAutoBid(%s) failed (Probably not found): %s", name, e.message);
+      });
+  }
+
+  // Add the proper class to the group name span
+  static renderBidAll(id, name) {
+    Group.waitFor(`#${id}[name="${name}"]`, 1000)
+      .then(spanGroupBidAll => {
+        if (spanGroupBidAll == null || spanGroupBidAll.length !== 1) {
+          console.warn("Biet-O-Matic: Group.renderBidAll, could not find group span.");
+          return;
+        }
+        Group.getState(name).then(state => {
+          if (state.bidAll) {
+            $(spanGroupBidAll).text(Popup.getTranslation('generic_group_bidAllEnabled', ".Bid all"));
+          } else {
+            $(spanGroupBidAll).text(Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win"));
+          }
+        }).catch(e => {
+          console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
+        });
+      })
+      .catch(e => {
+        // its expected to fail sometimes, e.g. due to table pagination
+        console.debug("Biet-O-Matic: Group.renderBidAll(%s) failed (Probably not found): %s", name, e.message);
       });
   }
 
@@ -234,7 +259,8 @@ class Group {
       return;
     // todo: Do we have to handle removed groups?
     Object.keys(changes.newValue).forEach(groupName => {
-      Group.renderState('spanGroupAutoBid', groupName);
+      Group.renderAutoBid('spanGroupAutoBid', groupName);
+      Group.renderBidAll('spanGroupBidAll', groupName);
     });
   }
 }
@@ -2019,21 +2045,21 @@ class ArticlesTable {
    * Render row groups
    */
   static renderGroups(rows, groupName) {
-    let td = document.createElement('td');
+    const td = document.createElement('td');
     td.colSpan = rows.columns()[0].length;
-    let div = document.createElement('div');
-    let i = document.createElement('i');
+    const div = document.createElement('div');
+    const i = document.createElement('i');
     i.classList.add('fas', 'fa-shopping-cart', 'fa-fw');
     i.style.fontSize = '1.2em';
     i.style.paddingTop = '0.5em';
-    let span = document.createElement('span');
+    const span = document.createElement('span');
     span.textContent = `${groupName} (${rows.count()})`;
     span.style.fontSize = '1.2em';
     span.style.fontWeight = 'normal';
     td.appendChild(i);
     td.appendChild(span);
 
-    let spanGroupAutoBid = document.createElement('span');
+    const spanGroupAutoBid = document.createElement('span');
     spanGroupAutoBid.id = 'spanGroupAutoBid';
     spanGroupAutoBid.classList.add('ui-button', 'translate');
     spanGroupAutoBid.setAttribute('name', groupName);
@@ -2048,8 +2074,22 @@ class ArticlesTable {
       spanGroupAutoBid.setAttribute('data-i18n-after', Popup.getTranslation('generic_inactive', '.inactive'));
     }
     td.appendChild(spanGroupAutoBid);
+
+    const spanGroupBidAll = document.createElement('span');
+    spanGroupBidAll.id = 'spanGroupBidAll';
+    spanGroupBidAll.classList.add('ui-button');
+    spanGroupBidAll.setAttribute('name', groupName);
+    if (Group.getStateCached(groupName)) {
+      spanGroupBidAll.textContent = Popup.getTranslation('generic_group_bidAllEnabled', ".Bid everything");
+    } else {
+      spanGroupBidAll.textContent = Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win");
+    }
+    spanGroupBidAll.style.float = 'right';
+    td.appendChild(spanGroupBidAll);
+
     // renderState will asynchronously add a class toggling enabled/disabled state
-    Group.renderState(spanGroupAutoBid.id, groupName);
+    Group.renderAutoBid(spanGroupAutoBid.id, groupName);
+    Group.renderBidAll(spanGroupBidAll.id, groupName);
     // append data-name to tr
     return $('<tr/>')
       .append(td)
@@ -3134,10 +3174,18 @@ class ArticlesTable {
     this.DataTable.on('click', 'tr.row-group', e => {
       if (e.target.id === 'spanGroupAutoBid') {
         const name = $(e.currentTarget).data('name');
-        Group.toggleState(name)
-          .then(() => Group.renderState('spanGroupAutoBid', name))
+        Group.toggleAutoBid(name)
+          .then(() => Group.renderAutoBid('spanGroupAutoBid', name))
           .catch(e => {
             console.log("Biet-O-Matic: Failed to toggle group '%s' autoBid state: %s", name, e.message);
+          });
+      }
+      if (e.target.id === 'spanGroupBidAll') {
+        const name = $(e.currentTarget).data('name');
+        Group.toggleBidAll(name)
+          .then(() => Group.renderBidAll('spanGroupBidAll', name))
+          .catch(e => {
+            console.log("Biet-O-Matic: Failed to toggle group '%s' bidAll state: %s", name, e.message);
           });
       }
     });

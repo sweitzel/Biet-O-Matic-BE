@@ -125,6 +125,12 @@
   "generic_group_autoBid": {
     "message": "Gruppen Automatikmodus"
   },
+  "generic_group_bidAllDisabled": {
+    "message": "Nach Bieterfolg abbrechen"
+  },
+  "generic_group_bidAllEnabled": {
+    "message": "Versuchen alle zu ersteigern"
+  },
   "generic_inactive": {
     "message": "inaktiv"
   },
@@ -221,6 +227,12 @@
   "popup_buynowprice": {
     "message": "Sofortkaufpreis"
   },
+  "popup_changesDiffError": {
+    "message": "$1: Kann Änderungen nicht anzeigen ($2)"
+  },
+  "popup_changesMisc": {
+    "message": "$1: $2 sonstige Änderungen"
+  },
   "popup_closeArticleTab": {
     "message": "Schließt den Artikel Tab"
   },
@@ -256,11 +268,5 @@
   },
   "popup_show_articleEvents": {
     "message": "Zeigt Artikel Ereignisprotokoll"
-  },
-  "popup_changesMisc": {
-    "message": "$1: $2 sonstige Änderungen"
-  },
-  "popup_changesDiffError": {
-    "message": "$1: Kann Änderungen nicht anzeigen ($2)"
   }
 }

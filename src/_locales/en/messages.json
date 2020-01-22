@@ -125,6 +125,12 @@
   "generic_group_autoBid": {
     "message": "Group Auto-Bid"
   },
+  "generic_group_bidAllDisabled": {
+    "message": "Bid until you win"
+  },
+  "generic_group_bidAllEnabled": {
+    "message": "Bid everything"
+  },
   "generic_inactive": {
     "message": "inactive"
   },
@@ -221,6 +227,12 @@
   "popup_buynowprice": {
     "message": "Buy-It-Now Price"
   },
+  "popup_changesDiffError": {
+    "message": "$1: Cannot determine changes ($2)"
+  },
+  "popup_changesMisc": {
+    "message": "$1: $2 other changes"
+  },
   "popup_closeArticleTab": {
     "message": "Closes the item tab"
   },
@@ -256,11 +268,5 @@
   },
   "popup_show_articleEvents": {
     "message": "Show item events"
-  },
-  "popup_changesMisc": {
-    "message": "$1: $2 other changes"
-  },
-  "popup_changesDiffError": {
-    "message": "$1: Cannot determine changes ($2)"
   }
 }
