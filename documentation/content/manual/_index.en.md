@@ -33,7 +33,7 @@ Basic Usage:
         * Group: By default, all items appear in the default group titled "Other Auctions". Simply enter a new group name next to an item and it will move to a new group with the name you specify.
         * Your Maximum Bid: Defines the maximum bid that BE will submit for the item just before the auction ends.
         * Item "Active" Mode: Activates the auto-bid mode for the item. If it is inactive, BE will not automatically bid on this item!
-	* NOTE that if you do not enter a maximum bid value on the BE overview page OR on the item page itself closing the item tab will remove it from the BE overview.
+	* NOTE that if you do not enter a maximum bid value on the BE overview page OR on the item page itself, or move and item to a custom bid group closing the item tab will remove it from the BE overview.
 * For an item to be auctioned, a maximum bid must be entered and the item must be have auto-bid enabled.
 
 In addition, the group auto-bid mode and the auto-bid mode for the window have to be active:
