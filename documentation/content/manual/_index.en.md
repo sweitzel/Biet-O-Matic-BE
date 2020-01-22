@@ -9,28 +9,36 @@ type: "docs"
 
 ## Quick-Start
 
-After Biet-O-Matic BE (hereinafter referred to as BE only) is added to the Browser, it is also directly ready for
-use without further configuration. It should only be ensured that you are already logged in to the ebay platform
-as this login is done by BE.
+After Biet-O-Matic BE (hereafter referred to as "BE") is added to the Browser it is immediately ready for
+use without additional configuration. The only requirement is that you are already logged in to the eBay site
+as the active authentication in the browser is a proxy for BE to place bids.
 
-Basic steps:
+Basic Usage:
 
-* Open BE by activating the BE icon (auction hammer on yellow background)
+* Open the BE overview page by clicking on the BE icon (auction hammer on yellow background see image below)
     * The icon is usually visible in the browser menu bar, where the address entry is also located.
-* The BE overview page opens "pinned" to the far left in the overview of open tabs
-    * The pinned icon contains a white 'B' on a red background when the automatic bidding mode is inactive for the current window,
-    * or a white 'B' on a green background if the automatic bidding mode is activated for the window.
-    * Note: The overview page must remain open for automatic bidding to work.
+* The BE overview page opens as a "pinned" tab to the far left of all open tabs in the window where you activated the extension.
+    * The pinned icon contains a white 'B' on a red background when the automatic bidding mode is INNACTIVE for the current window,
+    * or a white 'B' on a green background if the automatic bidding mode is ACTIVE for the window.
+    * Note: The overview page must remain open for automatic bidding to work. Closing this tab will result in no bids for any groups.
+
+{{< image src="/extension_status.en.png" alt="Plug-in Icon" >}}  {{< image src="/overview_page.en.png" alt="Overview Page/Tab" >}}
+	
 * Open an eBay item in a new browser tab
-    * You can define a maximum bid directly on the article page.
-      This would also save the article and it remains in the overview table, even if the article tab is closed.
-    * Or you define the parameters for the article on the BE overview page:
-        * Article Group: Moves the article to a group you specify.
-        * Item Maximum Bid: Defines the maximum bid that BE will submit for the item just before the auction ends.
-        * Item Auto-Bid Mode: Activates the auto-bid mode for the item. If it is inactive, BE will not automatically bid on this item.
+    * You can enter a maximum bid directly on the item page.
+      This will also "save" the item in the overview page - and it will remain there even if the item tab is closed.
+	* NOTE that the "Place bid" display on the item page will reflect the state of the "bid active" status of that item via an overlay from BE  
+{{< image src="/bid_overlay.en.png" alt="Overview Page/Tab" >}}	  
+    * Or you enter the bid for the item directly on the BE overview page:
+        * Group: By default, all items appear in "Group". Simply enter a new group name next to an item and it will move to a new group with the name you specify.
+        * Your Maximum Bid: Defines the maximum bid that BE will submit for the item just before the auction ends.
+        * Item "Active" Mode: Activates the auto-bid mode for the item. If it is inactive, BE will not automatically bid on this item!
+	* NOTE that if you do not enter a maximum bid value on the BE overview page OR on the item page itself closing the item tab will remove it from the BE overview.
 * For an item to be auctioned, a maximum bid must be entered and the item must be have auto-bid enabled.
 
 In addition, the group auto-bid mode and the auto-bid mode for the window have to be active:
+
+{{< image src="/features_be_groups.en.png" alt="Overview Page Features" >}}
 
 ### Group Auto-Bid Mode
 The user can define per article group whether articles from this group are to be auctioned automatically.
