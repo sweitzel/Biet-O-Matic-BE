@@ -71,7 +71,7 @@ class Group {
         return state;
       } else {
         // no value for this group stored yet
-        return false;
+        return true;
       }
     } else {
       // no groups stored at all
