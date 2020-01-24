@@ -126,10 +126,10 @@
     "message": "Group Auto-Bid"
   },
   "generic_group_bidAllDisabled": {
-    "message": "Bid until you win"
+    "message": "I want one"
   },
   "generic_group_bidAllEnabled": {
-    "message": "Bid everything"
+    "message": "I want all"
   },
   "generic_inactive": {
     "message": "inactive"
@@ -268,5 +268,8 @@
   },
   "popup_show_articleEvents": {
     "message": "Show item events"
+  },
+  "generic_group_bidAllHint": {
+    "message": "Toggles between 'Bid until you win' and 'Bid all items from this group'"
   }
 }

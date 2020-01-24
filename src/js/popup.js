@@ -128,20 +128,20 @@ class Group {
    */
   static renderAutoBid(id, name) {
     Group.waitFor(`#${id}[name="${name}"]`, 1000)
-      .then(spanGroupAutoBid => {
-        if (spanGroupAutoBid == null || spanGroupAutoBid.length !== 1) {
+      .then(inpGroupAutoBid => {
+        if (inpGroupAutoBid == null || inpGroupAutoBid.length !== 1) {
           console.warn("Biet-O-Matic: Group.renderAutoBid, could not find group span");
           return;
         }
         Group.getState(name).then(state => {
           if (state.autoBid) {
-            spanGroupAutoBid.addClass('autoBidEnabled');
-            spanGroupAutoBid.removeClass('autoBidDisabled');
-            $(spanGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_active', '.active'));
+            $(inpGroupAutoBid).siblings('span').removeClass('autoBidDisabled');
+            $(inpGroupAutoBid).siblings('span').addClass('autoBidEnabled');
+            $(inpGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_active', '.active'));
           } else {
-            spanGroupAutoBid.addClass('autoBidDisabled');
-            spanGroupAutoBid.removeClass('autoBidEnabled');
-            $(spanGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_inactive', '.inactive'));
+            $(inpGroupAutoBid).siblings('span').removeClass('autoBidEnabled');
+            $(inpGroupAutoBid).siblings('span').addClass('autoBidDisabled');
+            $(inpGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_inactive', '.inactive'));
           }
         }).catch(e => {
           console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
@@ -156,16 +156,20 @@ class Group {
   // Add the proper class to the group name span
   static renderBidAll(id, name) {
     Group.waitFor(`#${id}[name="${name}"]`, 1000)
-      .then(spanGroupBidAll => {
-        if (spanGroupBidAll == null || spanGroupBidAll.length !== 1) {
-          console.warn("Biet-O-Matic: Group.renderBidAll, could not find group span.");
+      .then(inpGroupBidAll => {
+        if (inpGroupBidAll == null || inpGroupBidAll.length !== 1) {
+          console.warn("Biet-O-Matic: Group.renderBidAll, could not find inpGroupBidAll element.");
           return;
         }
         Group.getState(name).then(state => {
           if (state.bidAll) {
-            $(spanGroupBidAll).text(Popup.getTranslation('generic_group_bidAllEnabled', ".Bid all"));
+            $(inpGroupBidAll).siblings('i').removeClass('fa-hand-pointer');
+            $(inpGroupBidAll).siblings('i').addClass('fa-hand-paper');
+            $(inpGroupBidAll).siblings('span').text(" " + Popup.getTranslation('generic_group_bidAllEnabled', ".Bid all"));
           } else {
-            $(spanGroupBidAll).text(Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win"));
+            $(inpGroupBidAll).siblings('i').removeClass('fa-hand-paper');
+            $(inpGroupBidAll).siblings('i').addClass('fa-hand-pointer');
+            $(inpGroupBidAll).siblings('span').text(" " + Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win"));
           }
         }).catch(e => {
           console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
@@ -173,7 +177,7 @@ class Group {
       })
       .catch(e => {
         // its expected to fail sometimes, e.g. due to table pagination
-        console.debug("Biet-O-Matic: Group.renderBidAll(%s) failed (Probably not found): %s", name, e.message);
+        console.debug("Biet-O-Matic: Group.renderBidAll(%s) failed (id=%s element not found): %s", name, id, e.message);
       });
   }
 
@@ -259,8 +263,8 @@ class Group {
       return;
     // todo: Do we have to handle removed groups?
     Object.keys(changes.newValue).forEach(groupName => {
-      Group.renderAutoBid('spanGroupAutoBid', groupName);
-      Group.renderBidAll('spanGroupBidAll', groupName);
+      Group.renderAutoBid('inpGroupAutoBid', groupName);
+      Group.renderBidAll('inpGroupBidAll', groupName);
     });
   }
 }
@@ -2047,7 +2051,8 @@ class ArticlesTable {
   static renderGroups(rows, groupName) {
     const td = document.createElement('td');
     td.colSpan = rows.columns()[0].length;
-    const div = document.createElement('div');
+
+    // left side: icon + group name (number of articles)
     const i = document.createElement('i');
     i.classList.add('fas', 'fa-shopping-cart', 'fa-fw');
     i.style.fontSize = '1.2em';
@@ -2059,37 +2064,64 @@ class ArticlesTable {
     td.appendChild(i);
     td.appendChild(span);
 
+    // right side: input groupBidAll, input groupAutoBid
+    const labelGroupAutoBid = document.createElement('label');
+    labelGroupAutoBid.id = 'lblGroupAutoBid';
+    labelGroupAutoBid.htmlFor = "inpGroupAutoBid";
+    labelGroupAutoBid.classList.add('ui-button');
+    labelGroupAutoBid.title = 'Aktuell ist der Gruppen Automatikmodus aktiv';
+    labelGroupAutoBid.style.float = 'right';
+    const inputGroupAutoBid = document.createElement('input');
+    inputGroupAutoBid.id = 'inpGroupAutoBid';
+    inputGroupAutoBid.setAttribute('name', groupName);
+    inputGroupAutoBid.type = 'checkbox';
+    inputGroupAutoBid.style.display = 'none';
     const spanGroupAutoBid = document.createElement('span');
     spanGroupAutoBid.id = 'spanGroupAutoBid';
-    spanGroupAutoBid.classList.add('ui-button', 'translate');
-    spanGroupAutoBid.setAttribute('name', groupName);
+    spanGroupAutoBid.classList.add('translate');
     spanGroupAutoBid.textContent = Popup.getTranslation('generic_group_autoBid', ".Group Auto-Bid ") + ' ';
-    spanGroupAutoBid.style.float = 'right';
     // set cached state, to avoid flicker
-    if (Group.getStateCached(groupName)) {
+    if (Group.getStateCached(groupName).autoBid) {
       spanGroupAutoBid.classList.add('autoBidEnabled');
       spanGroupAutoBid.setAttribute('data-i18n-after', Popup.getTranslation('generic_active', '.active'));
     } else {
       spanGroupAutoBid.classList.add('autoBidDisabled');
       spanGroupAutoBid.setAttribute('data-i18n-after', Popup.getTranslation('generic_inactive', '.inactive'));
     }
-    td.appendChild(spanGroupAutoBid);
+    labelGroupAutoBid.appendChild(inputGroupAutoBid);
+    labelGroupAutoBid.appendChild(spanGroupAutoBid);
+    td.appendChild(labelGroupAutoBid);
 
+    const labelGroupBidAll = document.createElement('label');
+    labelGroupBidAll.id = 'lblGroupBidAll';
+    labelGroupBidAll.htmlFor = 'inpGroupBidAll';
+    labelGroupBidAll.classList.add('ui-button');
+    labelGroupBidAll.title = Popup.getTranslation('generic_group_bidAllHint', ".Toggles betwen Bid all and Bid one for this group");
+    labelGroupBidAll.style.float = 'right';
+    const inputGroupBidAll = document.createElement('input');
+    inputGroupBidAll.id = 'inpGroupBidAll';
+    inputGroupBidAll.setAttribute('name', groupName);
+    inputGroupBidAll.type = 'checkbox';
+    inputGroupBidAll.style.display = 'none';
+    const iGroupBidAll = document.createElement('i');
+    iGroupBidAll.classList.add('far', 'fa-hand-pointer', 'fa-fw');
+    iGroupBidAll.style.width = '1.5em';
+    iGroupBidAll.style.fontSize = '1.3em';
     const spanGroupBidAll = document.createElement('span');
     spanGroupBidAll.id = 'spanGroupBidAll';
-    spanGroupBidAll.classList.add('ui-button');
-    spanGroupBidAll.setAttribute('name', groupName);
-    if (Group.getStateCached(groupName)) {
-      spanGroupBidAll.textContent = Popup.getTranslation('generic_group_bidAllEnabled', ".Bid everything");
+    if (Group.getStateCached(groupName).bidAll) {
+      spanGroupBidAll.textContent = " " + Popup.getTranslation('generic_group_bidAllEnabled', ".Bid everything");
     } else {
-      spanGroupBidAll.textContent = Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win");
+      spanGroupBidAll.textContent = " " + Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win");
     }
-    spanGroupBidAll.style.float = 'right';
-    td.appendChild(spanGroupBidAll);
+    labelGroupBidAll.appendChild(inputGroupBidAll);
+    labelGroupBidAll.appendChild(iGroupBidAll);
+    labelGroupBidAll.appendChild(spanGroupBidAll);
+    td.appendChild(labelGroupBidAll);
 
     // renderState will asynchronously add a class toggling enabled/disabled state
-    Group.renderAutoBid(spanGroupAutoBid.id, groupName);
-    Group.renderBidAll(spanGroupBidAll.id, groupName);
+    Group.renderAutoBid('inpGroupAutoBid', groupName);
+    Group.renderBidAll('inpGroupBidAll', groupName);
     // append data-name to tr
     return $('<tr/>')
       .append(td)
@@ -3172,18 +3204,18 @@ class ArticlesTable {
      * Toggle Group autobid
      */
     this.DataTable.on('click', 'tr.row-group', e => {
-      if (e.target.id === 'spanGroupAutoBid') {
-        const name = $(e.currentTarget).data('name');
+      if (e.target.id === 'inpGroupAutoBid') {
+        const name = e.target.name;
         Group.toggleAutoBid(name)
-          .then(() => Group.renderAutoBid('spanGroupAutoBid', name))
+          .then(() => Group.renderAutoBid('inpGroupAutoBid', name))
           .catch(e => {
             console.log("Biet-O-Matic: Failed to toggle group '%s' autoBid state: %s", name, e.message);
           });
       }
-      if (e.target.id === 'spanGroupBidAll') {
-        const name = $(e.currentTarget).data('name');
+      if (e.target.id === 'inpGroupBidAll') {
+        const name = e.target.name;
         Group.toggleBidAll(name)
-          .then(() => Group.renderBidAll('spanGroupBidAll', name))
+          .then(() => Group.renderBidAll('inpGroupBidAll', name))
           .catch(e => {
             console.log("Biet-O-Matic: Failed to toggle group '%s' bidAll state: %s", name, e.message);
           });

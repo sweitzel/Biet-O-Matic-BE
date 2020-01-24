@@ -126,10 +126,10 @@
     "message": "Gruppen Automatikmodus"
   },
   "generic_group_bidAllDisabled": {
-    "message": "Nach Bieterfolg abbrechen"
+    "message": "Ich möchte Einen"
   },
   "generic_group_bidAllEnabled": {
-    "message": "Versuchen alle zu ersteigern"
+    "message": "Ich möchte Alle"
   },
   "generic_inactive": {
     "message": "inaktiv"
@@ -268,5 +268,8 @@
   },
   "popup_show_articleEvents": {
     "message": "Zeigt Artikel Ereignisprotokoll"
+  },
+  "generic_group_bidAllHint": {
+    "message": "Wechselt zwischen 'Einen Artikel aus der Gruppe ersteigern' und 'Alle Artikel aus der Gruppe ersteigern'"
   }
 }
