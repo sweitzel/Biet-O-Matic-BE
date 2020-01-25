@@ -303,7 +303,7 @@ class AutoBid {
   static async getSyncState() {
     let info = {autoBidEnabled: false, id: null, timestamp: null};
     let result = await browser.storage.sync.get('SETTINGS');
-    //console.log("XXX getSyncState() %s", JSON.stringify(result));
+    console.log("XXX getSyncState() %s", JSON.stringify(result));
     if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
       const settingsInfo = result.SETTINGS;
       if (settingsInfo.hasOwnProperty('autoBid')) {

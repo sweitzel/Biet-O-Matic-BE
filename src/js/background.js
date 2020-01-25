@@ -33,6 +33,9 @@ class BomBackground {
         .catch(e => {console.log("Biet-O-Matic: BrowserActionClicked error: %s", e)});
     });
 
+    // handle browser close / restart
+    browser.windows.onRemoved.addListener(this.windowsOnRemovedHandler);
+
     //runtime extension install listener
     browser.runtime.onInstalled.addListener(this.runtimeOnInstalledHandler);
   }
@@ -132,26 +135,30 @@ class BomBackground {
           console.info('Biet-O-Matic: Updated from version %s to %s!', details.previousVersion, manifest.version);
         }
       }
-      // check if the current window has autoBid enabled (recently)
-      let autoBidEnabledForThisWindow = await BomBackground.checkAutoBidEnabledForThisWindow();
-      if (autoBidEnabledForThisWindow) {
-        // open the popup
-        console.info("Biet-O-Matic: Opening Popup after update, autoBid was enabled before");
-        await browser.tabs.create({
-          url: browser.runtime.getURL(BomBackground.getPopupFileName()),
-          windowId: browser.windows.WINDOW_ID_CURRENT,
-          pinned: true,
-          index: 0
-        });
+      // check if any of the currently open browser windows has/had autoBid enabled recently
+      const windowList = await browser.windows.getAll({populate: false, windowTypes: ['normal']});
+      for (const window of windowList) {
+        const autoBidEnabledForThisWindow = await BomBackground.checkAutoBidEnabledForWindow(window);
+        if (autoBidEnabledForThisWindow) {
+          // open the popup
+          console.info("Biet-O-Matic: Opening Popup after update, autoBid was enabled before in window(%d)", window.id);
+          await browser.tabs.create({
+            url: browser.runtime.getURL(BomBackground.getPopupFileName()),
+            windowId: window.id,
+            pinned: true,
+            index: 0
+          });
+        }
       }
     } catch (e) {
       console.error(`Biet-O-Matic: runtimeOnInstalledHandler() Internal Error: ${e.message}`);
     }
   }
 
-  // check if the autoBid is enabled for this window
-  static async checkAutoBidEnabledForThisWindow() {
-    const currentWindow = await browser.windows.getCurrent({populate: false});
+  /*
+   * check if the autoBid was enabled for one of the opened browser windows
+   */
+  static async checkAutoBidEnabledForWindow(window) {
     const result = await browser.storage.sync.get('SETTINGS');
     if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
       const settingsInfo = result.SETTINGS;
@@ -159,16 +166,16 @@ class BomBackground {
         const autoBid = settingsInfo.autoBid;
         // same window id?
         let id = autoBid.id.split(':')[1];
-        if (autoBid.id.split(':')[1] !== currentWindow.id.toString()) {
-          console.debug("Biet-O-Matic: checkAutoBidEnabledForThisWindow() autoBid for different id: stored=%s, ours=%s",
-            autoBid.id.split(':')[1], currentWindow.id);
+        if (autoBid.id.split(':')[1] !== window.id.toString()) {
+          console.debug("Biet-O-Matic: checkAutoBidEnabledForThisWindow(%d) Skipping; autoBid for different id: stored=%s",
+            window.id, autoBid.id.split(':')[1]);
         } else if ((Date.now() - autoBid.timestamp) > 5 * 60 * 1000) {
           // entry not older than 5 minutes
-          console.debug("Biet-O-Matic: checkAutoBidEnabledForThisWindow() autoBid too old (%ss)",
-            (Date.now() - autoBid.timestamp) / 1000);
+          console.debug("Biet-O-Matic: checkAutoBidEnabledForThisWindow(%d) Skipping; autoBid too old (%ss)",
+            window.id, (Date.now() - autoBid.timestamp) / 1000);
         } else {
-          console.debug("Biet-O-Matic: checkAutoBidEnabledForThisWindow() autoBid age is ok (%ss)",
-            (Date.now() - autoBid.timestamp) / 1000);
+          console.debug("Biet-O-Matic: checkAutoBidEnabledForThisWindow(%d) Using; autoBid age is ok (%ss)",
+            window.id, (Date.now() - autoBid.timestamp) / 1000);
           return true;
         }
       }
@@ -183,6 +190,29 @@ class BomBackground {
       return "popup.en.html";
     }
   }
+
+  /*
+   * handle browser close, remove autoBid state from sync storage if active for this window
+   * - however this doesnt seem to be called in Chrome when the browser is restarting
+   */
+  async windowsOnRemovedHandler(windowId) {
+    const checkId = `${browser.runtime.id}:${windowId}`;
+    // check if closed window is the global active autoBid window
+    let result = await browser.storage.sync.get('SETTINGS');
+    if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
+      const settingsInfo = result.SETTINGS;
+      if (settingsInfo.hasOwnProperty('autoBid')) {
+        if (settingsInfo.autoBid.id === checkId) {
+          // remove autoBid info from sync area
+          console.log("Biet-O-Matic: autoBid active browser window closed, removed sync info: checkId=%s", windowId, checkId);
+          delete settingsInfo.autoBid;
+          browser.storage.sync.set({'SETTINGS': settingsInfo});
+        }
+      }
+    }
+
+  }
+
 }
 
 const bom = new BomBackground();
