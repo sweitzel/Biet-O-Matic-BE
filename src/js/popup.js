@@ -2061,7 +2061,7 @@ class ArticlesTable {
     labelGroupAutoBid.id = 'lblGroupAutoBid';
     labelGroupAutoBid.htmlFor = "inpGroupAutoBid";
     labelGroupAutoBid.classList.add('ui-button');
-    labelGroupAutoBid.title = 'Aktuell ist der Gruppen Automatikmodus aktiv';
+    labelGroupAutoBid.title = Popup.getTranslation('generic_group_autoBidHint', '.Configures the Auto-Bid mode for the group');
     labelGroupAutoBid.style.float = 'right';
     const inputGroupAutoBid = document.createElement('input');
     inputGroupAutoBid.id = 'inpGroupAutoBid';

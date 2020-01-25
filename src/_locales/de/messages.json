@@ -271,5 +271,8 @@
   },
   "generic_group_bidAllHint": {
     "message": "Wechselt zwischen 'Einen Artikel aus der Gruppe ersteigern' und 'Alle Artikel aus der Gruppe ersteigern'"
+  },
+  "generic_group_autoBidHint": {
+    "message": "Konfiguriert den Automatikmodus für die Gruppe"
   }
 }

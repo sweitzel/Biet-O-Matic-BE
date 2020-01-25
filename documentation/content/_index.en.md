@@ -61,9 +61,10 @@ A quick and uncomplicated donation is possible via my [PayPal Profile](https://p
 
 ### GitHub
 Sponsoring through GitHub is a relatively new way to fund open source projects through a community and generate
-predictable income. It's more complicated for the "sponsor", but it does generate more predictable income,
+predictable income. It's more complicated for the "sponsor", but it does generate more predictable cash flow,
 which is necessary to keep such a project alive. Here is the GitHub link to donate.
 
-* requires a registration at GitHub (which is free)
+* Recommended only for software engineers or similar people, who already own a GitHub account.
+* Requires a registration at GitHub (which is free)
 * Donations can only be made as recurring payments. So the chosen amount will be debited monthly (but this can also be revoked monthly)
 * As a big advantage: GitHub currently doubles the donations (up to 5.000€) and does not charge any fees (until the end of 2020).

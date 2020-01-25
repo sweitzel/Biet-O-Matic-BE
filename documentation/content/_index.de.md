@@ -20,7 +20,7 @@ Vorab: Biet-O-Matic BE und das [Original B-O-M Programm](https://www.bid-o-matic
 * B-O-M BE hat einen geringeren Funktionsumpfang - es fokussiert sich auf Artikel Verwaltung und automatisches Bieten.
 
 Da das Original B-O-M Programm Ende 2019 durch von eBay bezüglich Login/Captcha durchgeführten Änderungen nicht mehr
-ordentlich funktionierte wurde dieses Projekt ins Leben gerufen, um eine frei zugänglichen Ersatzmöglichkeit zu bieten. 
+ordentlich funktionierte wurde dieses Projekt ins Leben gerufen, um eine frei zugängliche Ersatzmöglichkeit zu bieten. 
 
 Eine kurze Recherche über Alternativen führte zu keinen zufriedenstellenden Resultaten:
 * nicht professionel wirkende "Schnellschuss-Lösungen"
@@ -35,7 +35,7 @@ Falls sie Fragen zum Programm stellen wollen - sei es zu einem Problem, Vorschla
 im [B-O-M Forum](https://www.bid-o-matic.org/forum/index.php?c=6) erfolgen. 
 
 Bitte beachten Sie:
-* Für Anfragen bitte erst kurz prüfen ob es bereits diese oder eine ähnliche Anfrage gab
+* Für Anfragen bitte erst kurz prüfen, ob es bereits diese oder eine ähnliche Anfrage gab
 * Neue Anfragen bitte immer in separate "Topics" und in der richtigen Kategorie stellen 
 
 ## Quell-Code
@@ -60,8 +60,9 @@ Spenden (Sponsoring) über GitHub ist eine relativ neue Möglichkeit, um Open So
 kalkulierbare Einnahmen, welche nötig sind um solch ein Projekt langfristig am Leben zu erhalten.
 Hier ist der {{% fontawesome github-alt %}} [GitHub Link um zu spenden](https://github.com/sponsors/sweitzel).
 
-* setzt eine Anmeldung bei GitHub vorraus (die ist gratis)
-* GitHub ist eine Englischsprachige Plattform
-* Spenden geht nur als wiederkehrende Zahlung. Es wird also monatlich der gewählte Betrag abgebucht
+* Nur für Technik-affine Nutzer oder Software Entwickler empfehlenswert,
+  welche sowieso schon über einen Benutzeraccount bei GitHub verfügen.
+* GitHub ist eine Englischsprachige Plattform.
+* Spenden geht bei GitHub nur als wiederkehrende Zahlung. Es wird also monatlich der gewählte Betrag abgebucht
   (dies kann jedoch auch monatlich widerrufen werden)
-* Als großer Vorteil: GitHub verdoppelt die Spenden (bis 5.000€) und erhebt keine Gebühren (bis Ende 2020).
+* Als Vorteil wäre zu nennen: GitHub verdoppelt die Spenden (bis 5.000€) und erhebt keine Gebühren (bis Ende 2020).

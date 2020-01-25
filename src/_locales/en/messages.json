@@ -271,5 +271,8 @@
   },
   "generic_group_bidAllHint": {
     "message": "Toggles between 'Bid until you win' and 'Bid all items from this group'"
+  },
+  "generic_group_autoBidHint": {
+    "message": "Configures the Auto-Bid mode for the group"
   }
 }
