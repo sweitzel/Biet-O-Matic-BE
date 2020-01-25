@@ -681,7 +681,7 @@ class EbayArticle {
         let t = this.articleEndTime - Date.now();
         EbayArticle.sendArticleLog(this.articleId, {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
-          level: EbayArticle.getTranslation('generic_success', '.Success'),
+          level: "Info",
           message: EbayArticle.getTranslation('cs_testBidFinished',
             '.Test bid ended $1 ms before auction has ended.', t.toString())
         });
@@ -694,7 +694,7 @@ class EbayArticle {
         const t = this.articleEndTime - Date.now();
         EbayArticle.sendArticleLog(this.articleId, {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
-          level: EbayArticle.getTranslation('generic_success', '.Success'),
+          level: "Info",
           message: EbayArticle.getTranslation('cs_bidFinished',
             '.Bid performed $1 ms before auction has ended.', t.toString()),
         });

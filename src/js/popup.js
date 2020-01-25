@@ -1103,7 +1103,7 @@ class Article {
     const info = {
       articleAutoBid: this.articleAutoBid,
       groupName: groupName,
-      groupAutoBid: await Group.getState(groupName)
+      groupAutoBid: await Group.getState(groupName).autoBid
     };
     // the the window info (autoBidEnabled)
     const windowAutoBidInfo = AutoBid.getLocalState();
@@ -1324,7 +1324,7 @@ class Article {
       active: false,
       openerTabId: this.popup.tabId
     });
-    this.tabId = tab.id;
+    //this.tabId = tab.id;
     if (tabOpenedForBidding) {
       this.tabOpenedForBidding = true;
       this.addLog({
@@ -1874,20 +1874,6 @@ class ArticlesTable {
         informTab: updatedFromRemote,
         updatedFromRemote: updatedFromRemote
       });
-      // // send update to article tab (update maxBid, autoBid)
-      // if (updatedFromRemote && articleInfo.hasOwnProperty('articleMaxBid') && articleInfo.hasOwnProperty('articleAutoBid')) {
-      //   const row = this.getRow(`#${articleInfo.articleId}`);
-      //   if (row.data().hasOwnProperty('tabId') && row.data().tabId != null) {
-      //     let tabId = row.data().tabId;
-      //     browser.tabs.sendMessage(tabId, {
-      //       action: 'UpdateArticleMaxBid',
-      //       detail: {articleMaxBid: articleInfo.articleMaxBid, articleAutoBid: articleInfo.articleAutoBid}
-      //     }).catch(e => {
-      //       console.log("Biet-O-Matic: addOrUpdateArticle() Sending UpdateArticleMaxBid to tab %s failed: %s",
-      //         tabId, e.message);
-      //     });
-      //   }
-      // }
     }
   }
 
@@ -2617,9 +2603,9 @@ class ArticlesTable {
           }
 
           // get group autoBid state
-          let groupAutoBid = await Group.getState(article.articleGroup)
+          const groupState = await Group.getState(article.articleGroup)
             .catch(e => console.warn(`Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state! ${e.message}`));
-          if (groupAutoBid === true) {
+          if (groupState.autoBid) {
             let shouldOpenTab = true;
             // skip if tab already opened
             if (article.tabOpenedForBidding) {

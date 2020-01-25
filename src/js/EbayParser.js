@@ -57,7 +57,7 @@ class EbayParser {
    * Parse information from Ebay Article page and return the result object
    */
   parsePage() {
-    let result = {};
+    const result = {};
     // DOM Element Parsing
     const parseInfoArray = new Map([
       ['articleId', ['#descItemNumber']],
@@ -82,9 +82,9 @@ class EbayParser {
       ['articleMinimumBid', ['#MaxBidId']],
       ['articleImage', ['#icImg']]
     ]);
-    for (let item of parseInfoArray) {
-      let info = this.parseInfoEntry(item[0], item[1]);
-      result = Object.assign({}, result, info);
+    for (const item of parseInfoArray) {
+      const info = this.parseInfoEntry(item[0], item[1]);
+      Object.assign(result, info);
     }
     // save platform
     const regex = /(?:www|cgi)\.(ebay\..*?)\//i;
@@ -94,7 +94,7 @@ class EbayParser {
       console.log("Biet-O-Matic: Platform could not be determined from URL: %s", this.url);
       result.articlePlatform = 'ebay.de';
     }
-
+    console.debug("Biet-O-Matic: EbayParser.parsePage() result=%O", result);
     return result;
   }
 
