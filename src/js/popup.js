@@ -57,7 +57,7 @@ class Group {
    * and sets the group cache
    */
   static async getState(name) {
-    const result = {autoBid: true, bidAll: true};
+    const result = {autoBid: true, bidAll: false};
     // name=null -> name=Other Auctions
     if (name == null || typeof name === 'undefined')
       name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
@@ -76,7 +76,7 @@ class Group {
 
   // return cached group state or false if not cached
   static getStateCached(name) {
-    const result = {autoBid: true, bidAll: true};
+    const result = {autoBid: true, bidAll: false};
     if (Popup.cachedGroups.hasOwnProperty(name)) {
       Object.assign(result, Popup.cachedGroups[name]);
     }
@@ -1254,6 +1254,10 @@ class Article {
    * - store reason why adjusted (collided articles)
    */
   perlenschnur() {
+    // if bidAll is set, then we dont need to special handle articles collisions
+    if (Group.getStateCached(this.articleGroup).bidAll) {
+      return this.articleEndTime;
+    }
     const articles = {};
     // build an object with required information
     this.popup.table.DataTable.rows().every(index => {
@@ -1363,7 +1367,6 @@ class Article {
   /*
    * ArticlesTable received event from Article tab with auction end state
    * - this can be called multiple times, the state change be updated several times (e.g. unknown -> purchased)
-   * - update article 'auctionEndState' in storage
    * - add status to article log
    * - close tab if it was opened for bidding
    */
@@ -1373,12 +1376,10 @@ class Article {
         info.auctionEndState = null;
       // 1 == purchased : then disable group autoBid
       if (info.auctionEndState === 1) {
-        await Group.setState(this.articleGroup, false);
+        // disable group autoBid if bidAll is not set
+        if (Group.getStateCached(this.articleGroup).bidAll === false)
+          await Group.setState(this.articleGroup, false, false);
       }
-      await this.updateInfoInStorage(info, null, true)
-        .catch(e => {
-          console.warn("Biet-O-Matic: Unable to store article info: %s", e.message);
-        });
       // add the ended state to the article log
       this.addLog({
         component: Popup.getTranslation('cs_bidding', '.Bidding'),
@@ -3209,21 +3210,22 @@ class ArticlesTable {
      */
     this.DataTable.on('click', 'tr.row-group', e => {
       e.preventDefault();
-      if (!'name' in e.currentTarget.dataset) return;
-      const name = e.currentTarget.dataset.name;
-      if (e.target.id.includes('GroupAutoBid')) {
-        Group.toggleAutoBid(name)
-          .then(() => Group.renderAutoBid('inpGroupAutoBid', name))
-          .catch(e => {
-            console.log("Biet-O-Matic: Failed to toggle group '%s' autoBid state: %s", name, e.message);
-          });
-      }
-      if (e.target.id.includes('GroupBidAll')) {
-        Group.toggleBidAll(name)
-          .then(() => Group.renderBidAll('inpGroupBidAll', name))
-          .catch(e => {
-            console.log("Biet-O-Matic: Failed to toggle group '%s' bidAll state: %s", name, e.message);
-          });
+      if ('name' in e.currentTarget.dataset) {
+        const name = e.currentTarget.dataset.name;
+        if (e.target.id.includes('GroupAutoBid')) {
+          Group.toggleAutoBid(name)
+            .then(() => Group.renderAutoBid('inpGroupAutoBid', name))
+            .catch(e => {
+              console.log("Biet-O-Matic: Failed to toggle group '%s' autoBid state: %s", name, e.message);
+            });
+        }
+        if (e.target.id.includes('GroupBidAll')) {
+          Group.toggleBidAll(name)
+            .then(() => Group.renderBidAll('inpGroupBidAll', name))
+            .catch(e => {
+              console.log("Biet-O-Matic: Failed to toggle group '%s' bidAll state: %s", name, e.message);
+            });
+        }
       }
     });
   }

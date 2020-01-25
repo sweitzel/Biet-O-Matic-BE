@@ -219,7 +219,7 @@
     "message": "Browser Fenster"
   },
   "popup_autoBidDeactivated3": {
-    "message": "."
+    "message": " aktiviert."
   },
   "popup_bidCollision": {
     "message": "Bieten abgebrochen, da mit anderer Auktion kollidiert: $1"
