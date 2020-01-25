@@ -149,7 +149,7 @@ class Group {
       })
       .catch(e => {
         // its expected to fail sometimes, e.g. due to table pagination
-        console.debug("Biet-O-Matic: Group.renderAutoBid(%s) failed (Probably not found): %s", name, e.message);
+        console.debug("Biet-O-Matic: Group.renderAutoBid() failed ('#%s[name=%s]' element not found): %s", id, name, e.message);
       });
   }
 
@@ -177,7 +177,7 @@ class Group {
       })
       .catch(e => {
         // its expected to fail sometimes, e.g. due to table pagination
-        console.debug("Biet-O-Matic: Group.renderBidAll(%s) failed (id=%s element not found): %s", name, id, e.message);
+        console.debug("Biet-O-Matic: Group.renderBidAll() failed ('#%s[name=%s]' element not found): %s", id, name, e.message);
       });
   }
 
@@ -263,8 +263,10 @@ class Group {
       return;
     // todo: Do we have to handle removed groups?
     Object.keys(changes.newValue).forEach(groupName => {
-      Group.renderAutoBid('inpGroupAutoBid', groupName);
-      Group.renderBidAll('inpGroupBidAll', groupName);
+      if (groupName !== "") {
+        Group.renderAutoBid('inpGroupAutoBid', groupName);
+        Group.renderBidAll('inpGroupBidAll', groupName);
+      }
     });
   }
 }
@@ -2104,6 +2106,7 @@ class ArticlesTable {
     inputGroupBidAll.type = 'checkbox';
     inputGroupBidAll.style.display = 'none';
     const iGroupBidAll = document.createElement('i');
+    iGroupBidAll.id = 'iGroupBidAll';
     iGroupBidAll.classList.add('far', 'fa-hand-pointer', 'fa-fw');
     iGroupBidAll.style.width = '1.5em';
     iGroupBidAll.style.fontSize = '1.3em';
@@ -3202,18 +3205,20 @@ class ArticlesTable {
 
     /*
      * Toggle Group autobid
+     * e.currenTarget is the row, e.target can be span, label, i
      */
     this.DataTable.on('click', 'tr.row-group', e => {
-      if (e.target.id === 'inpGroupAutoBid') {
-        const name = e.target.name;
+      e.preventDefault();
+      if (!'name' in e.currentTarget.dataset) return;
+      const name = e.currentTarget.dataset.name;
+      if (e.target.id.includes('GroupAutoBid')) {
         Group.toggleAutoBid(name)
           .then(() => Group.renderAutoBid('inpGroupAutoBid', name))
           .catch(e => {
             console.log("Biet-O-Matic: Failed to toggle group '%s' autoBid state: %s", name, e.message);
           });
       }
-      if (e.target.id === 'inpGroupBidAll') {
-        const name = e.target.name;
+      if (e.target.id.includes('GroupBidAll')) {
         Group.toggleBidAll(name)
           .then(() => Group.renderBidAll('inpGroupBidAll', name))
           .catch(e => {
