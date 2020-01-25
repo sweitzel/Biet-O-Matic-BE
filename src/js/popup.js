@@ -296,11 +296,6 @@ class AutoBid {
     return info;
   }
 
-  static setLocalState(autoBidEnabled, simulation) {
-    Popup.updateSetting('autoBidEnabled', autoBidEnabled);
-    Popup.updateSetting('simulation', simulation);
-  }
-
   /*
    * return the info as is, to be evaluated external
    * SETTINGS: {autoBid: {id: <Id>, autoBidEnabled: true, timestamp: xxx}, otherSetting: xxxx}
@@ -359,7 +354,7 @@ class AutoBid {
   /*
    * Determine autoBid state
    * - prefers generally the local state
-   * - if the sync state is enabled for a different window (Id) then disable autobid
+   * - if the sync state is enabled for a different window (Id) then disable autoBid
    * - if sync state for this window is present, but local state is not set, then use sync state (extension update)
    * Note: this function is called by renderState, which will be called regularly to check for remote state updates
    * return {autoBidEnabled: true|false, simulation: true|false, id: <Id>|null, message: 'Text'}
@@ -373,16 +368,24 @@ class AutoBid {
     Object.assign(info, localInfo);
 
     // if sync state is for different id , then disable autoBid (sync state is only added if active)
-    if (syncInfo.hasOwnProperty('id') && syncInfo.id != null && syncInfo.id !== myId) {
+    // Note: if syncInfo.id == localInfo.id , then the browser probably restarted and assigned new windowId, in that
+    //   case do not disable autoBid
+    if (syncInfo.hasOwnProperty('id') && localInfo.hasOwnProperty('id') && syncInfo.id === localInfo.id) {
+      // syncinfo is intended for this window, just update with new Id
+      console.log("Biet-O-Matic: Updating localInfo id. (myId=%s, syncId=%s, localOldInfo=%s)", myId, syncInfo.id, localInfo.id);
+      Popup.updateSetting({});
+    } else if (syncInfo.hasOwnProperty('id') && syncInfo.id != null && syncInfo.id !== myId) {
+      console.log("Biet-O-Matic: Disabling autoBid because its enabled remotely. (myId=%s, syncId=%s, localOldInfo=%s)",
+        myId, syncInfo.id, localInfo.id);
       info.messageHtml = AutoBid.getDisableMessage(syncInfo.id, info.autoBidEnabled, info.simulation);
       if (info.simulation === false && syncInfo.autoBidEnabled === true) {
         info.autoBidEnabled = false;
-        AutoBid.setLocalState(info.autoBidEnabled);
+        Popup.updateSetting({autoBidEnabled: false});
       }
     } else if (Object.keys(localInfo).length === 0) {
       Object.assign(info, syncInfo);
       // initially set localState after extension update
-      AutoBid.setLocalState(info.autoBidEnabled, info.simulation);
+      Popup.updateSetting(info);
     }
     return info;
   }
@@ -391,7 +394,7 @@ class AutoBid {
    * Set state in local storage and sync storage (if not simulating)
    */
   static setState(autoBidEnabled = false, simulation = false) {
-    AutoBid.setLocalState(autoBidEnabled, simulation);
+    Popup.updateSetting({autoBidEnabled: autoBidEnabled, simulation: simulation});
     // do not set sync state if simulation is on (but handle shift when autoBid is disabled with shift pressed)
     if (simulation === false || autoBidEnabled === false) {
       AutoBid.setSyncState(autoBidEnabled).then(() => {
@@ -529,7 +532,7 @@ class AutoBid {
    */
   static deadManSwitch() {
     try {
-      let localState = AutoBid.getLocalState();
+      const localState = AutoBid.getLocalState();
       if (!localState.simulation && localState.autoBidEnabled) {
         console.debug("Biet-O-Matic: AutoBid.deadManSwitch() called");
         AutoBid.setSyncState(localState.autoBidEnabled).then(() => {
@@ -632,7 +635,7 @@ class OptionCompactView {
   }
 
   static setState(compactViewEnabled) {
-    Popup.updateSetting('compactViewEnabled', compactViewEnabled);
+    Popup.updateSetting({compactViewEnabled: compactViewEnabled});
     // local cache which should be used to check the option state
     OptionCompactView.compactViewEnabled = compactViewEnabled;
     OptionCompactView.renderState();
@@ -3128,7 +3131,7 @@ class ArticlesTable {
 
     // datatable length change
     this.DataTable.on('length.dt', function (e, settings, len) {
-      Popup.updateSetting('articlesTableLength', len);
+      Popup.updateSetting({articlesTableLength: len});
     });
 
     // articleButtons: activate tab, remove article
@@ -3450,15 +3453,16 @@ class Popup {
    * autoBidEnabled - Automatic Bidding enabled
    * simulation     - Perfom simulated bidding (do all , but not confirm the bid)
    */
-  static updateSetting(key, value) {
-    console.debug("Biet-O-Matic: updateSetting() key=%s, value=%s", key, JSON.stringify(value));
+  static updateSetting(info) {
+    console.debug("Biet-O-Matic: Popup.updateSetting() info=%s", JSON.stringify(info));
     let result = JSON.parse(window.sessionStorage.getItem('settings'));
-    if (result == null)
-      result = {};
-    // remove old settings
+    if (result == null) result = {};
+    // remove deprecated settings
     if (result.hasOwnProperty('simulate'))
       delete result.simulate;
-    result[key] = value;
+    Object.assign(result, info);
+    // assign cached id, will be used on browser restart to check if the info in sync area belongs to this "session"
+    result.id = AutoBid.beWindowId;
     window.sessionStorage.setItem('settings', JSON.stringify(result));
   }
 
