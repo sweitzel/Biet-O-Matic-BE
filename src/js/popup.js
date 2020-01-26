@@ -76,6 +76,9 @@ class Group {
 
   // return cached group state or false if not cached
   static getStateCached(name) {
+    // name=null -> name=Keine Gruppe
+    if (name == null || typeof name === 'undefined')
+      name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
     const result = {autoBid: true, bidAll: false};
     if (Popup.cachedGroups.hasOwnProperty(name)) {
       Object.assign(result, Popup.cachedGroups[name]);
@@ -100,6 +103,7 @@ class Group {
       if (autoBidUnchanged && bidAllUnchanged)
         return;
     }
+    console.debug("Biet-O-Matic: Group.setState(%s) setting autoBid=%s, bidAll=%s", name, autoBid, bidAll);
 
     groupInfo[name] = {autoBid: autoBid, bidAll: bidAll, timestamp: Date.now()};
     Popup.cachedGroups[name] = groupInfo[name];
@@ -1124,7 +1128,11 @@ class Article {
   async getBidLockState() {
     if (!this.hasOwnProperty('articleEndTime')) return;
     const result = { bidIsLocked: false, message: "" };
-
+    // if bidAll is set, then we dont need to special-handle articles collisions
+    if (Group.getStateCached(this.articleGroup).bidAll) {
+      result.message = 'Group bidAll option is set.';
+      return result;
+    }
     // get articles which have the same group, autoBid enabled
     const articles = {};
     // build an object with required information
@@ -1200,7 +1208,8 @@ class Article {
       this.popup.table.refreshArticle(articles[key].row);
 
       result.bidIsLocked = true;
-      result.message = Popup.getTranslation('popup_bidCollision', '.Cannot perform bidding, another auction is still running: $1', [key.toString()]);
+      result.message = Popup.getTranslation('popup_bidCollision',
+        '.Cannot perform bidding, another auction is still running: $1', [key.toString()]);
       break;
     }
     return result;
@@ -1380,8 +1389,12 @@ class Article {
       // 1 == purchased : then disable group autoBid
       if (info.auctionEndState === 1) {
         // disable group autoBid if bidAll is not set
-        if (Group.getStateCached(this.articleGroup).bidAll === false)
+        if (Group.getStateCached(this.articleGroup).bidAll === false) {
+          console.debug("Biet-O-matic: handleAuctionEnded() disabling autoBid; groupAutoBid=%s, info=%s",
+            JSON.stringify(Group.getStateCached(this.articleGroup)), JSON.stringify(info));
           await Group.setState(this.articleGroup, false, false);
+        }
+
       }
       // add the ended state to the article log
       this.addLog({
