@@ -250,7 +250,7 @@ class Group {
         } else if ($(selector).length === 1) {
           resolve($(selector));
         } else {
-          setTimeout(function () {
+          window.setTimeout(function () {
             waitForElementToDisplay(selector, time, timeout - time);
           }, time);
         }
@@ -536,7 +536,7 @@ class AutoBid {
    */
   static deadManSwitch() {
     try {
-      const localState = AutoBid.getLocalState();
+      let localState = AutoBid.getLocalState();
       if (!localState.simulation && localState.autoBidEnabled) {
         console.debug("Biet-O-Matic: AutoBid.deadManSwitch() called");
         AutoBid.setSyncState(localState.autoBidEnabled).then(() => {
@@ -545,13 +545,14 @@ class AutoBid {
           console.warn("Biet-O-Matic: AutoBid.setSyncState(%s) failed: %s", localState.autoBidEnabled, e.message);
         });
       }
+      localState = null;
       AutoBid.removeDeadAutoBid().catch(e => {
-        console.warn(`Biet-O-Matic: deadManSwitch() removeDeadAutoBid failed: ${e.message}`);
+        console.warn("Biet-O-Matic: deadManSwitch() removeDeadAutoBid failed: " + e);
       });
     } catch (e) {
-      console.warn(`Biet-O-Matic: deadManSwitch() internal error: ${e.message}`);
+      console.warn("Biet-O-Matic: deadManSwitch() internal error: " + e);
     } finally {
-      setTimeout(function () {
+      window.setTimeout(function () {
         AutoBid.deadManSwitch();
       }, 60000);
     }
@@ -559,7 +560,7 @@ class AutoBid {
 
   // remove autoBid if the timestamp update was longer than 5 minutes ago
   static async removeDeadAutoBid() {
-    let syncState = await AutoBid.getSyncState();
+    const syncState = await AutoBid.getSyncState();
     if (syncState.hasOwnProperty('timestamp') && syncState.timestamp != null) {
       if ((Date.now() - syncState.timestamp) / 1000 > 300) {
         console.debug("Biet-O-Matic: removeDeadAutoBid() Removing dead entry: %s", JSON.stringify(syncState));
@@ -1764,7 +1765,7 @@ class ArticlesTable {
       row = this.getRow(`#${articleInfo.articleId}`);
     if (row == null || row.length !== 1) return;
     const article = row.data();
-    console.debug("Biet-O-Matic: updateArticle(%s) called. info=%O, options=%O", articleInfo.articleId, articleInfo, options);
+    //console.debug("Biet-O-Matic: updateArticle(%s) called. info=%O, options=%O", articleInfo.articleId, articleInfo, options);
     // sanity check if the info + row match
     if (articleInfo.hasOwnProperty('articleId') && article.articleId !== articleInfo.articleId) {
       throw new Error(`updateArticle() Article Id from row=${article.articleId} and info=${articleInfo.articleId} do not match!`);

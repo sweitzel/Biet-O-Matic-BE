@@ -371,6 +371,7 @@ class EbayArticle {
             if (typeof oldN !== 'undefined' && oldN.textContent !== newN.textContent) {
               let info = this.ebayParser.parsePageRefresh();
               Object.assign(this, info);
+              info = null;
               this.activateAutoBidButton(this.articleMaxBid, this.articleMinimumBid);
               // send info to extension popup about new price
               browser.runtime.sendMessage({
@@ -814,8 +815,9 @@ class EbayArticle {
    * - reload when a modal was closed  -> resume bidding
    */
   static async handleReload() {
-    const ebayParser = new EbayParser();
+    let ebayParser = new EbayParser();
     const ebayArticleInfo = ebayParser.parsePageRefresh();
+    ebayParser = null;
     if (!ebayArticleInfo.hasOwnProperty('articleId')) {
       console.debug("Biet-O-Matic: handleReload() Aborting, no articleId found: %s", JSON.stringify(ebayArticleInfo));
       return ebayArticleInfo;

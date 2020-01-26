@@ -29,6 +29,18 @@ Weitere größere Änderungen in dieser Version:
   wenn die Auktionen dicht beieinander enden (10s), siehe auch [Funktionen]({{< relref "/manual/features#vermeidung-von-doppelkufen-auktions-kollosion" >}})
 * Wenn der Browser es unterstützt, wird BE verhindern, dass der Computer in den Schlafmodus wechselt. Aber nur wenn die Biet-Automatik aktiv ist.
 
+### Biet-O-Matic BE Version 0.3.4
+{{< hint info>}}
+Erschienen am Dienstag, 27.01.2020 
+{{< /hint >}}
+
+* Fügt die Möglichkeit hinzu, alle Artikel aus einer Gruppe zu ersteigern.
+  Der Standard bleibt weiterhin das pro Gruppe ein Artikel ersteigert wird. 
+* Ändert den Voreinstellung für Gruppen Automatikmodus auf "Aktiv"
+* Behebt flackern des Gruppen Automatikmodus
+* Behebt ein Problem beim Öffnen der BE übersichtsseite, welches dazu führte, 
+  dass mehrere Übersichtsseiten zur gleichen Zeit offen sein konnten. 
+ 
 ### Biet-O-Matic BE Version 0.3.3
 {{< hint info>}}
 Erschienen am Dienstag, 21.01.2020 
