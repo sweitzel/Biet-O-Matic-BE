@@ -91,32 +91,41 @@ class BomBackground {
   }
 
   async browserActionClickedHandler(tab) {
-    console.log("browserActionClickedHandler called from tab=%O", tab);
-    let popupTab = await this.getPopupTab(tab.windowId);
-    if (popupTab == null) {
-      console.info("Biet-O-Matic: browserActionClickedHandler() no open tabs, creating new.");
-      popupTab = await browser.tabs.create({
-        url: browser.runtime.getURL(BomBackground.getPopupFileName()),
-        windowId: tab.windowId,
-        pinned: true,
-        index: 0
-      });
-    } else {
-      // if open, ensure it is pinned (user might have accidentally un-pinned it)
-      const params = {};
-      params.pinned = true;
-      // do not activate BOM overview tab if the current tab is an ebay tab - this could cause confusion
-      if (tab.url.startsWith(browser.runtime.getURL("")) === false && /^https?:\/\/.*\.ebay\.(de|com)\/itm/.test(tab.url) === false) {
-        params.highlighted = true;
-        params.active = true;
+    try {
+      console.log("browserActionClickedHandler called from tab=%O", tab);
+      let popupTab = await this.getPopupTab(tab.windowId);
+      if (popupTab == null) {
+        console.info("Biet-O-Matic: browserActionClickedHandler() no open tabs, creating new.");
+        popupTab = await browser.tabs.create({
+          url: browser.runtime.getURL(BomBackground.getPopupFileName()),
+          windowId: tab.windowId,
+          pinned: true,
+          index: 0
+        });
+        // autoDiscardable not supported by all browsers, so we check it exists
+        if ('autoDiscardable' in tab) {
+          await browser.tabs.update(popupTab.id, {autoDiscardable: false})
+            .catch(e => console.warn("openBomTab() failed to update new tab err: " + e));
+        }
+      } else {
+        // if open, ensure it is pinned (user might have accidentally un-pinned it)
+        const params = {};
+        params.pinned = true;
+        // do not activate BOM overview tab if the current tab is an ebay tab - this could cause confusion
+        if (tab.url.startsWith(browser.runtime.getURL("")) === false && /^https?:\/\/.*\.ebay\.(de|com)\/itm/.test(tab.url) === false) {
+          params.highlighted = true;
+          params.active = true;
+        }
+        // autoDiscardable not supported by all browsers, so we check it exists
+        if ('autoDiscardable' in tab) {
+          params.autoDiscardable = false;
+        }
+        await browser.tabs.update(popupTab.id, params)
+          .then(console.debug("openBomTab(): tab with id %s updated, params=%s", popupTab.id, JSON.stringify(params)))
+          .catch(e => console.warn("openBomTab() failed to update existing tab err: " + e));
       }
-      // autoDiscardable not supported by all browsers, so we check it exists
-      if ('autoDiscardable' in tab) {
-        params.autoDiscardable = false;
-      }
-      await browser.tabs.update(popupTab.id, params)
-        .then(console.debug("openBomTab(): tab with id %s updated, params=%s", popupTab.id, JSON.stringify(params)))
-        .catch(e => console.warn("openBomTab() failed to update tab err: " + e));
+    } catch (e) {
+      console.error("Biet-O-Matic: browserActionClickedHandler() Internal Error: " + e);
     }
   }
 
@@ -151,7 +160,7 @@ class BomBackground {
         }
       }
     } catch (e) {
-      console.error(`Biet-O-Matic: runtimeOnInstalledHandler() Internal Error: ${e.message}`);
+      console.error("Biet-O-Matic: runtimeOnInstalledHandler() Internal Error: " + e);
     }
   }
 
@@ -196,21 +205,24 @@ class BomBackground {
    * - however this doesnt seem to be called in Chrome when the browser is restarting
    */
   async windowsOnRemovedHandler(windowId) {
-    const checkId = `${browser.runtime.id}:${windowId}`;
-    // check if closed window is the global active autoBid window
-    let result = await browser.storage.sync.get('SETTINGS');
-    if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
-      const settingsInfo = result.SETTINGS;
-      if (settingsInfo.hasOwnProperty('autoBid')) {
-        if (settingsInfo.autoBid.id === checkId) {
-          // remove autoBid info from sync area
-          console.log("Biet-O-Matic: autoBid active browser window closed, removed sync info: checkId=%s", windowId, checkId);
-          delete settingsInfo.autoBid;
-          browser.storage.sync.set({'SETTINGS': settingsInfo});
+    try  {
+      const checkId = `${browser.runtime.id}:${windowId}`;
+      // check if closed window is the global active autoBid window
+      let result = await browser.storage.sync.get('SETTINGS');
+      if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
+        const settingsInfo = result.SETTINGS;
+        if (settingsInfo.hasOwnProperty('autoBid')) {
+          if (settingsInfo.autoBid.id === checkId) {
+            // remove autoBid info from sync area
+            console.log("Biet-O-Matic: autoBid active browser window closed, removed sync info: checkId=%s", windowId, checkId);
+            delete settingsInfo.autoBid;
+            browser.storage.sync.set({'SETTINGS': settingsInfo});
+          }
         }
       }
+    } catch (e) {
+      console.error("Biet-O-Matic: windowsOnRemovedHandler() Internal Error: " + e);
     }
-
   }
 
 }
