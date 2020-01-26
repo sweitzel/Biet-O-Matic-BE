@@ -1034,9 +1034,11 @@ class Article {
       throw new Error(`Failed to fetch information for article ${this.articleId}: HTTP ${response.status} - ${response.statusText}`);
     const text = await response.text();
     //console.log("Fetch result: %s", text);
-    const parser = new EbayParser(this.getUrl(), text);
+    let parser = new EbayParser(this.getUrl(), text);
     parser.init();
-    return parser.parsePage();
+    const result = parser.parsePage();
+    parser = null;
+    return result;
   }
 
   // add log message for article
@@ -2456,6 +2458,7 @@ class ArticlesTable {
         if (cell.length === 1) {
           cell.node().classList.remove('loading-spinner');
         }
+        info = null;
       })
       .catch(e => {
         console.warn(`Biet-O-Matic: refreshArticle(${article.articleId}) Failed to refresh: ${e}`);

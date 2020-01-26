@@ -20,10 +20,10 @@ class EbayParser {
       this.data = document;
     } else {
       // Note: DOMParser fails on ebay page
-      let parser = new DOMParser();
-      const doc = document.implementation.createHTMLDocument("eBay Article");
+      let doc = document.implementation.createHTMLDocument("eBay Article");
       doc.documentElement.innerHTML = htmlString;
       this.data = doc;
+      doc = null;
     }
   }
 
