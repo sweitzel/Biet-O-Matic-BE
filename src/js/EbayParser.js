@@ -169,93 +169,103 @@ class EbayParser {
    * parse a specific DOM element from the current page
    * returns {key: value} which can be assigned to the instance or used otherwise
    */
-  parseInfoEntry(key, value = []) {
+  parseInfoEntry(key, selectors = []) {
     const result = {};
-    for (const v of value) {
-      const domEntry = this.data.querySelector(v);
-      if (domEntry != null) {
-        let value = null;
-        if (key === "articleEndTime") {
-          value = EbayParser.parseEndTime(domEntry);
-        } else if (key === "articleBidPrice" || key === 'articleBuyPrice') {
-          /*
-           * It would be easy to just take the price from the content attribute
-           *   however when the price gets updated on the page, the content attribute does not.
-           */
-          const priceInfo = EbayParser.parsePriceString(domEntry, this.data.querySelectorAll('[itemprop="priceCurrency"]'));
-          value = priceInfo.price;
-          if (!result.hasOwnProperty('articleCurrency'))
-            result.articleCurrency = priceInfo.currency;
-        } else if (key === "articleDescription") {
-          // some articles have long description, separated by <wbr>, concat the strings
-          value = "";
-          for (let child of domEntry.childNodes) {
-            if (child.nodeName === '#text') {
-              value += child.textContent.trim();
+    for (const selector of selectors) {
+      let domEntry = this.data.querySelector(selector);
+      try {
+        if (domEntry != null) {
+          let value = null;
+          if (key === "articleEndTime") {
+            value = EbayParser.parseEndTime(domEntry);
+          } else if (key === "articleBidPrice" || key === 'articleBuyPrice') {
+            /*
+             * It would be easy to just take the price from the content attribute
+             *   however when the price gets updated on the page, the content attribute does not.
+             */
+            const priceInfo = EbayParser.parsePriceString(domEntry, this.data.querySelectorAll('[itemprop="priceCurrency"]'));
+            value = priceInfo.price;
+            if (!result.hasOwnProperty('articleCurrency'))
+              result.articleCurrency = priceInfo.currency;
+          } else if (key === "articleDescription") {
+            // some articles have long description, separated by <wbr>, concat the strings
+            value = "";
+            for (let child of domEntry.childNodes) {
+              if (child.nodeName === '#text') {
+                value += child.textContent.trim();
+              }
             }
-          }
-        } else if (key === "articleMinimumBid") {
-          // the MinBidId input has a attribute which lists the minimum bid
-          // that will be used in the UI to indicate if the maxBid is high enough
-          value = domEntry.getAttribute('aria-label')
-            .replace(/\n/g, "")
-            .replace(/\s+/g, " ");
-          //console.debug("Minimum Bid: %O", value);
-          value = EbayParser.parsePriceString(value).price;
-        } else if (key === "articleBidCount") {
-          //console.debug("articleBidCount=%s", domEntry.textContent.trim());
-          value = parseInt(domEntry.textContent.trim(), 10);
-        } else if (key === "articleAuctionState") {
-          try {
-            // attempt to sanitize the html
-            value = EbayParser.cleanupHtmlString(domEntry.outerHTML);
-          } catch (e) {
-            console.log("Biet-O-Matic: cleanupHtmlString() Internal error: %s", e.message);
-            value = domEntry.outerHTML;
-          }
-          result.articleAuctionStateText = $(value)[0].textContent.trim()
-            .replace(/\n/g, '')
-            .replace(/\s+/g, ' ')
-            .replace(/[\s-\|]+$/g, '');
-        } else if (key === 'articleImage') {
-          // store primary Image URL
-          value = domEntry.src;
-        } else if (key === 'articlePaymentMethods') {
-          try {
-            const methods = [];
-            // get text and join with image alt attributes
-            const textMethod = domEntry.textContent.trim()
+          } else if (key === "articleMinimumBid") {
+            // the MinBidId input has a attribute which lists the minimum bid
+            // that will be used in the UI to indicate if the maxBid is high enough
+            value = domEntry.getAttribute('aria-label')
               .replace(/\n/g, "")
               .replace(/\s+/g, " ");
-            if (textMethod.trim().length > 0)
-              methods.push(textMethod.split(','));
-            // get images
-            let t = $(domEntry, "div");
-            if (typeof t !== 'undefined' && t.length === 1) {
-              let res =  $(t).find('img');
-              if (typeof res !== 'undefined' && res.length > 0) {
-                const D=$;
-                $(res).each((index, element) => {
-                  methods.push(D(element).attr('alt').toString());
-                });
-              }
-            } else {
-              console.log("Biet-O-Matic: Could not parse articlePaymentMethods images, t=%O", t);
+            //console.debug("Minimum Bid: %O", value);
+            value = EbayParser.parsePriceString(value).price;
+          } else if (key === "articleBidCount") {
+            //console.debug("articleBidCount=%s", domEntry.textContent.trim());
+            value = Number.parseInt(domEntry.textContent.trim(), 10);
+          } else if (key === "articleAuctionState") {
+            try {
+              // attempt to sanitize the html
+              value = EbayParser.cleanupHtmlString(domEntry.outerHTML);
+            } catch (e) {
+              console.log("Biet-O-Matic: cleanupHtmlString() Internal error: %s", e.message);
+              value = domEntry.outerHTML;
             }
-            value = methods.join(', ');
-          } catch(e) {
-            console.log("Biet-O-Matic: Failed to parse articlePaymentMethods: " + e);
+            result.articleAuctionStateText = $(value)[0].textContent.trim()
+              .replace(/\n/g, '')
+              .replace(/\s+/g, ' ')
+              .replace(/[\s-\|]+$/g, '');
+          } else if (key === 'articleImage') {
+            // store primary Image URL
+            value = domEntry.src;
+          } else if (key === 'articlePaymentMethods') {
+            try {
+              const methods = [];
+              // get text and join with image alt attributes
+              const textMethod = domEntry.textContent.trim()
+                .replace(/\n/g, "")
+                .replace(/\s+/g, " ");
+              if (textMethod.trim().length > 0)
+                methods.push(textMethod.split(','));
+              // get images from 'img' alt attributes
+              let t = $(domEntry, "div");
+              if (typeof t !== 'undefined' && t.length === 1) {
+                let res =  $(t).find('img');
+                if (typeof res !== 'undefined' && res.length > 0) {
+                  const D=$;
+                  $(res).each((index, element) => {
+                    methods.push(D(element).attr('alt').toString());
+                  });
+                }
+                t = null;
+              } else {
+                console.log("Biet-O-Matic: Could not parse articlePaymentMethods images, t=%O", t);
+              }
+              value = methods.join(', ');
+            } catch(e) {
+              console.log("Biet-O-Matic: Failed to parse articlePaymentMethods: " + e);
+            }
+          } else {
+            value = domEntry.textContent.trim();
+            // replace newline and multiple spaces
+            value = value
+              .replace(/\n/g, "")
+              .replace(/\s+/g, " ");
           }
+          result[key] = value;
+          value = null;
+          // the first success aborts the loop over the selectors
+          break;
         } else {
-          value = domEntry.textContent.trim();
-          // replace newline and multiple spaces
-          value = value.replace(/\n/g, "");
-          value = value.replace(/\s+/g, " ");
+          console.debug("Biet-O-Matic: parseInfoEntry() No value found for key %s, selector=%s", key, selector);
         }
-        result[key] = value;
-        break;
-      } else {
-        console.debug("Biet-O-Matic: parseInfoEntry() No value found for key %s, selector=%s", key, v);
+      } catch(err) {
+        console.log("parseInfoEntry(%s) Internal Error: %s", key, err);
+      } finally {
+        domEntry = null;
       }
     }
     return result;
@@ -373,6 +383,7 @@ class EbayParser {
               objChildNode = objChildNode.nextSibling;
             }
           }
+          objChildNode = null;
         }
       );
     };
@@ -384,12 +395,15 @@ class EbayParser {
     attributesAllowed.a = "|class|href|name|target|";
     //console.log("Before: %s", $(jqHtml).html());
     try {
-      htmlString = htmlString.replace(/(\r\n|\n|\r)/gm, '');
-      htmlString = htmlString.replace(/\t+/gm, '');
-      const jqHtml = $(htmlString);
+      htmlString = htmlString
+        .replace(/(\r\n|\n|\r)/gm, '')
+        .replace(/\t+/gm, '');
+      let jqHtml = $(htmlString);
       $(jqHtml).removeComments();
-      EbayParser.clearUnsupportedTagsAndAttributes($(jqHtml), tagsAllowed, attributesAllowed);
-      return $(jqHtml).get(0).outerHTML;
+      EbayParser.clearUnsupportedTagsAndAttributes(jqHtml, tagsAllowed, attributesAllowed);
+      const result = $(jqHtml).get(0).outerHTML;
+      jqHtml = null;
+      return result;
     } catch (e) {
       console.warn("Biet-O-Matic: Failed to cleanup status: %s", e.message);
       return htmlString;
@@ -399,7 +413,7 @@ class EbayParser {
   static clearUnsupportedTagsAndAttributes(obj, tagsAllowed, attributesAllowed, emptyTagsAllowed = '|div|br|hr|') {
     $(obj).children().each(function () {
       //recursively down the tree
-      const el = $(this);
+      let el = $(this);
       EbayParser.clearUnsupportedTagsAndAttributes(el, tagsAllowed, attributesAllowed, emptyTagsAllowed);
       try {
         const tag = el.tagName();
@@ -437,6 +451,8 @@ class EbayParser {
         }
       } catch (e) {
         throw new Error(e.message);
+      } finally {
+        el = null;
       }
     });
   }
