@@ -262,6 +262,10 @@ div.container {
 }
 /*endregion*/
 
+body {
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  font-size: 75%;
+}
 
 /* raleway-regular - latin_latin-ext */
 /*

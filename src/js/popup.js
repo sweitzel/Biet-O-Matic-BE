@@ -95,7 +95,6 @@ class Group {
     if (name == null || typeof name === 'undefined')
       name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
     const groupInfo = await Group.getAll();
-
     // check if the autoBid needs to be updated
     if (groupInfo.hasOwnProperty(name)) {
       const autoBidUnchanged = groupInfo[name].hasOwnProperty('autoBid') && groupInfo[name].autoBid === autoBid;
@@ -126,63 +125,54 @@ class Group {
     await Group.setState(name, state.autoBid, !state.bidAll);
   }
 
-  /*
-   * Add the proper class to the group name span
-   * requires a bit waiting, because the function will be called before the actual elements will be added
-   */
-  static renderAutoBid(id, name) {
-    Group.waitFor(`#${id}[name="${name}"]`, 1000)
-      .then(inpGroupAutoBid => {
-        if (inpGroupAutoBid == null || inpGroupAutoBid.length !== 1) {
-          console.warn("Biet-O-Matic: Group.renderAutoBid, could not find group span");
-          return;
-        }
-        Group.getState(name).then(state => {
-          if (state.autoBid) {
-            $(inpGroupAutoBid).siblings('span').removeClass('autoBidDisabled');
-            $(inpGroupAutoBid).siblings('span').addClass('autoBidEnabled');
-            $(inpGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_active', '.active'));
-          } else {
-            $(inpGroupAutoBid).siblings('span').removeClass('autoBidEnabled');
-            $(inpGroupAutoBid).siblings('span').addClass('autoBidDisabled');
-            $(inpGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_inactive', '.inactive'));
-          }
-        }).catch(e => {
-          console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
-        });
-      })
+  static async renderAutoBid(id, name) {
+    const inpGroupAutoBid = await Group.waitFor(`#${id}[name="${name}"]`, 1000)
       .catch(e => {
         // its expected to fail sometimes, e.g. due to table pagination
         console.debug("Biet-O-Matic: Group.renderAutoBid() failed ('#%s[name=%s]' element not found): %s", id, name, e.message);
       });
+    if (inpGroupAutoBid == null || inpGroupAutoBid.length !== 1) {
+      return;
+    }
+    const state = await Group.getState(name)
+      .catch(e => {
+        console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
+      });
+    if (state.autoBid) {
+      $(inpGroupAutoBid).siblings('span').removeClass('autoBidDisabled');
+      $(inpGroupAutoBid).siblings('span').addClass('autoBidEnabled');
+      $(inpGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_active', '.active'));
+    } else {
+      $(inpGroupAutoBid).siblings('span').removeClass('autoBidEnabled');
+      $(inpGroupAutoBid).siblings('span').addClass('autoBidDisabled');
+      $(inpGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_inactive', '.inactive'));
+    }
   }
 
   // Add the proper class to the group name span
-  static renderBidAll(id, name) {
-    Group.waitFor(`#${id}[name="${name}"]`, 1000)
-      .then(inpGroupBidAll => {
-        if (inpGroupBidAll == null || inpGroupBidAll.length !== 1) {
-          console.warn("Biet-O-Matic: Group.renderBidAll, could not find inpGroupBidAll element.");
-          return;
-        }
-        Group.getState(name).then(state => {
-          if (state.bidAll) {
-            $(inpGroupBidAll).siblings('i').removeClass('fa-hand-pointer');
-            $(inpGroupBidAll).siblings('i').addClass('fa-hand-paper');
-            $(inpGroupBidAll).siblings('span').text(" " + Popup.getTranslation('generic_group_bidAllEnabled', ".Bid all"));
-          } else {
-            $(inpGroupBidAll).siblings('i').removeClass('fa-hand-paper');
-            $(inpGroupBidAll).siblings('i').addClass('fa-hand-pointer');
-            $(inpGroupBidAll).siblings('span').text(" " + Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win"));
-          }
-        }).catch(e => {
-          console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
-        });
-      })
+  static async renderBidAll(id, name) {
+    const inpGroupBidAll = await Group.waitFor(`#${id}[name="${name}"]`, 1000)
       .catch(e => {
         // its expected to fail sometimes, e.g. due to table pagination
         console.debug("Biet-O-Matic: Group.renderBidAll() failed ('#%s[name=%s]' element not found): %s", id, name, e.message);
       });
+    if (inpGroupBidAll == null || inpGroupBidAll.length !== 1) {
+      return;
+    }
+    const state = await Group.getState(name)
+      .catch(e => {
+        console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
+      });
+    if (state.bidAll) {
+      $(inpGroupBidAll).siblings('i').removeClass('fa-hand-pointer');
+      $(inpGroupBidAll).siblings('i').addClass('fa-hand-paper');
+      $(inpGroupBidAll).siblings('span').text(" " + Popup.getTranslation('generic_group_bidAllEnabled', ".Bid all"));
+    } else {
+      $(inpGroupBidAll).siblings('i').removeClass('fa-hand-paper');
+      $(inpGroupBidAll).siblings('i').addClass('fa-hand-pointer');
+      $(inpGroupBidAll).siblings('span').text(" " + Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win"));
+    }
+
   }
 
   // remove unused groups
@@ -268,7 +258,7 @@ class Group {
     // todo: Do we have to handle removed groups?
     Object.keys(changes.newValue).forEach(groupName => {
       if (groupName !== "") {
-        Group.renderAutoBid('inpGroupAutoBid', groupName);
+        Group.renderAutoBid('inpGroupAutoBid', groupName).catch();
         Group.renderBidAll('inpGroupBidAll', groupName);
       }
     });
@@ -788,7 +778,7 @@ class Article {
      * e.g. https://www.ebay.de/itm/*
      */
     let regex = /^https:\/\/www.ebay.(de|com)\/itm/i;
-    if (!regex.test(tab.url)) {
+    if (!tab.hasOwnProperty('url') || !regex.test(tab.url)) {
       return Promise.resolve({});
     }
     console.debug("Biet-O-Matic: Injecting contentScript on tab %d = %s", tab.id, tab.url);
@@ -800,13 +790,16 @@ class Article {
 
     let retryCount = 0;
     do {
+      console.log("XXX tab=%s retryCount=%s", tab.id, retryCount)
       try {
         return await browser.tabs.sendMessage(tab.id, {action: "GetArticleInfo"});
       } catch (error) {
         if (retryCount >= 3) {
           // all retries failed
+          console.log("xxx2");
           return Promise.reject(error);
         } else {
+          console.log("xxx3");
           console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
         }
         await wait(1000);
@@ -1643,47 +1636,36 @@ class ArticlesTable {
   }
 
   // add open article tabs to the table
-  addArticlesFromTabs() {
+  async addArticlesFromTabs() {
     // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
-    browser.tabs.query({currentWindow: true, url: ['*://*.ebay.de/itm/*', '*://*.ebay.com/itm/*']})
-      .then(tabs => {
-        for (const tab of tabs) {
-          const myTab = tab;
-          const at = ArticlesTable;
-          const a = Article;
-          Article.getInfoFromTab(myTab, "addArticlesFromTabs")
-            .then(articleInfo => {
-              if (typeof articleInfo !== 'undefined' && articleInfo.hasOwnProperty('detail')) {
-                let article = new a(this.popup, articleInfo.detail, myTab);
-                article.init()
-                  .then(article => {
-                    this.addOrUpdateArticle(article, myTab, false);
-                  });
-              } else {
-                console.warn("Biet-O-Matic: addArticlesFromTabs() Failed to add articleInfo for tab %d, " +
-                  "received info missing or incomplete", myTab.id);
-              }
-            })
-            .catch(e => {
-              console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${myTab.id}: ${e.message}`);
-              /*
-               * The script injection failed, this can have multiple reasons:
-               * - the contentScript threw an error because the page is not a article
-               * - the contentScript threw an error because the article is a duplicate tab
-               * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
-               * Therefore we perform a tab reload once, which should recover the latter case
-               */
-              at.reloadTab(myTab.id).then(() => {
-                console.debug("Biet-O-Matic: Tab %d reloaded to attempt repairing contentScript", myTab.id);
-              }).catch(e => {
-                console.log("Biet-O-Matic: addArticlesFromTabs() reloadTab(%s) failed:%s", myTab.id, e.message);
-              });
-            });
-        }
-      })
+    const tabs = await browser.tabs.query({currentWindow: true})
       .catch(e => {
-        console.warn("Biet-O-Matic: Failed to add articles from tabs: %s", e.message);
+        console.warn("Biet-O-Matic: Failed to add articles from tabs: " + e);
       });
+
+    for (let tab of tabs) {
+      const articleInfo = await Article.getInfoFromTab(tab, "addArticlesFromTabs")
+        .catch(function(e) {
+          console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${tab.id}: ${e.message}`);
+          /*
+           * The script injection failed, this can have multiple reasons:
+           * - the contentScript threw an error because the page is not a article
+           * - the contentScript threw an error because the article is a duplicate tab
+           * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
+           * Therefore we perform a tab reload once, which should recover the latter case
+           */
+          ArticlesTable.reloadTab(tab.id).then(() => {
+            console.debug("Biet-O-Matic: Tab %d reloaded to attempt repairing contentScript", tab.id);
+          }).catch(e => {
+            console.log("Biet-O-Matic: addArticlesFromTabs() reloadTab(%s) failed:%s", tab.id, e.message);
+          });
+        });
+      if (typeof articleInfo !== 'undefined' && articleInfo.hasOwnProperty('detail')) {
+        const article = new Article(this.popup, articleInfo.detail, tab);
+        await article.init();
+        this.addOrUpdateArticle(article, tab, false);
+      }
+    }
   }
 
   // add articles which are in storage
@@ -1700,9 +1682,14 @@ class ArticlesTable {
       // add article if not already in table
       if (this.getRow(`#${articleId}`).length < 1) {
         let article = new Article(this.popup, info);
-        article.init().then(a => {
-          this.addArticle(a);
-        });
+        // add article to table asynchronously to avoid UI blocking
+        article.init()
+          .then(a => {
+            this.addArticle(a);
+          })
+          .catch(e => {
+            console.log("Biet-O-Matic: addArticlesFromStorage() Failed to init article %s: %s", a.articleId, e);
+          });
       }
     });
   }
@@ -2150,8 +2137,8 @@ class ArticlesTable {
     td.appendChild(labelGroupBidAll);
 
     // renderState will asynchronously add a class toggling enabled/disabled state
-    Group.renderAutoBid('inpGroupAutoBid', groupName);
-    Group.renderBidAll('inpGroupBidAll', groupName);
+    Group.renderAutoBid('inpGroupAutoBid', groupName).catch();
+    Group.renderBidAll('inpGroupBidAll', groupName).catch();
     // append data-name to tr
     return $('<tr/>')
       .append(td)
@@ -3288,7 +3275,7 @@ class ArticlesTable {
         }
         if (e.target.id.includes('GroupBidAll')) {
           Group.toggleBidAll(name)
-            .then(() => Group.renderBidAll('inpGroupBidAll', name))
+            .then(Group.renderBidAll('inpGroupBidAll', name))
             .catch(e => {
               console.log("Biet-O-Matic: Failed to toggle group '%s' bidAll state: %s", name, e.message);
             });
@@ -3378,8 +3365,10 @@ class Popup {
     $('#inpStorageCount').val(Object.keys(inpStorageCount).length);
 
     // total size
-    let inpStorageSize = await browser.storage.sync.getBytesInUse(null);
-    $('#inpStorageSize').val(inpStorageSize);
+    if ('getBytesInUse' in browser.storage.sync) {
+      let inpStorageSize = await browser.storage.sync.getBytesInUse(null);
+      $('#inpStorageSize').val(inpStorageSize);
+    }
 
     $('#inpStorageClearAll').on('click', async e => {
       console.debug('Biet-O-Matic: Clear all data from local and sync storage, %O', e);
@@ -3463,7 +3452,7 @@ class Popup {
     this.restoreSettings();
 
     await Popup.table.addArticlesFromStorage();
-    Popup.table.addArticlesFromTabs();
+    await Popup.table.addArticlesFromTabs();
     await Popup.checkBrowserStorage();
   }
 
