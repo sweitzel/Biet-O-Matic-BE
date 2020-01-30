@@ -19,6 +19,12 @@ if (fileSystem.existsSync(secretsPath)) {
   alias["secrets"] = secretsPath;
 }
 
+var manifestFile = path.join(__dirname, "src", "manifest.json");
+var buildPath = path.join(__dirname, "build");
+if (env.BROWSER === 'firefox') {
+  buildPath = path.join(__dirname, "build-firefox");
+  manifestFile = path.join(__dirname, "src", "manifest_firefox.json");
+}
 var options = {
   mode: process.env.NODE_ENV || "production",
   entry: {
@@ -30,7 +36,7 @@ var options = {
     notHotReload: ["contentScript"]
   },
   output: {
-    path: path.join(__dirname, "build"),
+    path: buildPath,
     filename: "[name].bundle.js"
   },
   module: {
@@ -62,12 +68,17 @@ var options = {
       cleanAfterEveryBuildPatterns: [path.join(__dirname, "documentation", "public", "**")],
     }),
     // expose and write the allowed env vars on the compiled bundle
-    new webpack.EnvironmentPlugin(["NODE_ENV"]),
+    new webpack.EnvironmentPlugin({
+      npm_package_Version: '0.0.0',
+      NODE_ENV: 'production', // use 'development' unless process.env.NODE_ENV is defined
+      DEBUG: false
+    }),
     new webpack.DefinePlugin({
       'BOM_VERSION': JSON.stringify(process.env.npm_package_version),
     }),
     new CopyWebpackPlugin([{
-      from: "src/manifest.json",
+      from: manifestFile,
+      to: path.join(buildPath, "manifest.json"),
       transform: function (content, path) {
         // generates the manifest file using the package.json informations
         return Buffer.from(JSON.stringify({
@@ -92,13 +103,13 @@ var options = {
     new CopyWebpackPlugin([
       {
         from:  path.join(__dirname, "src", "_locales"),
-        to: path.join(__dirname, "build", "_locales")
+        to: path.join(buildPath, "_locales")
       }
     ]),
     new CopyWebpackPlugin([
       {
         from:  path.join(__dirname, "src", "*.png"),
-        to: path.join(__dirname, "build"),
+        to: buildPath,
         flatten: true
       }
     ]),
@@ -109,7 +120,7 @@ var options = {
     new CopyWebpackPlugin([
       {
         from:  path.join(__dirname, "documentation", "public"),
-        to: path.join(__dirname, "build", "doc")
+        to: path.join(buildPath, "doc")
       }
     ]),
     new ZipPlugin({

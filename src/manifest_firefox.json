@@ -1,37 +1,30 @@
 {
-  "version": "0.0.1",
   "name": "__MSG_appName__",
   "short_name": "BOM",
   "description": "__MSG_appDesc__",
-  "default_locale": "de",
+  "default_locale": "en",
   "background": {
     "scripts": [
-      "thirdparty/browser-polyfill.min.js",
-      "js/background.js"
+      "background.bundle.js"
     ]
   },
   "browser_action": {
-    "default_title": "Öffne Biet-O-Mat"
+    "default_title": "__MSG_appOpen__"
   },
-  "content_scripts": [
-    {
-      "matches": ["https://*.ebay.com/*", "https://*.ebay.de/*"],
-      "js": [
-        "thirdparty/browser-polyfill.min.js",
-        "js/contentScript.js"
-      ]
-    }
-  ],
   "permissions": [
     "https://*.ebay.com/*",
     "https://*.ebay.de/*",
     "tabs",
     "storage"
   ],
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
   "browser_specific_settings": {
     "gecko": {
-      "id": "biet-o-mat@consolida.de",
-      "strict_min_version": "47.0"
+      "id": "bid_o_matic_be@consolida.de",
+      "strict_min_version": "42.0"
     }
   },
   "manifest_version": 2

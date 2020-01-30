@@ -402,9 +402,11 @@ class AutoBid {
     }
   }
 
-  static async toggleState() {
+  static async toggleState(simulate = null) {
     const state = await AutoBid.getState();
-    AutoBid.setState(!state.autoBidEnabled, state.simulation);
+    if (simulate == null)
+      simulate = state.simulation;
+    AutoBid.setState(!state.autoBidEnabled, simulate);
   }
 
   static renderState() {
@@ -779,6 +781,7 @@ class Article {
      */
     let regex = /^https:\/\/www.ebay.(de|com)\/itm/i;
     if (!tab.hasOwnProperty('url') || !regex.test(tab.url)) {
+      console.log("Biet-O-Matic: getInfoFromTab(%d) Not an ebay tab, skipping.", tab.id);
       return Promise.resolve({});
     }
     console.debug("Biet-O-Matic: Injecting contentScript on tab %d = %s", tab.id, tab.url);
@@ -790,16 +793,13 @@ class Article {
 
     let retryCount = 0;
     do {
-      console.log("XXX tab=%s retryCount=%s", tab.id, retryCount)
       try {
         return await browser.tabs.sendMessage(tab.id, {action: "GetArticleInfo"});
       } catch (error) {
         if (retryCount >= 3) {
           // all retries failed
-          console.log("xxx2");
           return Promise.reject(error);
         } else {
-          console.log("xxx3");
           console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
         }
         await wait(1000);
@@ -1640,13 +1640,27 @@ class ArticlesTable {
     // update browserAction Icon for all of this window Ebay Tabs (Chrome does not support windowId param)
     const tabs = await browser.tabs.query({currentWindow: true})
       .catch(e => {
-        console.warn("Biet-O-Matic: Failed to add articles from tabs: " + e);
+        console.warn("Biet-O-Matic: addArticlesFromTabs() Failed to query open tabs: " + e);
       });
 
     for (let tab of tabs) {
-      const articleInfo = await Article.getInfoFromTab(tab, "addArticlesFromTabs")
+      // retrieve article info asynchronously
+      const myTab = tab;
+      Article.getInfoFromTab(myTab, "addArticlesFromTabs")
+        .then(articleInfo => {
+          if (typeof articleInfo !== 'undefined' && articleInfo.hasOwnProperty('detail')) {
+            let article = new Article(this.popup, articleInfo.detail, myTab);
+            article.init()
+              .then(article => {
+                this.addOrUpdateArticle(article, myTab, false);
+              });
+          } else {
+            console.info("Biet-O-Matic: addArticlesFromTabs() Failed to add articleInfo for tab %d, " +
+              "received info missing or incomplete", myTab.id);
+          }
+        })
         .catch(function(e) {
-          console.warn(`Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab ${tab.id}: ${e.message}`);
+          console.warn("Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab " + myTab.id + ", " + e);
           /*
            * The script injection failed, this can have multiple reasons:
            * - the contentScript threw an error because the page is not a article
@@ -1654,17 +1668,12 @@ class ArticlesTable {
            * - the browser extension reinitialized / updated and the tab cannot send us messages anymore
            * Therefore we perform a tab reload once, which should recover the latter case
            */
-          ArticlesTable.reloadTab(tab.id).then(() => {
-            console.debug("Biet-O-Matic: Tab %d reloaded to attempt repairing contentScript", tab.id);
+          ArticlesTable.reloadTab(myTab.id).then(() => {
+            console.debug("Biet-O-Matic: Tab %d reloaded to attempt repairing contentScript", myTab.id);
           }).catch(e => {
-            console.log("Biet-O-Matic: addArticlesFromTabs() reloadTab(%s) failed:%s", tab.id, e.message);
+            console.log("Biet-O-Matic: addArticlesFromTabs() reloadTab(%s) failed:%s", myTab.id, e.message);
           });
         });
-      if (typeof articleInfo !== 'undefined' && articleInfo.hasOwnProperty('detail')) {
-        const article = new Article(this.popup, articleInfo.detail, tab);
-        await article.init();
-        this.addOrUpdateArticle(article, tab, false);
-      }
     }
   }
 
@@ -1688,7 +1697,7 @@ class ArticlesTable {
             this.addArticle(a);
           })
           .catch(e => {
-            console.log("Biet-O-Matic: addArticlesFromStorage() Failed to init article %s: %s", a.articleId, e);
+            console.log("Biet-O-Matic: addArticlesFromStorage() Failed to init article %s: %s", article.articleId, e);
           });
       }
     });
@@ -1876,7 +1885,8 @@ class ArticlesTable {
       if (rowByArticleId.data().tabId != null && rowByArticleId.data().tabId !== tabId) {
         throw new Error(`Article ${articleId} is already open in another tab (${rowByArticleId.data().tabId})!`);
       } else if (rowByArticleId.data().tabId == null) {
-        rowByArticleId.data().tabId = tab.id;
+        console.log("XXX1");
+        rowByArticleId.data().tabId = tabId;
         // redraw the row in case no other updates are registered
         rowByArticleId.invalidate('data').draw(false);
       }
@@ -2422,24 +2432,15 @@ class ArticlesTable {
         openerTabId: this.popup.tabId
       }).then(tab => {
         article.tabId = tab.id;
-        // redraw tab status cell
-        const cell = this.DataTable.cell("#" + article.articleId, 'articleButtons:name');
-        if (cell !== 'undefined' && cell.length === 1) {
-          cell.invalidate('data').draw(false);
-        } else {
-          row.invalidate('data').draw(false);
-        }
+        // redraw article row to ensure all icons and links are refreshed
+        row.invalidate('data');
       });
     } else {
       console.debug("Biet-O-Matic: toggleArticleTab(%s) Closing tab %d", article.articleId, article.tabId);
       browser.tabs.remove(article.tabId).then(() => {
         article.tabId = null;
-        const cell = this.DataTable.cell("#" + article.articleId, 'articleButtons:name');
-        if (cell !== 'undefined' && cell.length === 1) {
-          cell.invalidate('data').draw(false);
-        } else {
-          row.invalidate('data').draw(false);
-        }
+        // redraw article row to ensure all icons and links are refreshed
+        row.invalidate('data');
       });
     }
   }
@@ -2828,7 +2829,7 @@ class ArticlesTable {
                   // Note: this can happen if the contentScript was just inserted and the row has not yet been added
                   console.log("Biet-O-Matic: Event ebayArticleRefresh(%s) aborted: article not found in table row=%O, article=%O",
                     request.articleId, row, article);
-                  return Promise.reject(`Specified article ${request.articleId} not found in table`);
+                  return Promise.resolve(false);
                 }
                 if (article.tabId !== sender.tab.id) {
                   console.log("Biet-O-Matic: ebayArticleRefresh() Article %s - Found tabId mismatch %s -> %s",
@@ -3023,10 +3024,12 @@ class ArticlesTable {
                 url: row.data().getUrl(),
                 openerTabId: this.popup.tabId,
               }).then(() => {
-                console.log("onUpdatedListener found bad ebay t=%O c=%s, redirecting to %s : %s", tabInfo, JSON.stringify(changeInfo), host, articleId);
+                console.log("onUpdatedListener found bad ebay t=%O c=%s, redirecting to %s : %s",
+                  tabInfo, JSON.stringify(changeInfo), host, articleId);
               });
             }
           }
+
           // status == complete, then inject content script, request info and update table
           if (changeInfo.status === 'complete') {
             console.debug('Biet-O-Matic: tab(%d).onUpdated listener fired: change=%s, tabInfo=%s',
@@ -3487,8 +3490,13 @@ class Popup {
         console.debug('Biet-O-Matic: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
         // only toggle favicon for ebay tabs
         if (tab.url.startsWith(browser.runtime.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/i)) {
-          AutoBid.toggleState().catch(e => {
-            console.log("Biet-O-Matic: Browser Action clicked, AutoBid.toggleState failed: %s", e.message);
+          let simulate = false;
+          if (typeof clickData !== "undefined" && clickData.hasOwnProperty('modifiers') && clickData.modifiers.length === 1) {
+            if (clickData.modifiers[0] === "Shift")
+              simulate = true;
+          }
+          AutoBid.toggleState(simulate).catch(e => {
+            console.log("Biet-O-Matic: Browser Action clicked, AutoBid.toggleState failed: " + e);
           });
         }
       }
