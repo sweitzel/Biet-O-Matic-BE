@@ -929,6 +929,7 @@ class EbayArticle {
   // check if the contentScript was already loaded
   if (document.getElementById('BomAutoBid') != null) {
     console.debug("Biet-O-Matic: RELOADED EXTENSION, window=%O", window);
+    location.reload();
     // return value will be passed back to executeScript
     return false;
   }

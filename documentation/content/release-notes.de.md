@@ -7,6 +7,17 @@ type: "docs"
 
 # Versions Übersicht
 
+## Biet-O-Matic BE Version 0.4
+Biet-O-Matic steht nun für alle größeren Browser zur Verfügung. 
+
+### Biet-O-Matic BE Version 0.4.1
+{{< hint info>}}
+Erschienen am Freitag, 31.01.2020 
+{{< /hint >}}
+
+* Behebt Problem bzgl. der Speicherverwaltung, welches unter Umständen zu einem Absturz von BE führen kann.
+* Behebt Problem bei der Tabverwaltung.
+
 ## Biet-O-Matic BE Version 0.3
 Diese Version von BE ist die erste, welche mehrsprachig ist. Es wird, nun neben Deutsch, auch eine Englischsprachige
 Benutzung ermöglicht. Ausserdem wurde ebay.com Unterstützung getestet und sollte nun problemlos funktionieren. 

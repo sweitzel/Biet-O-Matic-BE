@@ -7,6 +7,17 @@ type: "docs"
 
 # Release Notes
 
+## Bid-O-Matic BE Version 0.4
+Bid-O-Matic is now available for all larger browser platforms. 
+
+### Bid-O-Matic BE Version 0.4.1
+{{< hint info>}}
+Published on Friday, 31.01.2020 
+{{< /hint >}}
+
+* Fixes a problem with memory management that could cause BE to crash under certain circumstances.
+* Resolves problem regarding tab management.
+
 ## Bid-O-Matic BE Version 0.3
 This BE Version is the first one, which is multilingual. Besides German it now also supports English language.
 Furthermore ebay.com support was tested as well and should work without major issues. 
