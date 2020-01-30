@@ -44,7 +44,8 @@ The following main features have been implemented:
 
 
 ## I18N / Languages
-The BE currently only supports German language.
+The BE currently only supports German and English language. 
+It is using the standard browser i18n functionality. Language is automatically detected from the Browser UI language.
 
 ## Development
 Contributors or testers can download the Extension from Github and install manually to their Browser. 
@@ -55,11 +56,17 @@ Please refer to the Browser instruction how to do that. End users should only in
     * Ultimate or WebStorm is recommended, to get full JS support (e.g. syntax checking, dependency management)
 * [NodeJS LTS](https://nodejs.org/de/download/)
 * [yarn](https://yarnpkg.com/lang/en/docs/install)
+    * For overall build process (triggers webpack)
+* [hugo](https://gohugo.io/)
+    * For building/testing documentation
 
 ### Building
 * The build is performed using `yarn build`
-* It will generate a `build` folder, which can be loaded as unpacked extension to quickly test changes
-* the bom-be.zip can be uploaded to Chrome Web Store once the testing has been concluded
+   * define `BROWSER=firefox` env param to build for Firefox 
+* It will generate a `build` (or `build-firefox`) folder, which can be loaded as unpacked extension to quickly test changes
+* the bom-be-${VERSION}.zip can be uploaded to Chrome Web Store once the testing has been concluded
 
 ## Supported Browsers
-* [Google Chrome - Web Store](https://chrome.google.com/webstore/detail/biet-o-matic-be/feihhkfahbiejgfimhbdnihcdcapibji) 
+* [Google Chrome - Web Store](https://chrome.google.com/webstore/detail/biet-o-matic-be/feihhkfahbiejgfimhbdnihcdcapibji)
+* [Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/ipjpfheamhikbhjiefkhclbhbmkjgdcj)
+* [Firefox Addon Store](https://addons.mozilla.org/de/firefox/addon/bid-o-matic-be/)
