@@ -735,15 +735,15 @@ class EbayArticle {
   static waitFor(selector, timeout = 3000) {
     return new Promise(function (resolve, reject) {
       waitForElementToDisplay(selector, 250, timeout);
-      function waitForElementToDisplay(selector, time, timeout) {
+      function waitForElementToDisplay(selector, interval, timeout) {
         if (timeout <= 0) {
           reject(`waitFor(${selector}), timeout expired!`);
         } else if (document.querySelector(selector) != null) {
           resolve(document.querySelector(selector));
         } else {
           setTimeout(function () {
-            waitForElementToDisplay(selector, time, timeout - time);
-          }, time);
+            waitForElementToDisplay(selector, interval, timeout - interval);
+          }, interval);
         }
       }
     });
@@ -817,6 +817,7 @@ class EbayArticle {
   static async handleReload() {
     let ebayParser = new EbayParser();
     const ebayArticleInfo = ebayParser.parsePageRefresh();
+    ebayParser.data = null;
     ebayParser = null;
     if (!ebayArticleInfo.hasOwnProperty('articleId')) {
       console.debug("Biet-O-Matic: handleReload() Aborting, no articleId found: %s", JSON.stringify(ebayArticleInfo));

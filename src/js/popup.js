@@ -234,15 +234,15 @@ class Group {
     return new Promise(function (resolve, reject) {
       waitForElementToDisplay(selector, 250, timeout);
 
-      function waitForElementToDisplay(selector, time, timeout) {
+      function waitForElementToDisplay(selector, interval, timeout) {
         if (timeout <= 0) {
           reject(`waitFor(${selector}), timeout expired!`);
         } else if ($(selector).length === 1) {
           resolve($(selector));
         } else {
           window.setTimeout(function () {
-            waitForElementToDisplay(selector, time, timeout - time);
-          }, time);
+            waitForElementToDisplay(selector, interval, timeout - interval);
+          }, interval);
         }
       }
     });
@@ -1059,7 +1059,7 @@ class Article {
     log.push(message);
     window.localStorage.setItem("log:" + this.articleId, JSON.stringify(log));
     // inform local popup about the change
-    const row = Popup.table.getRow(`#${this.articleId}`);
+    const row = Popup.table.getRow("#" + this.articleId);
     if (row != null && row.length === 1) {
       // update child info, but drawing will be separate
       row.child(ArticlesTable.renderArticleLog(this));
@@ -1099,15 +1099,15 @@ class Article {
       return `https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&nordt=true&orig_cvip=true&rt=nc'`;
   }
 
-  // returns the autoBid state for window and article group
-  async getAutoBidState() {
+  // returns the autoBid state for window, article group and article
+  getAutoBidState() {
     let groupName = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
     if (this.hasOwnProperty('articleGroup') && this.articleGroup != null && typeof this.articleGroup !== 'undefined')
       groupName = this.articleGroup;
     const info = {
       articleAutoBid: this.articleAutoBid,
       groupName: groupName,
-      groupAutoBid: await Group.getState(groupName).autoBid
+      groupAutoBid: Group.getStateCached(groupName).autoBid
     };
     // the the window info (autoBidEnabled)
     const windowAutoBidInfo = AutoBid.getLocalState();
@@ -1122,11 +1122,15 @@ class Article {
    * - by use of perlenschnur algorithm it is ensured that between two articles are always 10s
    * - but still 2..n auctions could end at the same time
    */
-  async getBidLockState() {
+  getBidLockState() {
     if (!this.hasOwnProperty('articleEndTime')) return;
-    const result = { bidIsLocked: false, message: "" };
+    let groupName = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
+    if (this.hasOwnProperty('articleGroup') && this.articleGroup != null && typeof this.articleGroup !== 'undefined')
+      groupName = this.articleGroup;
+    const result = {bidIsLocked: false, message: ""};
     // if bidAll is set, then we dont need to special-handle articles collisions
-    if (Group.getStateCached(this.articleGroup).bidAll) {
+    if (Group.getStateCached(groupName).bidAll) {
+      console.debug("Biet-O-Matic: getBidLockState(%s) Skipping, bidAll is on.", this.articleId);
       result.message = 'Group bidAll option is set.';
       return result;
     }
@@ -1149,8 +1153,7 @@ class Article {
         // ignore articles in the past
         // || article.articleEndTime < Date.now();
         articles[article.articleId] = {
-          articleEndTime: article.articleEndTime,
-          row: row
+          articleEndTime: article.articleEndTime
         };
         // handover existing auction end states
         if (article.hasOwnProperty('auctionEndState')) {
@@ -1181,24 +1184,29 @@ class Article {
      */
     const sortedArticles = Object.keys(articles).sort(sorter);
     //console.log("XXX articles=%O sortedArticles=%O", articles, sortedArticles);
-    for (const key of sortedArticles) {
+    for (const articleId of sortedArticles) {
       // skip if endTime of that article is not within 10s of this article
-      const timeDiff =  Math.abs(this.articleEndTime - articles[key].articleEndTime);
+      const timeDiff =  Math.abs(this.articleEndTime - articles[articleId].articleEndTime);
       if (timeDiff > 10000) continue;
       // if we reach our article, we can abort the loop
-      if (this.articleId === key) break;
+      if (this.articleId === articleId) break;
       // if article has an final auctionEndState (!= unknown), then we can continue
-      if (articles[key].hasOwnProperty('auctionEndState') && articles[key].auctionEndState !== EbayParser.auctionEndStates.unknown.id) {
+      if (articles[articleId].hasOwnProperty('auctionEndState') && articles[articleId].auctionEndState !== EbayParser.auctionEndStates.unknown.id) {
         console.debug("Biet-O-Matic: getBidLockState(%s) Article %s has an final auctionEndState: %s",
-          this.articleId, key, articles[key].auctionEndState);
+          this.articleId, articleId, articles[articleId].auctionEndState);
         continue;
       }
-      //console.log("XXX3 article=%s info=%O\nrowdata=%s", key, articles[key], articles[key].row.data().toString());
-
+      let row = Popup.table.DataTable.row("#" + articleId);
+      let article = row.data();
+      //console.log("XXX3 article=%s info=%O, row=%O, article=%O", articleId, articles[articleId], row, article);
+      if (article == null || typeof article === 'unbdefined') {
+        console.log("Biet-O-Matic: getBidLockState() Cannot get row for article %s", articleId);
+        continue;
+      }
       // if the auction price is higher than the maxBid, then we can continue (wont win this auction)
-      if (articles[key].row.data().articleMaxBid < articles[key].row.data().articleBidPrice) {
+      if (article.articleMaxBid < article.articleBidPrice) {
         console.debug("Biet-O-Matic: getBidLockState(%s) Article %s is going to overbid, it is safe to continue.",
-          this.articleId, key);
+          this.articleId, articleId);
         // todo user can manually increase the maxBid when the tab is open, then this wouldnt work reliably as
         //   we would not see the maxBid increase here
         continue;
@@ -1209,11 +1217,12 @@ class Article {
        * - if the article price went higher than the maxBid, then auction will fail and we do not need to block
        * - if the article now has a final auction state, we do not need to block (handle successful auction too)
        */
-      Popup.table.refreshArticle(articles[key].row);
+      ArticlesTable.refreshArticle(articleId);
 
       result.bidIsLocked = true;
       result.message = Popup.getTranslation('popup_bidCollision',
-        '.Cannot perform bidding, another auction is still running: $1', [key.toString()]);
+        '.Cannot perform bidding, another auction is still running: $1', [articleId.toString()]);
+      console.debug("getBidLockState(%s) Cannot perform bidding, another auction is still running: %s", this.articleId, articleId);
       break;
     }
     articles = null;
@@ -1396,24 +1405,34 @@ class Article {
    */
   async handleAuctionEnded(info) {
     try {
+      let autoBidDisabled = false;
       if (!info.hasOwnProperty('auctionEndState'))
         info.auctionEndState = null;
       // 1 == purchased : then disable group autoBid
       if (info.auctionEndState === 1) {
         // disable group autoBid if bidAll is not set
         if (Group.getStateCached(this.articleGroup).bidAll === false) {
-          console.debug("Biet-O-matic: handleAuctionEnded() disabling autoBid; groupAutoBid=%s, info=%s",
-            JSON.stringify(Group.getStateCached(this.articleGroup)), JSON.stringify(info));
+          console.debug("Biet-O-matic: handleAuctionEnded(%s) disabling autoBid for group %s; groupAutoBid=%s, info=%s",
+            this.articleId, this.articleGroup, JSON.stringify(Group.getStateCached(this.articleGroup)), info.auctionEndState);
           await Group.setState(this.articleGroup, false, false);
+          autoBidDisabled = true;
         }
-
       }
       // add the ended state to the article log
-      this.addLog({
-        component: Popup.getTranslation('cs_bidding', '.Bidding'),
-        level: "Status",
-        message: Article.stateToText(info.auctionEndState)
-      });
+      if (autoBidDisabled) {
+        this.addLog({
+          component: Popup.getTranslation('cs_bidding', '.Bidding'),
+          level: "Status",
+          message: Article.stateToText(info.auctionEndState) +
+            Popup.getTranslation('popup_autoBidDeactivatedForGroup', '.Auto-Bid for group $1 deactivated.'),
+        });
+      } else {
+        this.addLog({
+          component: Popup.getTranslation('cs_bidding', '.Bidding'),
+          level: "Status",
+          message: Article.stateToText(info.auctionEndState)
+        });
+      }
     } catch (e) {
       console.log("Biet-O-Matic: Article.handleAuctionEnded(%s) failed: %s, info=%s", this.articleId, e, JSON.stringify(info));
     }
@@ -1689,7 +1708,7 @@ class ArticlesTable {
       info.articleId = articleId;
       //console.debug("Biet-O-Matic: addArticlesFromStorage(%s) info=%s", articleId, JSON.stringify(info));
       // add article if not already in table
-      if (this.getRow(`#${articleId}`).length < 1) {
+      if (this.getRow("#" + articleId).length < 1) {
         let article = new Article(this.popup, info);
         // add article to table asynchronously to avoid UI blocking
         article.init()
@@ -1772,7 +1791,7 @@ class ArticlesTable {
                   updatedFromRemote: false
                 }) {
     if (row == null)
-      row = this.getRow(`#${articleInfo.articleId}`);
+      row = this.getRow("#" + articleInfo.articleId);
     if (row == null || row.length !== 1) return;
     const article = row.data();
     //console.debug("Biet-O-Matic: updateArticle(%s) called. info=%O, options=%O", articleInfo.articleId, articleInfo, options);
@@ -1811,12 +1830,12 @@ class ArticlesTable {
 
   // update articleStatus column with given message
   updateArticleStatus(articleId, message) {
-    const row = this.getRow(`#${articleId}`);
+    const row = this.getRow("#" + articleId);
     if (row == null || row.length !== 1) {
       console.log("updateArticleStatus() Cannot determine row from articleId %s", articleId);
       return;
     }
-    let statusCell = this.DataTable.cell(`#${articleId}`, 'articleAuctionState:name');
+    let statusCell = this.DataTable.cell("#" + articleId, 'articleAuctionState:name');
     row.data().articleAuctionState = message;
     statusCell.invalidate('data').draw(false);
   }
@@ -1828,7 +1847,7 @@ class ArticlesTable {
  */
   updateRowMaxBid(articleInfo = {}, row = null) {
     if (row == null && articleInfo.hasOwnProperty('articleId'))
-      row = this.getRow(`#${articleInfo.articleId}`);
+      row = this.getRow("#" + articleInfo.articleId);
     if (row == null || row.length !== 1) return;
     //console.debug('Biet-O-Matic: updateRowMaxBid(%s) info=%s', data.articleId, JSON.stringify(articleInfo));
     const info = {};
@@ -1879,13 +1898,12 @@ class ArticlesTable {
     }
 
     // article already in table?
-    const rowByArticleId = this.getRow(`#${articleId}`);
+    const rowByArticleId = this.getRow("#" + articleId);
     // check if article is already open in another tab
     if (tab != null && rowByArticleId.length !== 0 && typeof rowByArticleId !== 'undefined') {
       if (rowByArticleId.data().tabId != null && rowByArticleId.data().tabId !== tabId) {
         throw new Error(`Article ${articleId} is already open in another tab (${rowByArticleId.data().tabId})!`);
       } else if (rowByArticleId.data().tabId == null) {
-        console.log("XXX1");
         rowByArticleId.data().tabId = tabId;
         // redraw the row in case no other updates are registered
         rowByArticleId.invalidate('data').draw(false);
@@ -1914,7 +1932,7 @@ class ArticlesTable {
     // find articleId by tabId
     const articleId = this.getArticleIdByTabId(tabId);
     if (articleId == null) return;
-    let row = this.DataTable.row(`#${articleId}`);
+    let row = this.DataTable.row("#" + articleId);
     let article = row.data();
     try {
       if (article == null) return;
@@ -1926,12 +1944,12 @@ class ArticlesTable {
             (storageInfo.articleMaxBid != null || storageInfo.articleGroup != null)) {
             // redraw, tabid has been updated
             console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), keeping article %s.", tabId, articleId);
-            const rowFresh = this.DataTable.row(`#${articleId}`);
+            const rowFresh = this.DataTable.row("#" + articleId);
             rowFresh.invalidate('data').draw(false);
           } else {
             console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), removed article %s.", tabId, articleId);
             // remove from table (recheck if the row still exists)
-            const rowFresh = this.DataTable.row(`#${articleId}`);
+            const rowFresh = this.DataTable.row("#" + articleId);
             rowFresh.remove().draw(false);
           }
         });
@@ -2395,7 +2413,7 @@ class ArticlesTable {
   // remove an article from the table
   removeArticleFromTable(articleId) {
     if (articleId == null) return;
-    let row = this.DataTable.row(`#${articleId}`);
+    let row = this.DataTable.row("#" + articleId);
     let article = row.data();
     if (typeof row === 'undefined' || row.length === 0) return;
     // remove from table
@@ -2451,18 +2469,20 @@ class ArticlesTable {
    * - also called by getBidLockState to update auction state info
    * - prevent duplicate execution by refreshArticleLock
    */
-  refreshArticle(row) {
-    if (typeof row === 'undefined' || row.length !== 1)
-      return;
-    let article = row.data();
-    if (Popup.checkAlreadyRunning('refreshArticle', article.articleId)) {
-      console.log("Biet-O-Matic: refreshArticle(%s) Skip refreshing (already running)", article.articleId);
-      article = null;
+  static refreshArticle(articleId) {
+    let row = Popup.table.DataTable.row("#" + articleId);
+    if (typeof row === 'undefined' || row.length !== 1) {
+      console.log("Biet-O-Matic: refreshArticle() Unable to find row from articleId=%s (%s)", articleId, typeof articleId);
       return;
     }
-    console.debug("Biet-O-Matic: refreshArticle(%s) Refreshing", article.articleId);
+    let article = row.data();
+    if (Popup.checkAlreadyRunning('refreshArticle', articleId)) {
+      console.log("Biet-O-Matic: refreshArticle(%s) Skip refreshing (already running)", articleId);
+      return;
+    }
+    console.debug("Biet-O-Matic: refreshArticle(%s) Refreshing", articleId);
     // add class to indicate update to the user
-    let cell = this.DataTable.cell("#" + article.articleId, 'articleDetailsControl:name');
+    let cell = Popup.table.DataTable.cell("#" + articleId, 'articleDetailsControl:name');
     if (cell.length === 1) {
       cell.node().classList.add('loading-spinner');
     }
@@ -2470,8 +2490,8 @@ class ArticlesTable {
     article.getRefreshedInfo()
       .then(info => {
         // apply the update info
-        this.updateArticle(info, row, {onlyIfExistsInStorage: true});
-        let cellLoc = this.DataTable.cell("#" + article.articleId, 'articleDetailsControl:name');
+        Popup.table.updateArticle(info, row, {onlyIfExistsInStorage: true});
+        let cellLoc = Popup.table.DataTable.cell("#" + article.articleId, 'articleDetailsControl:name');
         if (cellLoc.length === 1) {
           cellLoc.node().classList.remove('loading-spinner');
         }
@@ -2481,7 +2501,6 @@ class ArticlesTable {
         console.warn(`Biet-O-Matic: refreshArticle(${article.articleId}) Failed to refresh: ${e}`);
       })
       .finally(() => {
-        row = null;
         delete Popup.alreadyRunning.refreshArticle[article.articleId];
       });
   }
@@ -2600,7 +2619,7 @@ class ArticlesTable {
       return;
     }
     // redraw date (COLUMN 3)
-    let dateCell = Popup.table.DataTable.cell(`#${articleId}`, 'articleEndTime:name');
+    let dateCell = Popup.table.DataTable.cell("#" + articleId, 'articleEndTime:name');
     // redraw date
     if (dateCell !== 'undefined' && dateCell.length === 1) {
       //dateCell.invalidate('data').draw(false);
@@ -2744,7 +2763,7 @@ class ArticlesTable {
           if (article.hasOwnProperty('tabId') && article.tabId != null) return;
           // skip articles which ended already (longer than 60 minutes ago)
           if (article.articleEndTime < (Date.now() - (60 * 60 * 1000))) return;
-          Popup.table.refreshArticle(row);
+          ArticlesTable.refreshArticle(article.articleId);
         } catch(e) {
           console.log("regularRefreshArticleInfo() Internal Error inside loop: " + e);
         } finally {
@@ -2767,7 +2786,6 @@ class ArticlesTable {
    * - ebayArticleMaxBidUpdated: from content script to update maxBid info
    * - ebayArticleRefresh: from content script, simple info to refresh the row (update remaining time)
    * - getArticleInfo: return article info from row
-   * - getArticleSyncInfo: return article info from sync storage
    * - ebayArticleSetAuctionEndState: from content script to update the Auction State with given info
    * - ebayArticleGetAdjustedBidTime: returns adjusted bidding time for a given articleId (see below for details)
    * - getAutoBidState: returns the state of window and group autoBid for the given articleId
@@ -2806,7 +2824,7 @@ class ArticlesTable {
                 articleId = this.getArticleIdByTabId(sender.tab.id);
               else
                 articleId = request.articleId;
-              const row = this.getRow(`#${articleId}`);
+              const row = this.getRow("#" + articleId);
               if (row != null && row.length === 1)
                 this.updateRowMaxBid(request.detail, row);
               return Promise.resolve(true);
@@ -2823,7 +2841,7 @@ class ArticlesTable {
                 request.articleId, sender.tab.id);
               // determine row by articleId
               if (request.hasOwnProperty('articleId')) {
-                const row = this.getRow(`#${request.articleId}`);
+                const row = this.getRow("#" + request.articleId);
                 const article = row.data();
                 if (typeof article === 'undefined') {
                   // Note: this can happen if the contentScript was just inserted and the row has not yet been added
@@ -2852,7 +2870,7 @@ class ArticlesTable {
                 request.articleId, sender.tab.id);
               if (request.hasOwnProperty('articleId')) {
                 // determine row by articleId
-                const row = this.getRow(`#${request.articleId}`);
+                const row = this.getRow("#" + request.articleId);
                 const article = row.data();
                 return Promise.resolve({
                   data: Article.getInfoForTab(article),
@@ -2867,22 +2885,6 @@ class ArticlesTable {
             throw new Error(e);
           }
           break;
-        case 'getArticleSyncInfo':
-          try {
-            if (this.currentWindowId === sender.tab.windowId) {
-              console.debug("Biet-O-Matic: Browser Event getArticleSyncInfo received from tab %s, article=%s",
-                sender.tab.id, request.articleId);
-              if (request.hasOwnProperty('articleId')) {
-                return Promise.resolve(browser.storage.sync.get(request.articleId));
-              } else {
-                return Promise.reject("ArticleId missing in request data.");
-              }
-            }
-          } catch (e) {
-            console.warn("Biet-O-Matic: Event.getArticleSyncInfo internal error: %s", e);
-            throw new Error(e);
-          }
-          break;
         case 'getAutoBidState':
           try {
             if (this.currentWindowId === sender.tab.windowId) {
@@ -2894,7 +2896,7 @@ class ArticlesTable {
               console.debug("Biet-O-Matic: Browser Event getAutoBidState received from tab %s, article=%s",
                 sender.tab.id, articleId);
               if (articleId != null) {
-                const row = this.getRow(`#${articleId}`);
+                const row = this.getRow("#" + articleId);
                 const article = row.data();
                 return Promise.resolve(article.getAutoBidState());
               } else {
@@ -2917,7 +2919,7 @@ class ArticlesTable {
               console.debug("Biet-O-Matic: Browser Event getBidLockState received from tab %s, article=%s",
                 sender.tab.id, articleId);
               if (articleId != null) {
-                const row = this.getRow(`#${articleId}`);
+                const row = this.getRow("#" + articleId);
                 const article = row.data();
                 return Promise.resolve(article.getBidLockState());
               } else {
@@ -2933,7 +2935,7 @@ class ArticlesTable {
           try {
             if (this.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event addArticleLog received from tab %s", sender.tab.id);
-              const article = this.getRow(`#${request.articleId}`).data();
+              const article = this.getRow("#" + request.articleId).data();
               // redraw status (COLUMN 6)
               if (request.detail.message.level !== Popup.getTranslation('generic_perfornmance', 'Performance')) {
                 this.updateArticleStatus(request.articleId, request.detail.message.message);
@@ -2952,7 +2954,7 @@ class ArticlesTable {
             if (this.currentWindowId === sender.tab.windowId) {
               if (!request.hasOwnProperty('articleId') || request.articleId === 'undefined')
                 return Promise.reject("ebayArticleSetAuctionEndState: articleId missing");
-              const row = this.getRow(`#${request.articleId}`);
+              const row = this.getRow("#" + request.articleId);
               if (typeof row === 'undefined' || row.length !== 1)
                 return Promise.reject("ebayArticleSetAuctionEndState: articleId invalid:" + request.articleId);
               const article = row.data();
@@ -2986,7 +2988,7 @@ class ArticlesTable {
               if (!request.hasOwnProperty('articleId')) {
                 return Promise.reject("Missing parameter articleId");
               }
-              const row = this.getRow(`#${request.articleId}`);
+              const row = this.getRow("#" + request.articleId);
               const article = row.data();
               // {articleEndTime: <adjustedTime>, adjustmentReason}
               return Promise.resolve(article.perlenschnur());
@@ -3155,7 +3157,7 @@ class ArticlesTable {
         .replace('inpGroup_', '');
 
       // determine row by articleId
-      let row = this.getRow(`#${articleId}`);
+      let row = this.getRow("#" + articleId);
       if (row == null || row.length !== 1)
         return;
       let article = row.data();
@@ -3461,7 +3463,6 @@ class Popup {
 
   /*
    * register events:
-   * - getWindowSettings: from content script to retrieve the settings for this window (e.g. autoBidEnabled)
    * - pingPopup: from background script to identify popup tabs (required without tabs permission)
    * - browserAction clicked
    * - inputAutoBid clicked
@@ -3471,12 +3472,6 @@ class Popup {
     browser.runtime.onMessage.addListener((request, sender) => {
       //console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
       switch (request.action) {
-        case 'getWindowSettings':
-          if (this.whoIAm.currentWindow.id === sender.tab.windowId) {
-            console.debug("Biet-O-Matic: Browser Event getWindowSettings received from tab %s", sender.tab.id);
-            return Promise.resolve(JSON.parse(window.sessionStorage.getItem('settings')));
-          }
-          break;
         case 'pingPopup':
           console.debug("Biet-O-Matic: Browser Event pingPopup received from %O", sender);
           return Promise.resolve("pong");

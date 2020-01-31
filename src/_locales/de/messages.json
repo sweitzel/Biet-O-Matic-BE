@@ -125,11 +125,17 @@
   "generic_group_autoBid": {
     "message": "Gruppen Automatikmodus"
   },
+  "generic_group_autoBidHint": {
+    "message": "Konfiguriert den Automatikmodus für die Gruppe"
+  },
   "generic_group_bidAllDisabled": {
     "message": "Ich möchte Einen"
   },
   "generic_group_bidAllEnabled": {
     "message": "Ich möchte Alle"
+  },
+  "generic_group_bidAllHint": {
+    "message": "Wechselt zwischen 'Einen Artikel aus der Gruppe ersteigern' und 'Alle Artikel aus der Gruppe ersteigern'"
   },
   "generic_inactive": {
     "message": "inaktiv"
@@ -221,6 +227,9 @@
   "popup_autoBidDeactivated3": {
     "message": " aktiviert."
   },
+  "popup_autoBidDeactivatedForGroup": {
+    "message": "Automatikmodus für Gruppe $1 wurde deaktiviert."
+  },
   "popup_bidCollision": {
     "message": "Bieten abgebrochen, da mit anderer Auktion kollidiert: $1"
   },
@@ -268,11 +277,5 @@
   },
   "popup_show_articleEvents": {
     "message": "Zeigt Artikel Ereignisprotokoll"
-  },
-  "generic_group_bidAllHint": {
-    "message": "Wechselt zwischen 'Einen Artikel aus der Gruppe ersteigern' und 'Alle Artikel aus der Gruppe ersteigern'"
-  },
-  "generic_group_autoBidHint": {
-    "message": "Konfiguriert den Automatikmodus für die Gruppe"
   }
 }

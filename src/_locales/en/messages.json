@@ -125,11 +125,17 @@
   "generic_group_autoBid": {
     "message": "Group Auto-Bid"
   },
+  "generic_group_autoBidHint": {
+    "message": "Configures the Auto-Bid mode for the group"
+  },
   "generic_group_bidAllDisabled": {
     "message": "I want one"
   },
   "generic_group_bidAllEnabled": {
     "message": "I want all"
+  },
+  "generic_group_bidAllHint": {
+    "message": "Toggles between 'Bid until you win' and 'Bid all items from this group'"
   },
   "generic_inactive": {
     "message": "inactive"
@@ -221,6 +227,9 @@
   "popup_autoBidDeactivated3": {
     "message": "."
   },
+  "popup_autoBidDeactivatedForGroup": {
+    "message": "Auto-Bid for group $1 has been deactivated."
+  },
   "popup_bidCollision": {
     "message": "Bidding aborted because it collided with another article: $1"
   },
@@ -268,11 +277,5 @@
   },
   "popup_show_articleEvents": {
     "message": "Show item events"
-  },
-  "generic_group_bidAllHint": {
-    "message": "Toggles between 'Bid until you win' and 'Bid all items from this group'"
-  },
-  "generic_group_autoBidHint": {
-    "message": "Configures the Auto-Bid mode for the group"
   }
 }
