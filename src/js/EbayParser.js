@@ -23,7 +23,6 @@ class EbayParser {
       let doc = document.implementation.createHTMLDocument("eBay Article");
       doc.documentElement.innerHTML = htmlString;
       this.data = doc;
-      doc = null;
     }
   }
 
@@ -120,7 +119,7 @@ class EbayParser {
     ]);
     for (const item of parseInfoArray) {
       const info = this.parseInfoEntry(item[0], item[1]);
-      result = Object.assign({}, result, info);
+      Object.assign(result, info);
     }
     return result;
   }
@@ -209,9 +208,10 @@ class EbayParser {
           } else if (key === "articleAuctionState") {
             try {
               // attempt to sanitize the html
-              value = EbayParser.cleanupHtmlString(domEntry.outerHTML);
+              EbayParser.cleanupHtmlString(domEntry);
             } catch (e) {
               console.log("Biet-O-Matic: cleanupHtmlString() Internal error: %s", e.message);
+            } finally {
               value = domEntry.outerHTML;
             }
             result.articleAuctionStateText = $(value)[0].textContent.trim()
@@ -359,7 +359,7 @@ class EbayParser {
    * - tags: class, style, id
    * - a href add target _blank
    */
-  static cleanupHtmlString(htmlString) {
+  static cleanupHtmlString(domEntry) {
     //Extension for getting the tagName
     $.fn.tagName = function () {
       if (!this.get(0).tagName) return "";
@@ -395,18 +395,10 @@ class EbayParser {
     attributesAllowed.a = "|class|href|name|target|";
     //console.log("Before: %s", $(jqHtml).html());
     try {
-      htmlString = htmlString
-        .replace(/(\r\n|\n|\r)/gm, '')
-        .replace(/\t+/gm, '');
-      let jqHtml = $(htmlString);
-      $(jqHtml).removeComments();
-      EbayParser.clearUnsupportedTagsAndAttributes(jqHtml, tagsAllowed, attributesAllowed);
-      const result = $(jqHtml).get(0).outerHTML;
-      jqHtml = null;
-      return result;
+      $(domEntry).removeComments();
+      EbayParser.clearUnsupportedTagsAndAttributes(domEntry, tagsAllowed, attributesAllowed);
     } catch (e) {
       console.warn("Biet-O-Matic: Failed to cleanup status: %s", e.message);
-      return htmlString;
     }
   }
 
