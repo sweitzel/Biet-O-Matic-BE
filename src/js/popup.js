@@ -263,6 +263,21 @@ class Group {
       }
     });
   }
+
+  // update datalist on overview page, will be used by each article row
+  static updateDatalist() {
+    const datalist = $('#groups');
+    if (typeof datalist === 'undefined')
+      return;
+    datalist.empty();
+    Object.keys(Popup.cachedGroups).forEach(group => {
+      if (group.length === 0)
+        return;
+      const option = document.createElement('option');
+      option.value = group;
+      datalist.append(option);
+    });
+  }
 }
 
 /*
@@ -2164,9 +2179,14 @@ class ArticlesTable {
     labelGroupBidAll.appendChild(spanGroupBidAll);
     td.appendChild(labelGroupBidAll);
 
+    // add group to cached groups
+    if (!Popup.cachedGroups.hasOwnProperty(groupName))
+      Popup.cachedGroups[groupName] = {};
+
     // renderState will asynchronously add a class toggling enabled/disabled state
     Group.renderAutoBid('inpGroupAutoBid', groupName).catch();
     Group.renderBidAll('inpGroupBidAll', groupName).catch();
+    Group.updateDatalist();
     // append data-name to tr
     return $('<tr/>')
       .append(td)
@@ -2191,15 +2211,7 @@ class ArticlesTable {
     if (data != null && typeof data !== 'undefined')
       inpGroup.defaultValue = data;
 
-    const listGroup = document.createElement('datalist');
-    listGroup.id = 'groups';
-    Object.keys(Popup.cachedGroups).forEach(group => {
-      const option = document.createElement('option');
-      option.value = group;
-      listGroup.appendChild(option);
-    });
     div.appendChild(inpGroup);
-    div.appendChild(listGroup);
     return div.outerHTML;
   }
 
