@@ -208,7 +208,7 @@ class EbayParser {
           } else if (key === "articleAuctionState") {
             try {
               // attempt to sanitize the html
-              EbayParser.cleanupHtmlString(domEntry);
+              //EbayParser.cleanupHtmlString(domEntry);
             } catch (e) {
               console.log("Biet-O-Matic: cleanupHtmlString() Internal error: %s", e.message);
             } finally {
@@ -398,7 +398,7 @@ class EbayParser {
       $(domEntry).removeComments();
       EbayParser.clearUnsupportedTagsAndAttributes(domEntry, tagsAllowed, attributesAllowed);
     } catch (e) {
-      console.warn("Biet-O-Matic: Failed to cleanup status: %s", e.message);
+      console.warn("Biet-O-Matic: Failed to cleanup status: " + e);
     }
   }
 
@@ -406,7 +406,7 @@ class EbayParser {
     $(obj).children().each(function () {
       //recursively down the tree
       let el = $(this);
-      EbayParser.clearUnsupportedTagsAndAttributes(el, tagsAllowed, attributesAllowed, emptyTagsAllowed);
+      EbayParser.clearUnsupportedTagsAndAttributes(this, tagsAllowed, attributesAllowed, emptyTagsAllowed);
       try {
         const tag = el.tagName();
         // add target to links

@@ -22,6 +22,10 @@
     "48": "icon48.png",
     "128": "icon128.png"
   },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
   "minimum_chrome_version": "71",
   "manifest_version": 2
 }

@@ -457,17 +457,24 @@ class AutoBid {
       }
       Popup.updateFavicon(info.autoBidEnabled, null, info.simulation);
       // prevent computer sleep
-      try {
-        if (info.autoBidEnabled) {
-          console.log("Biet-O-Matic: Requesting browser to keep system awake.");
-          chrome.power.requestKeepAwake('system');
+      // check if the regular refresh has been disabled
+      browser.storage.sync.get({disableSleepPrevention: false}).then(globalOptions => {
+        if (globalOptions.disableSleepPrevention) {
+          console.info("Biet-O-Matic: Not trying to prevent sleep mode.");
         } else {
-          console.log("Biet-O-Matic: Cancelled request for browser to keep system awake.");
-          chrome.power.releaseKeepAwake();
+          try {
+            if (info.autoBidEnabled) {
+              console.log("Biet-O-Matic: Requesting browser to keep system awake.");
+              chrome.power.requestKeepAwake('system');
+            } else {
+              console.log("Biet-O-Matic: Cancelled request for browser to keep system awake.");
+              chrome.power.releaseKeepAwake();
+            }
+          } catch(e) {
+            console.log("Biet-O-Matic: Cannot modify computer sleep: %s", e);
+          }
         }
-      } catch(e) {
-        console.log("Biet-O-Matic: Cannot modify computer sleep: %s", e);
-      }
+      });
     }).catch(e => {
       console.warn("Biet-O-Matic: AutoBid.renderState() failed: %s", e.message);
     });
@@ -874,6 +881,7 @@ class Article {
    * - from contentScript: minBid, maxBid, autoBid
    */
   async updateInfoInStorage(info, tabId = null, onlyIfExists = false) {
+    console.log("XXX updateInfoInStorage starting")
     let oldStoredInfo = {};
     // get existing article information from storage - it will be merged with the new info
     let result = await browser.storage.sync.get(this.articleId);
@@ -1797,6 +1805,7 @@ class ArticlesTable {
   /*
    * update article with fresh information
    * - if row is null, it will be determined by articleId
+   * - Note that changes are *not* compared against the storage.
    * - optional parameters: {onlyIfExistsInStorage, updatedFromRemote, informTab}
    */
   updateArticle(articleInfo, row = null,
@@ -1932,6 +1941,7 @@ class ArticlesTable {
       });
     } else {
       // article in table - update it (do not update storage if not already exists)
+      //console.log("calling updateArticle for article %s", articleInfo.articleId)
       this.updateArticle(articleInfo, rowByArticleId, {
         informTab: updatedFromRemote,
         updatedFromRemote: updatedFromRemote
@@ -2763,6 +2773,11 @@ class ArticlesTable {
    */
   static async regularRefreshArticleInfo() {
     try {
+      // check if the regular refresh has been disabled
+      const globalOptions = await browser.storage.sync.get({disableArticleRefresh: false});
+      if (globalOptions.disableArticleRefresh) {
+        return;
+      }
       // check if autoBid is enabled
       const localState = AutoBid.getLocalState();
       if (Popup.table == null || !localState.autoBidEnabled) return;

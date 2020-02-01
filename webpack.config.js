@@ -30,6 +30,7 @@ var options = {
   entry: {
     contentScript: path.join(__dirname, "src", "js", "contentScript.js"),
     popup: path.join(__dirname, "src", "js", "popup.js"),
+    options: path.join(__dirname, "src", "js", "options.js"),
     background: path.join(__dirname, "src", "js", "background.js")
   },
   chromeExtensionBoilerplate: {
@@ -87,6 +88,11 @@ var options = {
         }));
       }
     }]),
+    new HtmlWebpackPlugin({
+      template: path.join(__dirname, "src", "options.html"),
+      filename: "options.html",
+      chunks: ['options']
+    }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, "src", "popup.de.html"),
       filename: "popup.de.html",

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Biet-O-Matic BE Configuration</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+</head>
+<body style="min-width: 96%">
+
+<div id="mainContent">
+  <fieldset>
+    <legend>Options</legend>
+    <div>
+      <label style="display: block;">
+        <input type="checkbox" id="disableSleepPrevention">
+        Do not prevent system from sleeping.
+      </label>
+      <label style="display: block;">
+        <input type="checkbox" id="disableArticleRefresh">
+        Do not background-refresh closed Items.
+      </label>
+      <div id="status"></div>
+    </div>
+  </fieldset>
+  <button id="save" style="margin: 10px">Save</button>
+</div>
+
+<script src="options.bundle.js"></script>
+</body>
+</html>

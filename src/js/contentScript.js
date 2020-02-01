@@ -40,9 +40,10 @@ class EbayArticle {
     // parse article information
     let info;
     try {
-      this.ebayParser = new EbayParser(window.location.href);
-      this.ebayParser.init(oldInfo);
-      info = this.ebayParser.parsePage();
+      let ebayParser = new EbayParser(window.location.href);
+      ebayParser.init(oldInfo);
+      info = ebayParser.parsePage();
+      ebayParser.data = null;
     } catch (e) {
       throw new Error("EbayParser failed: " + e);
     }
@@ -369,9 +370,11 @@ class EbayArticle {
             let newN = mutation.target;
             oldN=oldN[0];
             if (typeof oldN !== 'undefined' && oldN.textContent !== newN.textContent) {
-              let info = this.ebayParser.parsePageRefresh();
+              let ebayParser = new EbayParser();
+              let info = ebayParser.parsePageRefresh();
               Object.assign(this, info);
               info = null;
+              ebayParser.data = null;
               this.activateAutoBidButton(this.articleMaxBid, this.articleMinimumBid);
               // send info to extension popup about new price
               browser.runtime.sendMessage({
