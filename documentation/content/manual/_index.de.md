@@ -10,8 +10,8 @@ type: "docs"
 ## Schnellstart
 
 Nachdem Biet-O-Matic BE (im folgenden nur BE genannt) zum Browser hinzugefügt wurde,
-ist es auch direkt ohne weitere Konfiguration einsatzbereit. Es muss nur sichergestellt sein das sie bereits an der 
-ebay Plattform angemeldet sind, da dies nicht von BE durchgeführt wird.
+ist es auch direkt ohne weitere Konfiguration einsatzbereit. Es muss nur sichergestellt sein, das sie bereits an der 
+ebay Plattform angemeldet sind. Die Anmeldung bei eBay wird nicht durch BE durchgeführt.
 
 * Öffnen Sie BE, in dem sie das BE Symbol (Auktionshammer auf gelbem Hintergrund) aktivieren.
     * Das Symbol befindet sich überlicherweise sichtbar in der Browser Menüleiste, in der sich auch die Addresseingabe befindet.
@@ -20,8 +20,8 @@ ebay Plattform angemeldet sind, da dies nicht von BE durchgeführt wird.
     * bzw. ein weißes 'B' auf grünem Hintergrund, wenn der Biet-Automatikmodus für das Fenster aktiviert ist.
     * Hinweis: Die Übersichtsseite muss geöffnet bleiben, damit das automatische Bieten funktioniert.
 * Öffnen sie einen eBay Artikel in einem neuen Browser Tab
-    * Sie können direkt auf der Artilseite ein Maximalgebot definieren. Hierdurch würde der Artikel auch gespeichert
-      werden und in der Übersichtstabelle bleiben, selbst wenn der Artikel Tab geschlossen wird.
+    * Sie können direkt auf der Artikelseite ein Maximalgebot definieren. Hierdurch bleibt der Artikel auch gespeichert
+      und in der Übersichtstabelle erhalten, selbst wenn der Artikel Tab geschlossen wird.
     * Oder sie legen die Parameter für den Artikel auf der BE Übersichtsseite fest:
         * Artikel Gruppe: Verschiebt den Artikel in eine von ihnen festgelegte Gruppe.
         * Artikel Maximalgebot: Definiert das Maximalgebot, welches für den Artikel kurz vor Ende der Auktion durch BE abgegeben wird.
@@ -79,6 +79,7 @@ Einstellungen. BE verfügt über keine technischen Möglichkeiten, den Computer 
 
 Bei einigen Browsern wird BE versuchen, den Ruhezustand des Computers zu verhindern,
 am sichersten ist es jedoch, den Computer entsprechend zu konfigurieren.
+Sie können dies jedoch in den internen Optionen von BE deaktivieren.
 
 ## Erweiterungs Verwaltung 
 ### Installation
@@ -122,4 +123,16 @@ Es ist aber möglich, dieses über die Erweiterung "Storage Area Explorer" durch
 > Zur Analyse von Problemen kann es hilfreich sein, diese Daten zur Analyse zu exportieren und in der Support-Anfrage
 > zu übermitteln.
 
-{{< image src="be_export.de.png" alt="Daten Sicherung" >}}
+{{< image src="/be_export.de.png" alt="Daten Sicherung" >}}
+
+## Interne Konfigurationsparameter
+Durch rechtsclick auf das BE Symbol und Aufruf des Menüpunktes "Optionen" erreichen sie die internen Parameter von BE.
+
+Aktuell gibt es folgende Parameter (Seite aktuell nicht übersetzt):
+
+* "Do not prevent system from sleeping"
+    * Wenn dies aktiviert wird, wird BE angewiesen den PC nicht am Wechsel in den Schlafmodus zu hindern.
+    * Bitte denken sie daran, das BE Gebote nur automatisch abgeben kann, wenn der Computer läuft.
+* "Do not background-refresh closed Items"
+    * Wenn dies aktiviert wird, wird BE Informationen für Artikel, welche aktuell nicht in einem Tab offen sind, nicht automatisch aktualisieren.
+    * Hinweis: Dies kann hilfreich sein um Abstürze zu verhindern, wenn BE lange Zeit unbeafsichtigt laufen soll.  

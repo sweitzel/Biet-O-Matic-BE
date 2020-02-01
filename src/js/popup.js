@@ -881,7 +881,6 @@ class Article {
    * - from contentScript: minBid, maxBid, autoBid
    */
   async updateInfoInStorage(info, tabId = null, onlyIfExists = false) {
-    console.log("XXX updateInfoInStorage starting")
     let oldStoredInfo = {};
     // get existing article information from storage - it will be merged with the new info
     let result = await browser.storage.sync.get(this.articleId);

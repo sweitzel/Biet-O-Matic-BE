@@ -10,13 +10,23 @@ type: "docs"
 ## Biet-O-Matic BE Version 0.4
 Biet-O-Matic steht nun für alle größeren Browser zur Verfügung. 
 
+### Biet-O-Matic BE Version 0.4.2
+{{< hint info>}}
+Erschienen am Freitag, 02.02.2020 
+{{< /hint >}}
+
+* Interne Optionen zur Abschaltung der Hintergrundaktualisierung und Schlafmodus-Verhinderung hinzugefügt
+    * Für mehr Informationen siehe auch [Handbuch]({{< relref "/manual#interne-konfigurationsparameter" >}})
+* Optimierung der Artikel-Gruppen
+
 ### Biet-O-Matic BE Version 0.4.1
 {{< hint info>}}
-Erschienen am Freitag, 31.01.2020 
+Erschienen am Freitag, 31.01.2020
 {{< /hint >}}
 
 * Behebt Problem bzgl. der Speicherverwaltung, welches unter Umständen zu einem Absturz von BE führen kann.
-* Behebt Problem bei der Tabverwaltung.
+* Behebt Problem bei der Tabverwaltung welches dazu führen konnte das mehrere Artikel aus eine Gruppe ersteigert wurden
+  wenn diese zwischen 10s..60s auseinander endeten.
 
 ## Biet-O-Matic BE Version 0.3
 Diese Version von BE ist die erste, welche mehrsprachig ist. Es wird, nun neben Deutsch, auch eine Englischsprachige

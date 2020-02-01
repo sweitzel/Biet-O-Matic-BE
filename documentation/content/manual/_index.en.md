@@ -84,6 +84,7 @@ will be running. Some computers will automatically go to sleep when they are "in
 settings. BE has no technical means to wakeup the computer from it.
 
 On some browsers BE will try to prevent computer sleep, however the safest is to configure your computer accordingly.
+You can chose to deactivate this sleep prevention, in the internal BE options. 
 
 ## Extension Management
 ### Installation
@@ -127,3 +128,15 @@ However, it is possible to do this using the "Storage Area Explorer" extension.
 > To help support analyze problems, it can be helpful to export this data for analysis manually in the support request.
 
 ![Data Export](/be_export.de.png)
+
+## Internal configuration parameters
+By right clicking on the BE symbol and selecting the menu item "Options" you can access the internal parameters of BE.
+
+The following parameters currently exist:
+
+* Do not prevent system from sleeping
+    * When this is enabled, BE is instructed not to prevent the PC from entering sleep mode.
+    * Please remember that BE can only place bids automatically when the computer is running.
+* Do not background-refresh closed items
+    * When enabled, BE will not automatically update information for items that are not currently open in a tab.
+    * Note that this can be useful in case you notice BE crashing due to memory issues, when BE is running unattended for long times.

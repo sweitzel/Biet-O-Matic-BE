@@ -10,6 +10,15 @@ type: "docs"
 ## Bid-O-Matic BE Version 0.4
 Bid-O-Matic is now available for all larger browser platforms. 
 
+### Bid-O-Matic BE Version 0.4.2
+{{< hint info>}}
+Published on Friday, 02.02.2020 
+{{< /hint >}}
+
+* Added internal options to disable background update and sleep mode prevention
+    * For more information also check out [the manual]({{< relref "/manual#internal-configuration-parameters" >}})
+* Optimization of article groups
+
 ### Bid-O-Matic BE Version 0.4.1
 {{< hint info>}}
 Published on Friday, 31.01.2020 
