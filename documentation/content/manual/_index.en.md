@@ -130,7 +130,11 @@ However, it is possible to do this using the "Storage Area Explorer" extension.
 ![Data Export](/be_export.de.png)
 
 ## Internal configuration parameters
-By right clicking on the BE symbol and selecting the menu item "Options" you can access the internal parameters of BE.
+
+> Internal options should generally only be changed in case of problems. 
+
+By right clicking on the BE symbol and selecting the menu item "Options" (Chrome/IE) or "Manage Extension" (Firefox)
+you can access the internal parameters of BE.
 
 The following parameters currently exist:
 

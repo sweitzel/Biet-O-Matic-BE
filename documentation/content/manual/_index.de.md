@@ -126,7 +126,11 @@ Es ist aber möglich, dieses über die Erweiterung "Storage Area Explorer" durch
 {{< image src="/be_export.de.png" alt="Daten Sicherung" >}}
 
 ## Interne Konfigurationsparameter
-Durch rechtsclick auf das BE Symbol und Aufruf des Menüpunktes "Optionen" erreichen sie die internen Parameter von BE.
+
+> Interne Parameter sollten üblicherweise nur verstellt werden, falls Probleme auftauchen.
+
+Durch Klick mit der rechten Maustaste auf das BE Symbol und Aufruf des Menüpunktes
+"Optionen" (Chrome/IE) bzw. "Erweiterung verwalten (Firefox)" erreichen sie die internen Parameter von BE.
 
 Aktuell gibt es folgende Parameter (Seite aktuell nicht übersetzt):
 
