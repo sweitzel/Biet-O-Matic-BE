@@ -12,12 +12,16 @@ Biet-O-Matic steht nun für alle größeren Browser zur Verfügung.
 
 ### Biet-O-Matic BE Version 0.4.2
 {{< hint info>}}
-Erschienen am Freitag, 02.02.2020 
+Erschienen am Sonntag, 02.02.2020 
 {{< /hint >}}
 
+* Unterstützung zur Ermittlung des Zeitunterschiedes zwischen dem System auf dem BE läuft und dem eBay Server hinzugefügt.
+    * BE zeigt eine Warnung auf der Übersichtsseite an, wenn der Zeitunterschied größer als eine Sekunde ist.
 * Interne Optionen zur Abschaltung der Hintergrundaktualisierung und Schlafmodus-Verhinderung hinzugefügt
     * Für mehr Informationen siehe auch [Handbuch]({{< relref "/manual#interne-konfigurationsparameter" >}})
 * Optimierung der Artikel-Gruppen
+    * Gruppen können jetzt ausgewählt werden auch wenn sie gerade hinzugefügt wurden.
+    * Gruppen werden nur einmal in der BE Übersichtsseite verwaltet.
 
 ### Biet-O-Matic BE Version 0.4.1
 {{< hint info>}}

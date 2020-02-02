@@ -446,6 +446,48 @@ class EbayParser {
     });
   }
 //endregion
+
+  /*
+   * Determine time from ebay server and returns the difference to the local time in ms
+   * The difference for a correctly synchronized PC would be around +100ms, due to the processing times.
+   * - a positive value means the system time is ahead
+   * - a negative value means the system time is behind ebay time
+   */
+  static async getEbayTimeDifference() {
+    // first determine response time via HEAD method
+    const started = Date.now()
+    let responseHead = await fetch('https://viv.ebay.com/favicon.ico',
+      {method: "GET", mode: "no-cors"});
+    const delay = Date.now() - started;
+
+    let responseGet = await fetch('https://viv.ebay.com/ws/eBayISAPI.dll?EbayTime');
+    if (!responseGet.ok)
+      throw new Error(`Failed to fetch ebay time(2): HTTP ${responseGet.status} - ${responseGet.statusText}`);
+    // date header "date: Sat, 01 Feb 2020 22:51:17 GMT"
+    const htmlString = await responseGet.text();
+    let doc = document.implementation.createHTMLDocument("eBay Time");
+    doc.documentElement.innerHTML = htmlString;
+    // e.g. "Saturday, February 01, 2020 14:37:36 PST"
+    //let e = $(doc).find('p.currTime');
+    //if (typeof e == 'undefined' || e.length !== 1) {
+    //  return null;
+    //}
+    //let ebayTime = e.get(0).textContent;
+    // get time from the img tag instead of the obvious Date string because parsing is awful.
+    let images = $(doc).find('img');
+    for (let i = 0; i < images.length; i++) {
+      // src: "https://rover.ebay.com/roversync/?site=0&stg=1&mpt=1580598619516"
+      let match = images[i].src.match(/mpt=([0-9]+)$/);
+      if (match == null)
+        continue;
+      // reduce time difference by 100ms which is the approximated ebay system processing time
+      const diffTime =  (Date.now() - 100) - Number.parseInt(match[1], 10);
+      console.debug("Biet-O-Matic: getEbayTimeDifference() networkDelay=%s, timeDiff=%s", delay, diffTime);
+      return diffTime - delay;
+    }
+    return 0;
+  }
+
 }
 // auction states as communicated to the overview page
 EbayParser.auctionEndStates = {

@@ -12,12 +12,16 @@ Bid-O-Matic is now available for all larger browser platforms.
 
 ### Bid-O-Matic BE Version 0.4.2
 {{< hint info>}}
-Published on Friday, 02.02.2020 
+Published on Sunday, 02.02.2020 
 {{< /hint >}}
 
+* Added support for detection of the time difference of the system where BE is running and the ebay server.
+    * BE will display a warning message on the overview page if the time difference is larger than a second.
 * Added internal options to disable background update and sleep mode prevention
     * For more information also check out [the manual]({{< relref "/manual#internal-configuration-parameters" >}})
 * Optimization of article groups
+    * Groups can now be selected also when they have been just added.
+    * Groups are only kept once in memory on the overview page.
 
 ### Bid-O-Matic BE Version 0.4.1
 {{< hint info>}}

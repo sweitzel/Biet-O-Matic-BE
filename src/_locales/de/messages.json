@@ -277,5 +277,8 @@
   },
   "popup_show_articleEvents": {
     "message": "Zeigt Artikel Ereignisprotokoll"
+  },
+  "popup_timeDiff1": {
+    "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (~$1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
   }
 }

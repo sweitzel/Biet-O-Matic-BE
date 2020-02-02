@@ -3485,6 +3485,40 @@ class Popup {
     await Popup.table.addArticlesFromStorage();
     await Popup.table.addArticlesFromTabs();
     await Popup.checkBrowserStorage();
+    Popup.regularCheckEbayTime();
+  }
+
+  /*
+   * Regular check of computer time
+   * - will display a notification if the time difference is > 1s
+   */
+  static regularCheckEbayTime() {
+    try {
+      EbayParser.getEbayTimeDifference()
+        .then(diff => {
+          if (diff > 1000) {
+            let messages = document.querySelector('#messages');
+            if (messages != null && typeof messages !== 'undefined') {
+              let span = document.createElement('span');
+              span.classList.add('ui-state-highlight');
+              span.innerText = Popup.getTranslation(
+                'popup_timeDiff1',
+                '.The time difference of your computer vs. the eBay time is too large: $1s',
+                [(diff / 1000).toFixed(2).toString()]
+              );
+              $(messages).empty();
+              messages.appendChild(span);
+            }
+          }
+        });
+    } catch (e) {
+      console.warn("Biet-O-Matic: regularCheckEbayTime() Internal Error: " + e);
+    } finally {
+      // reexecute this function at random (60..120s) interval
+      window.setTimeout(function() {
+        Popup.regularCheckEbayTime();
+      }, Math.floor(Math.random() * (120 - 60 + 1) + 60) * 1000);
+    }
   }
 
   /*
