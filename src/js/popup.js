@@ -1042,8 +1042,7 @@ class Article {
   /*
    * Refresh article information from manual HTTP request
    * - perform HTTP request to ebay for the article
-   * - parse the returned HTML, but only relevant information
-   *   articleDescription, articleEndTime, articleBidCount, articleMinimumBid, articlBidPrice
+   * - parse the returned HTML
    */
   async getRefreshedInfo() {
     const response = await fetch(this.getUrl());
@@ -1051,11 +1050,11 @@ class Article {
       throw new Error(`Failed to fetch information for article ${this.articleId}: HTTP ${response.status} - ${response.statusText}`);
     const text = await response.text();
     //console.log("Fetch result: %s", text);
-    let parser = new EbayParser(this.getUrl(), text);
-    parser.init();
-    const result = parser.parsePage();
-    parser = null;
-    return result;
+    let ebayParser = new EbayParser(this.getUrl(), text);
+    ebayParser.init();
+    const info = ebayParser.parsePage();
+    ebayParser.cleanup();
+    return info;
   }
 
   // add log message for article
@@ -2378,10 +2377,7 @@ class ArticlesTable {
       span.textContent = Popup.getTranslation('generic_unlimited', '.unlimited');
       if (data != null && typeof data !== 'undefined') {
         const timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: Popup.locale, addSuffix: true});
-        const date = new Intl.DateTimeFormat('default', {
-          'dateStyle': 'medium',
-          'timeStyle': 'medium'
-        }).format(new Date(data));
+        const date = format(data, 'PPpp', {locale: Popup.locale});
         span.textContent = `${date} (${timeLeft})`;
         if (data - Date.now() < 0) {
           // ended
@@ -2507,16 +2503,14 @@ class ArticlesTable {
     if (cell.length === 1) {
       cell.node().classList.add('loading-spinner');
     }
-    cell = null;
     article.getRefreshedInfo()
       .then(info => {
         // apply the update info
         Popup.table.updateArticle(info, row, {onlyIfExistsInStorage: true});
-        let cellLoc = Popup.table.DataTable.cell("#" + article.articleId, 'articleDetailsControl:name');
+        let cellLoc = Popup.table.DataTable.cell("#" + info.articleId, 'articleDetailsControl:name');
         if (cellLoc.length === 1) {
           cellLoc.node().classList.remove('loading-spinner');
         }
-        cellLoc = null;
       })
       .catch(e => {
         console.warn(`Biet-O-Matic: refreshArticle(${article.articleId}) Failed to refresh: ${e}`);

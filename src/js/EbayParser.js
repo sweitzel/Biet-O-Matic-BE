@@ -18,11 +18,13 @@ class EbayParser {
     this.url = url;
     if (htmlString == null) {
       this.data = document;
+      this.createdFromHtml = false;
     } else {
       // Note: DOMParser fails on ebay page
       let doc = document.implementation.createHTMLDocument("eBay Article");
       doc.documentElement.innerHTML = htmlString;
       this.data = doc;
+      this.createdFromHtml = true;
     }
   }
 
@@ -34,7 +36,7 @@ class EbayParser {
     // first we check if the page is a expected Article Page
     const body = this.data.getElementById("Body");
     if (body == null) {
-      console.info("Biet-O-Mat: skipping on this page; no Body element, window=%O", window);
+      console.info("Biet-O-Mat: skipping on this page; no Body element, data=%O", this.data);
       throw new Error("Biet-O-Mat: skipping on this page; no Body element");
     }
     const itemType = body.getAttribute("itemtype");
@@ -50,6 +52,14 @@ class EbayParser {
     if (typeof oldInfo !== "undefined" && oldInfo.auctionEnded) {
       throw new Error("Biet-O-Mat: skipping on this page; bidding already performed.");
     }
+  }
+
+  cleanup() {
+    // todo check if this is a good way to cleanup the document for memory leak prevention
+    if (this.createdFromHtml) {
+      $(this.data).empty();
+    }
+    this.data = null;
   }
 
   /*
@@ -475,6 +485,7 @@ class EbayParser {
     //let ebayTime = e.get(0).textContent;
     // get time from the img tag instead of the obvious Date string because parsing is awful.
     let images = $(doc).find('img');
+    let result = 0;
     for (let i = 0; i < images.length; i++) {
       // src: "https://rover.ebay.com/roversync/?site=0&stg=1&mpt=1580598619516"
       let match = images[i].src.match(/mpt=([0-9]+)$/);
@@ -483,9 +494,11 @@ class EbayParser {
       // reduce time difference by 100ms which is the approximated ebay system processing time
       const diffTime =  (Date.now() - 100) - Number.parseInt(match[1], 10);
       console.debug("Biet-O-Matic: getEbayTimeDifference() networkDelay=%s, timeDiff=%s", delay, diffTime);
-      return diffTime - delay;
+      result = diffTime - delay;
+      break;
     }
-    return 0;
+    $(doc).empty();
+    return result;
   }
 
 }
