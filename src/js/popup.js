@@ -3514,10 +3514,10 @@ class Popup {
     } catch (e) {
       console.warn("Biet-O-Matic: regularCheckEbayTime() Internal Error: " + e);
     } finally {
-      // reexecute this function at random (60..120s) interval
+      // reexecute this function at random (180..600s) interval
       window.setTimeout(function() {
         Popup.regularCheckEbayTime();
-      }, Math.floor(Math.random() * (120 - 60 + 1) + 60) * 1000);
+      }, Math.floor(Math.random() * (600 - 180 + 1) + 180) * 1000);
     }
   }
 
