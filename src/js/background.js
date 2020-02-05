@@ -47,6 +47,11 @@ class BomBackground {
    * - returns null if no popup tab yet
    */
   async getPopupTab(windowId) {
+    function wait(ms) {
+      return new Promise(function(resolve, reject) {
+        setTimeout(resolve, ms, 'TIMED_OUT');
+      });
+    }
     let result = null;
     if (this.popupTab.hasOwnProperty(windowId)) {
       const tab = this.popupTab[windowId];
@@ -66,7 +71,9 @@ class BomBackground {
     const tabs = await browser.tabs.query({windowId: windowId});
     for (const iTab of tabs) {
       try {
-        const response = await browser.tabs.sendMessage(iTab.id, {action: "pingPopup"});
+        const promise1 = browser.tabs.sendMessage(iTab.id, {action: "pingPopup"});
+        const promise2 = wait(300);
+        const response = await Promise.race([promise1, promise2]);
         if (response === "pong") {
           console.debug("Biet-O-Matic: Pinging tab %s succeeded", iTab.id);
           if (this.popupTab.hasOwnProperty(windowId) && this.popupTab[windowId] != null) {
