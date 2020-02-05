@@ -3479,37 +3479,44 @@ class Popup {
     await Popup.table.addArticlesFromStorage();
     await Popup.table.addArticlesFromTabs();
     await Popup.checkBrowserStorage();
-    Popup.regularCheckEbayTime();
+    await Popup.regularCheckEbayTime()
+      .catch(e => {
+        console.log("Biet-O-Matic: regularCheckEbayTime() failed: " + e);
+      });
   }
 
   /*
    * Regular check of computer time
    * - will display a notification if the time difference is > 1s
    */
-  static regularCheckEbayTime() {
+  static async regularCheckEbayTime() {
     try {
-      EbayParser.getEbayTimeDifference()
-        .then(diff => {
-          if (diff > 1000) {
-            let messages = document.querySelector('#messages');
-            if (messages != null && typeof messages !== 'undefined') {
-              let span = document.createElement('span');
-              span.classList.add('ui-state-highlight');
-              span.innerText = Popup.getTranslation(
-                'popup_timeDiff1',
-                '.The time difference of your computer vs. the eBay time is too large: $1s',
-                [(diff / 1000).toFixed(2).toString()]
-              );
-              $(messages).empty();
-              messages.appendChild(span);
-            }
-          }
-        });
+      // check if the regular refresh has been disabled
+      const globalOptions = await browser.storage.sync.get({disableClockCheck: false});
+      if (globalOptions.disableClockCheck) {
+        console.info("Biet-O-Matic: Regular clock check has been deactivated by user.");
+        return;
+      }
+      const diff = EbayParser.getEbayTimeDifference();
+      if (diff > 1000) {
+        let messages = document.querySelector('#messages');
+        if (messages != null && typeof messages !== 'undefined') {
+          let span = document.createElement('span');
+          span.classList.add('ui-state-highlight');
+          span.innerText = Popup.getTranslation(
+            'popup_timeDiff1',
+            '.The time difference of your computer vs. the eBay time is too large: $1s',
+            [(diff / 1000).toFixed(2).toString()]
+          );
+          $(messages).empty();
+          messages.appendChild(span);
+        }
+      }
     } catch (e) {
       console.warn("Biet-O-Matic: regularCheckEbayTime() Internal Error: " + e);
     } finally {
       // reexecute this function at random (180..600s) interval
-      window.setTimeout(function() {
+      window.setTimeout(function () {
         Popup.regularCheckEbayTime();
       }, Math.floor(Math.random() * (600 - 180 + 1) + 180) * 1000);
     }

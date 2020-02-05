@@ -219,7 +219,7 @@ class EbayParser {
           } else if (key === "articleAuctionState") {
             try {
               // attempt to sanitize the html
-              //EbayParser.cleanupHtmlString(domEntry);
+              EbayParser.cleanupHtmlString(domEntry);
             } catch (e) {
               console.log("Biet-O-Matic: cleanupHtmlString() Internal error: %s", e.message);
             } finally {

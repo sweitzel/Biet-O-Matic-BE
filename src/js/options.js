@@ -6,9 +6,11 @@ function save_options() {
   'use strict';
   let disableSleepPrevention = document.getElementById('disableSleepPrevention').checked;
   let disableArticleRefresh = document.getElementById('disableArticleRefresh').checked;
+  let disableClockCheck = document.getElementById('disableClockCheck').checked;
   browser.storage.sync.set({
     disableSleepPrevention: disableSleepPrevention,
-    disableArticleRefresh: disableArticleRefresh
+    disableArticleRefresh: disableArticleRefresh,
+    disableClockCheck: disableClockCheck
   })
     .then(() => {
       // Update status to let user know options were saved.
@@ -16,7 +18,7 @@ function save_options() {
       status.textContent = 'Options saved.';
       setTimeout(function() {
         status.textContent = '';
-      }, 750);
+      }, 1000);
     })
     .catch(e => {
       console.log("Unable to save: " + e);
@@ -29,10 +31,12 @@ function restore_options() {
   'use strict';
   browser.storage.sync.get({
     disableSleepPrevention: false,
-    disableArticleRefresh: false
+    disableArticleRefresh: false,
+    disableClockCheck: false
   }).then((items) => {
       document.getElementById('disableSleepPrevention').checked = items.disableSleepPrevention;
       document.getElementById('disableArticleRefresh').checked = items.disableArticleRefresh;
+      document.getElementById('disableClockCheck').checked = items.disableClockCheck;
     }).catch(e => {
       console.log("Unable to load options: " + e);
     });
