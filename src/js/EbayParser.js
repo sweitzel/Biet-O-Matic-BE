@@ -158,13 +158,14 @@ class EbayParser {
       price = domEntry;
     }
     // use regular expression to parse info, e.g.
-    // US $1,000.12
+    // US $1,000.12 (on ebay.com)
+    // US $1.100,00 (on ebay.de)
     // GBP 26.00
     // EUR 123,00
-    const regex = /(.*?)([0-9,]+)(?:.|,)([0-9]{2})/;
+    const regex = /(.*?)([0-9,\\.]+)(?:.|,)([0-9]{2})/;
     if (regex.test(price)) {
       const rexres = price.match(regex);
-      let p1 = rexres[2].replace(/,/, '');
+      let p1 = rexres[2].replace(/[,\\.]/, '');
       let p2 = rexres[3];
       result.price = Number.parseFloat(`${p1}.${p2}`);
     } else {
