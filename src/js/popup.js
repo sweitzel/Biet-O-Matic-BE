@@ -1084,8 +1084,7 @@ class Article {
     if (row != null && row.length === 1) {
       // update child info, but drawing will be separate
       row.child(ArticlesTable.renderArticleLog(this));
-      // 0 = articleDetailsControl
-      row.cell(0).invalidate('data').draw(false);
+      Popup.redrawTableCell(this.articleId, 'articleDetailsControl:name');
     }
   }
 
@@ -1518,7 +1517,7 @@ class ArticlesTable {
     this.addSearchFields();
     this.registerEvents();
     this.registerTableEvents();
-    this.regularOpenArticleForBidding()
+    this.regularOpenArticlesForBidding()
       .catch(e => {
         console.error("Biet-O-Matic: openArticleTabsForBidding() internal error: " + e);
       });
@@ -1539,9 +1538,7 @@ class ArticlesTable {
             console.log("Biet-O-Matic: Natural Sorting (asc) failed: %s", e.message);
             return 0;
           }
-        }
-      },
-      $.fn.dataTable.ext.type.order, {
+        },
         'natural-desc': function (a, b) {
           try {
             return ArticlesTable.naturalSort(a, b, true) * -1;
@@ -1824,7 +1821,7 @@ class ArticlesTable {
     // if updatedFromRemote, then do not log change
     const modifiedInfo = article.updateInfo(articleInfo, !options.updatedFromRemote);
     if (modifiedInfo.modifiedForStorage > 0) {
-      row.invalidate('data').draw(false);
+      Popup.redrawTableRow(row);
       // if the information was submitted from remote instance (detect via storage change),
       // then inform the open tab and do not store again
       if (options.updatedFromRemote) {
@@ -1857,9 +1854,8 @@ class ArticlesTable {
       console.log("updateArticleStatus() Cannot determine row from articleId %s", articleId);
       return;
     }
-    let statusCell = this.DataTable.cell("#" + articleId, 'articleAuctionState:name');
+    Popup.redrawTableCell(articleId, 'articleAuctionState:name');
     row.data().articleAuctionState = message;
-    statusCell.invalidate('data').draw(false);
   }
 
   /*
@@ -1928,7 +1924,7 @@ class ArticlesTable {
       } else if (rowByArticleId.data().tabId == null) {
         rowByArticleId.data().tabId = tabId;
         // redraw the row in case no other updates are registered
-        rowByArticleId.invalidate('data').draw(false);
+        Popup.redrawTableRow(rowByArticleId);
       }
     }
     if (rowByArticleId.length === 0) {
@@ -1968,7 +1964,7 @@ class ArticlesTable {
             // redraw, tabid has been updated
             console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), keeping article %s.", tabId, articleId);
             const rowFresh = this.DataTable.row("#" + articleId);
-            rowFresh.invalidate('data').draw(false);
+            Popup.redrawTableRow(rowFresh);
           } else {
             console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), removed article %s.", tabId, articleId);
             // remove from table (recheck if the row still exists)
@@ -2377,7 +2373,7 @@ class ArticlesTable {
       span.textContent = Popup.getTranslation('generic_unlimited', '.unlimited');
       if (data != null && typeof data !== 'undefined') {
         const timeLeft = formatDistanceToNow(data, {includeSeconds: true, locale: Popup.locale, addSuffix: true});
-        const date = format(data, 'PPpp', {locale: Popup.locale});
+        const date = format(data, 'PPp', {locale: Popup.locale});
         span.textContent = `${date} (${timeLeft})`;
         if (data - Date.now() < 0) {
           // ended
@@ -2468,14 +2464,14 @@ class ArticlesTable {
       }).then(tab => {
         article.tabId = tab.id;
         // redraw article row to ensure all icons and links are refreshed
-        row.invalidate('data');
+        Popup.redrawTableRow(row);
       });
     } else {
       console.debug("Biet-O-Matic: toggleArticleTab(%s) Closing tab %d", article.articleId, article.tabId);
       browser.tabs.remove(article.tabId).then(() => {
         article.tabId = null;
         // redraw article row to ensure all icons and links are refreshed
-        row.invalidate('data');
+        Popup.redrawTableRow(row);
       });
     }
   }
@@ -2627,33 +2623,6 @@ class ArticlesTable {
     return articleId;
   }
 
-  // limit to once a minute
-  static redrawArticleDate(articleId) {
-    // todo check if tab is active?
-    if (Popup.checkRateLimit('redrawArticleDate', articleId, 60 * 1000)) {
-      return;
-    }
-    // redraw date (COLUMN 3)
-    let dateCell = Popup.table.DataTable.cell("#" + articleId, 'articleEndTime:name');
-    // redraw date
-    if (dateCell !== 'undefined' && dateCell.length === 1) {
-      //dateCell.invalidate('data').draw(false);
-      // just invalidate seems to be enough for the date redraw
-      dateCell.invalidate('data');
-    }
-    dateCell = null;
-  }
-
-  // another attempt to redraw the date, by invalidating the whole row
-  // Note: The original cell-based redraw causes a constant memory increase if the overview page is in the background...
-  static redrawArticleDateByRow(row) {
-    if (Popup.checkRateLimit('redrawArticleDate', row.id(), 60 * 1000)) {
-      return;
-    }
-    // redraw row
-    row.invalidate('data');
-  }
-
   /*
  * Open Article Tabs for bidding:
  * - abort if autoBid is disabled
@@ -2665,97 +2634,101 @@ class ArticlesTable {
  *   - open tab
  * The function will schedule itself to be executed every 30s
  */
-  async regularOpenArticleForBidding() {
+  async regularOpenArticlesForBidding() {
     try {
+      // redraw the table to ensure the times and certain info are refreshed
+      //Popup.redrawTable();
       // window autoBid enabled?
       if (AutoBid.getLocalState().autoBidEnabled) {
-        //console.debug("Biet-O-Matic: openArticleTabsForBidding() called");
-        this.DataTable.rows().every(async function (rowIdx, tableLoop, rowLoop) {
-          let article = this.data();
-          try {
-            // update date column for closed tab (open tabs will be handled by ebayArticleRefresh event)
-            ArticlesTable.redrawArticleDateByRow(this);
-            if (!article.hasOwnProperty('articleEndTime')) {
-              console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, no endTime", article.articleId);
-              return;
-            }
-            const timeLeftSeconds = (article.articleEndTime - Date.now()) / 1000;
-            // skip if articleEndTime is in the past
-            if (timeLeftSeconds < 0 || timeLeftSeconds > 90) {
-              //console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, not ending within 90s: %ss",
-              //  article.articleId, timeLeftSeconds);
-              return;
-            }
-            // get group autoBid state
-            const groupState = await Group.getState(article.articleGroup)
-              .catch(e => console.warn("Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state: " + e));
-            if (groupState.autoBid) {
-              let shouldOpenTab = true;
-              // skip if tab already opened
-              if (article.tabOpenedForBidding) {
-                console.debug("Biet-O-Matic: openArticleTabsForBidding() Skipping, article %s is already open", article.articleId);
-                return;
-              }
-              // check and skip if tab has autoBid disabled
-              if (article.articleAutoBid === false) {
-                shouldOpenTab = false;
-              } else if (article.hasOwnProperty('tabId') && article.tabId != null && typeof article.tabId !== 'undefined') {
-                shouldOpenTab = false;
-                // reload a tab if auction ends within 30..90 seconds - the reloadTab will rateLimit it self to 1 per 60s
-                if (timeLeftSeconds > 30) {
-                  const reloaded = await ArticlesTable.reloadTab(article.tabId)
-                    .catch(e => {
-                      console.log("Biet-O-Matic: openArticleTabsForBidding() reloadTab failed: " + e);
-                    });
-                  if (reloaded) {
-                    console.debug("Biet-O-Matic: openArticleTabsForBidding() Article %s tab %s has been reloaded for bidding.",
-                      article.articleId, article.tabId);
-                  }
-                }
-              }
-              // schedule to open tab, if not already scheduled
-              if (shouldOpenTab) {
-                // set timer to open tab 60 seconds before auction ends
-                const wakeUpInMs = (article.articleEndTime - Date.now()) - 60000;
-                if (wakeUpInMs > 0) {
-                  console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - Opening tab via wakeUp timer: %sms",
-                    article.articleId, wakeUpInMs);
-                  window.setTimeout(function (tmpArticle) {
-                    tmpArticle.openTab(true)
-                      .catch(e => {
-                        console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${tmpArticle.articleId} for bidding: ${e.message}`);
-                      });
-                  }, wakeUpInMs, article);
-                } else {
-                  console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s Opening tab now",
-                    article.articleId, wakeUpInMs);
-                  await article.openTab(true)
-                    .catch(e => {
-                      console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
-                    });
-                }
-              } else {
-                console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - should not open tab (already open=%d)",
-                  article.articleId, article.tabId);
-              }
-            } else {
-              // group autoBid is disabled, do not open tab
-              console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Group '%s' autoBid is disabled",
-                article.articleId, article.articleGroup);
-            }
-          } catch(e) {
-            console.log("regularOpenArticleForBidding() Internal Error in rows.every: " + e);
-          }  finally {
-            article = null;
-          }
-        });
+        console.debug("Biet-O-Matic: openArticleTabsForBidding() called");
+        this.DataTable.rows().every(await ArticlesTable.openArticleForBidding);
       }
     } catch (e) {
       console.warn("Biet-O-Matic: openArticleTabsForBidding() Internal Error: " + e);
     } finally {
       window.setTimeout(() => {
-        this.regularOpenArticleForBidding();
-      }, 30000);
+        this.regularOpenArticlesForBidding();
+      }, 5000);
+    }
+  }
+
+  static async openArticleForBidding(index) {
+    let row = Popup.table.DataTable.row(index);
+    let article = row.data();
+    try {
+      await Popup.redrawTableRow(article.articleId);
+      if (!article.hasOwnProperty('articleEndTime')) {
+        console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, no endTime", article.articleId);
+        return;
+      }
+      const timeLeftSeconds = (article.articleEndTime - Date.now()) / 1000;
+      // skip if articleEndTime is in the past
+      if (timeLeftSeconds < 0 || timeLeftSeconds > 90) {
+        //console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, not ending within 90s: %ss",
+        //  article.articleId, timeLeftSeconds);
+        return;
+      }
+      // get group autoBid state
+      const groupState = await Group.getState(article.articleGroup)
+        .catch(e => console.warn("Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state: " + e));
+      if (groupState.autoBid) {
+        let shouldOpenTab = true;
+        // skip if tab already opened
+        if (article.tabOpenedForBidding) {
+          console.debug("Biet-O-Matic: openArticleTabsForBidding() Skipping, article %s is already open", article.articleId);
+          return;
+        }
+        // check and skip if tab has autoBid disabled
+        if (article.articleAutoBid === false) {
+          shouldOpenTab = false;
+        } else if (article.hasOwnProperty('tabId') && article.tabId != null && typeof article.tabId !== 'undefined') {
+          shouldOpenTab = false;
+          // reload a tab if auction ends within 30..90 seconds - the reloadTab will rateLimit it self to 1 per 60s
+          if (timeLeftSeconds > 30) {
+            const reloaded = await ArticlesTable.reloadTab(article.tabId)
+              .catch(e => {
+                console.log("Biet-O-Matic: openArticleTabsForBidding() reloadTab failed: " + e);
+              });
+            if (reloaded) {
+              console.debug("Biet-O-Matic: openArticleTabsForBidding() Article %s tab %s has been reloaded for bidding.",
+                article.articleId, article.tabId);
+            }
+          }
+        }
+        // schedule to open tab, if not already scheduled
+        if (shouldOpenTab) {
+          // set timer to open tab 60 seconds before auction ends
+          const wakeUpInMs = (article.articleEndTime - Date.now()) - 60000;
+          if (wakeUpInMs > 0) {
+            console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - Opening tab via wakeUp timer: %sms",
+              article.articleId, wakeUpInMs);
+            window.setTimeout(function (tmpArticle) {
+              tmpArticle.openTab(true)
+                .catch(e => {
+                  console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${tmpArticle.articleId} for bidding: ${e.message}`);
+                });
+            }, wakeUpInMs, article);
+          } else {
+            console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s Opening tab now",
+              article.articleId, wakeUpInMs);
+            await article.openTab(true)
+              .catch(e => {
+                console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
+              });
+          }
+        } else {
+          console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - should not open tab (already open=%d)",
+            article.articleId, article.tabId);
+        }
+      } else {
+        // group autoBid is disabled, do not open tab
+        console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Group '%s' autoBid is disabled",
+          article.articleId, article.articleGroup);
+      }
+    } catch(e) {
+      console.log("regularOpenArticleForBidding() Internal Error in rows.every: " + e);
+    }  finally {
+      article = null;
     }
   }
 
@@ -2769,6 +2742,7 @@ class ArticlesTable {
       // check if the regular refresh has been disabled
       const globalOptions = await browser.storage.sync.get({disableArticleRefresh: false});
       if (globalOptions.disableArticleRefresh) {
+        console.log("Biet-O-Matic: Regular item refresh has been deactivated by the user.");
         return;
       }
       // check if autoBid is enabled
@@ -2874,7 +2848,7 @@ class ArticlesTable {
                     request.articleId, article.tabId, sender.tab.id);
                 }
                 article.tabRefreshed = Date.now();
-                ArticlesTable.redrawArticleDate(request.articleId);
+                Popup.redrawTableCell(request.articleId, 'articleEndTime:name');
               }
               return Promise.resolve(true);
             }
@@ -3208,7 +3182,6 @@ class ArticlesTable {
             info.articleGroup = undefined;
           else
             info.articleGroup = e.target.value;
-          this.lastFocusedInput = null;
         }
         this.updateArticle(info, row, {informTab: true});
       } catch(err) {
@@ -3259,27 +3232,6 @@ class ArticlesTable {
           row.child(ArticlesTable.renderArticleLog(row.data())).show();
           row.data().articleDetailsShown = true;
         }
-      }
-    });
-
-    // remember last focused event
-    this.DataTable.on('focus', 'tr input', e => {
-      //console.debug('Biet-O-Matic: configureUi() INPUT Focus Event this=%O', e);
-      if (e.currentTarget.id.match(/^inpGroup_/))
-        this.lastFocusedInput = e.target.id;
-      else
-        this.lastFocusedInput = null;
-    });
-
-    // handle redraw: restore focus in last input
-    this.DataTable.on('draw.dt', (e) => {
-      if (this.hasOwnProperty('lastFocusedInput') && this.lastFocusedInput != null) {
-        Group.waitFor(`#${this.lastFocusedInput}`, 200).then(lastFocusedInput => {
-          if (document.activeElement !== lastFocusedInput)
-            lastFocusedInput.focus();
-        }).catch(e => {
-          console.log("Biet-O-Matic: draw.dt cannot activate input %s: %s", this.lastFocusedInput, e.message);
-        });
       }
     });
 
@@ -3494,7 +3446,7 @@ class Popup {
       // check if the regular refresh has been disabled
       const globalOptions = await browser.storage.sync.get({disableClockCheck: false});
       if (globalOptions.disableClockCheck) {
-        console.info("Biet-O-Matic: Regular clock check has been deactivated by user.");
+        console.log("Biet-O-Matic: Regular clock check has been deactivated by user.");
         return;
       }
       const diff = EbayParser.getEbayTimeDifference();
@@ -3594,6 +3546,64 @@ class Popup {
     // assign cached id, will be used on browser restart to check if the info in sync area belongs to this "session"
     result.id = AutoBid.beWindowId;
     window.sessionStorage.setItem('settings', JSON.stringify(result));
+  }
+
+  /*
+   * Redraw DataTable
+   * - this function checks if the BE overview page is active and aborts if not
+   *   If redraw occurs for inactive page, the memory leak piles up
+   */
+  static async redrawTable() {
+    if (Popup.table == null || typeof Popup.table.DataTable === 'undefined')
+      return;
+    if (Popup.checkRateLimit('redrawTable', 'articles',30000))
+      return;
+    // first check if window is active
+    let window = await browser.windows.getCurrent();
+    if (window.active === false)
+      return;
+    // second check if tab is active
+    let tab = await browser.tabs.getCurrent();
+    if (tab.active === false)
+      return;
+    console.debug("Biet-O-Matic: redrawTable() redrawing table now.");
+    Popup.table.DataTable.draw(false);
+  }
+
+  static async redrawTableRow(rowId) {
+    if (Popup.checkRateLimit('redrawTableRow', rowId,30000))
+      return;
+    // first check if window is active
+    let window = await browser.windows.getCurrent();
+    if (window.active === false)
+      return;
+    // second check if tab is active
+    let tab = await browser.tabs.getCurrent();
+    if (tab.active === false)
+      return;
+    let row = Popup.table.DataTable.row('#' + rowId);
+    if (row !== 'undefined' && row.length === 1) {
+      console.debug("Biet-O-Matic: redrawTableRow()  redrawing table row %s now.", rowId);
+      row.invalidate('data').draw(false);
+    }
+  }
+
+  static async redrawTableCell(rowId, cellId) {
+    if (Popup.checkRateLimit('redrawTableCell', `${rowId}:${cellId}`,30000))
+      return;
+    // first check if window is active
+    let window = await browser.windows.getCurrent();
+    if (window.active === false)
+      return;
+    // second check if tab is active
+    let tab = await browser.tabs.getCurrent();
+    if (tab.active === false)
+      return;
+    let cell = Popup.table.DataTable.cell("#" + rowId, cellId);
+    if (cell !== 'undefined' && cell.length === 1) {
+      console.debug("Biet-O-Matic: redrawTableCell() redrawing table cell %s for article %s now.", cellId, rowId);
+      cell.invalidate('data').draw(false);
+    }
   }
 
   /*

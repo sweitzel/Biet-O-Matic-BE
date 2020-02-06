@@ -62,15 +62,25 @@ haben.
 
 ### Genaue System Uhr
 BE verwendet die Systemuhr, um Aufgaben zu gewissen Zeitpunkte auszuführen. Besonders wichtig ist es natürlich,
-das das Maximal Gebot bei eBay eingeht, bevor die Auktion endet - und auf der anderen Seite auch nicht zu früh - damit 
-nicht andere Bieter sich eine Gebot-Schlacht liefern. 
+das das Maximal Gebot bei eBay eingeht, bevor die Auktion endet - und auf der anderen Seite auch nicht zu früh
+abgegeben wird - damit nicht andere Bieter noch eine Gebot-Schlacht auslösen.
 
 Von daher stellen sie bitte sicher das ihr PC die Zeit automatisch mit der Internet Zeit synchronisiert. Seit Windows
 7 ist diese Funktion übrigens eingebaut und standardmäßig aktiv. Allerdings kann es vorkommen das das voreingestellte
 Interval nicht ausreicht (beispielsweise bei einem ungenauen Zeitgeber der Hardware) und hier eine Anpassung nötig ist.
 
 BE hat übrigens keine technische Möglichkeit die Zeit selbständig zu korrigieren - hierzu fehlen im Browser die
-Berechtigungen. 
+Berechtigungen. Es wird jedoch eine Warnung ausgegeben, sollte die Systemzeit mehr als eine Sekunde von der ebay-Zeit
+abweichen.
+
+Möglichkeiten zur Zeitkorrektur:
+* Registry Einstellung ändern: 
+* Windows Tool: http://www.timesynctool.com/
+
+{{< hint info >}}
+Sollte die Computer Uhr nachgehen, beispielsweise "-2.00s", dann führt dies mit hoher Wahrscheinlichkeit dazu,
+dass das von BE abgegebene Gebot zu spät abgegeben wird und nich registriert wird. 
+{{< /hint >}}
 
 ### Verhinderung des Computer-Schlafmodus
 Wenn BE automatisch auf Auktionen bieten soll, ist es wichtig, dass der Computer, der das Gebot abgeben soll aktiv ist.

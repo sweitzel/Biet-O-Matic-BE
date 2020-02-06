@@ -225,7 +225,12 @@ class EbayParser {
             } finally {
               value = domEntry.outerHTML;
             }
-            result.articleAuctionStateText = $(value).find('span.msgTextAlign')[0].innerText.trim();
+            //result.articleAuctionStateText = $(value).find('span.msgTextAlign')[0].innerText.trim();
+            result.articleAuctionStateText = $(value)[0].textContent
+              .trim()
+              .replace(/\n/g, '')
+              .replace(/\s+/g, ' ')
+              .replace(/[\s-\|]+$/g, '');
           } else if (key === 'articleImage') {
             // store primary Image URL
             value = domEntry.src;
