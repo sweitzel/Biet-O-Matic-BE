@@ -1821,7 +1821,7 @@ class ArticlesTable {
     // if updatedFromRemote, then do not log change
     const modifiedInfo = article.updateInfo(articleInfo, !options.updatedFromRemote);
     if (modifiedInfo.modifiedForStorage > 0) {
-      Popup.redrawTableRow(row);
+      Popup.redrawTableRow(articleInfo.articleId, false);
       // if the information was submitted from remote instance (detect via storage change),
       // then inform the open tab and do not store again
       if (options.updatedFromRemote) {
@@ -1924,7 +1924,7 @@ class ArticlesTable {
       } else if (rowByArticleId.data().tabId == null) {
         rowByArticleId.data().tabId = tabId;
         // redraw the row in case no other updates are registered
-        Popup.redrawTableRow(rowByArticleId);
+        Popup.redrawTableRow(articleId, false);
       }
     }
     if (rowByArticleId.length === 0) {
@@ -1963,8 +1963,7 @@ class ArticlesTable {
             (storageInfo.articleMaxBid != null || storageInfo.articleGroup != null)) {
             // redraw, tabid has been updated
             console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), keeping article %s.", tabId, articleId);
-            const rowFresh = this.DataTable.row("#" + articleId);
-            Popup.redrawTableRow(rowFresh);
+            Popup.redrawTableRow(articleId, false);
           } else {
             console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), removed article %s.", tabId, articleId);
             // remove from table (recheck if the row still exists)
@@ -2464,14 +2463,14 @@ class ArticlesTable {
       }).then(tab => {
         article.tabId = tab.id;
         // redraw article row to ensure all icons and links are refreshed
-        Popup.redrawTableRow(row);
+        Popup.redrawTableRow(row.id(), false);
       });
     } else {
       console.debug("Biet-O-Matic: toggleArticleTab(%s) Closing tab %d", article.articleId, article.tabId);
       browser.tabs.remove(article.tabId).then(() => {
         article.tabId = null;
         // redraw article row to ensure all icons and links are refreshed
-        Popup.redrawTableRow(row);
+        Popup.redrawTableRow(row.id(), false);
       });
     }
   }
@@ -3570,8 +3569,8 @@ class Popup {
     Popup.table.DataTable.draw(false);
   }
 
-  static async redrawTableRow(rowId) {
-    if (Popup.checkRateLimit('redrawTableRow', rowId,30000))
+  static async redrawTableRow(rowId, useRateLimit = true) {
+    if (useRateLimit && Popup.checkRateLimit('redrawTableRow', rowId, 30000))
       return;
     // first check if window is active
     let window = await browser.windows.getCurrent();
