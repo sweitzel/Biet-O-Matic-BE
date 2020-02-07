@@ -1237,7 +1237,7 @@ class Article {
        * - if the article price went higher than the maxBid, then auction will fail and we do not need to block
        * - if the article now has a final auction state, we do not need to block (handle successful auction too)
        */
-      ArticlesTable.refreshArticle(articleId);
+      ArticlesTable.refreshArticle(articleId, articles[articleId].articleEndTime);
 
       result.bidIsLocked = true;
       result.message = Popup.getTranslation('popup_bidCollision',
@@ -1821,7 +1821,7 @@ class ArticlesTable {
     // if updatedFromRemote, then do not log change
     const modifiedInfo = article.updateInfo(articleInfo, !options.updatedFromRemote);
     if (modifiedInfo.modifiedForStorage > 0) {
-      Popup.redrawTableRow(articleInfo.articleId, false);
+      Popup.redrawTableRow(article.articleId, false);
       // if the information was submitted from remote instance (detect via storage change),
       // then inform the open tab and do not store again
       if (options.updatedFromRemote) {
@@ -2481,17 +2481,39 @@ class ArticlesTable {
    * - also called by getBidLockState to update auction state info
    * - prevent duplicate execution by refreshArticleLock
    */
-  static refreshArticle(articleId) {
+  static refreshArticle(articleId, articleEndTime) {
+    /*
+     * Ratelimit the article refresh:
+     * - > 12hours ago or in the future: 1x every hour
+     * - > 2hours ago or in the future: 1x every 15 minutes
+     * - ends within 1hour: every 5 minutes
+     * - ends within 5 minutes: every minute
+     */
+    let rateLimitMs = 60000;
+    let timeLeft = Date.now() - articleEndTime;
+    if (timeLeft > 43200*1000 || timeLeft < -43200*1000 ) {
+      // > 12 hours -> refresh every hour
+      rateLimitMs = 60 * 60 * 1000;
+    } else if (timeLeft > 7200*1000 || timeLeft < -7200*1000) {
+      // > 2 hours -> refresh every 15 minutes
+      rateLimitMs = 15 * 60 * 1000;
+    } else if (timeLeft > 3600*1000 || timeLeft < 0) {
+      // > 2 hours or in past -> refresh every 10 minutes
+      rateLimitMs = 10 * 60 * 1000;
+    } else if (timeLeft > 300*1000) {
+      // > 5 minutes -> refresh every 5 minutes
+      rateLimitMs = 5 * 60 * 1000;
+    }
+    if (Popup.checkRateLimit('refreshArticle', articleId, rateLimitMs)) {
+      //console.debug("Biet-O-Matic: refreshArticle(%s) Skip refreshing (ratelimit=%ds)", articleId, rateLimitMs / 1000);
+      return;
+    }
     let row = Popup.table.DataTable.row("#" + articleId);
     if (typeof row === 'undefined' || row.length !== 1) {
       console.log("Biet-O-Matic: refreshArticle() Unable to find row from articleId=%s (%s)", articleId, typeof articleId);
       return;
     }
     let article = row.data();
-    if (Popup.checkAlreadyRunning('refreshArticle', articleId)) {
-      console.log("Biet-O-Matic: refreshArticle(%s) Skip refreshing (already running)", articleId);
-      return;
-    }
     console.debug("Biet-O-Matic: refreshArticle(%s) Refreshing", articleId);
     // add class to indicate update to the user
     let cell = Popup.table.DataTable.cell("#" + articleId, 'articleDetailsControl:name');
@@ -2509,9 +2531,6 @@ class ArticlesTable {
       })
       .catch(e => {
         console.warn(`Biet-O-Matic: refreshArticle(${article.articleId}) Failed to refresh: ${e}`);
-      })
-      .finally(() => {
-        delete Popup.alreadyRunning.refreshArticle[article.articleId];
       });
   }
 
@@ -2647,7 +2666,7 @@ class ArticlesTable {
     } finally {
       window.setTimeout(() => {
         this.regularOpenArticlesForBidding();
-      }, 5000);
+      }, 30000);
     }
   }
 
@@ -2754,9 +2773,8 @@ class ArticlesTable {
         try {
           // skip articles with open tab
           if (article.hasOwnProperty('tabId') && article.tabId != null) return;
-          // skip articles which ended already (longer than 60 minutes ago)
-          if (article.articleEndTime < (Date.now() - (60 * 60 * 1000))) return;
-          ArticlesTable.refreshArticle(article.articleId);
+          // Note: the refresh function will use a rate limit which depends on the article end time
+          ArticlesTable.refreshArticle(article.articleId, article.articleEndTime);
         } catch(e) {
           console.log("regularRefreshArticleInfo() Internal Error inside loop: " + e);
         } finally {
@@ -3157,7 +3175,6 @@ class ArticlesTable {
       try {
         const info = {};
         console.debug("Biet-O-Matic: Input changed event: Article=%s, field=%s", article.articleId, e.target.id);
-
         if (e.target.id.startsWith('inpMaxBid_')) {
           // maxBid was entered
           // normally with input type=number this should not be necessary - but there was a problem reported...
@@ -3570,7 +3587,7 @@ class Popup {
   }
 
   static async redrawTableRow(rowId, useRateLimit = true) {
-    if (useRateLimit && Popup.checkRateLimit('redrawTableRow', rowId, 30000))
+    if (typeof rowId === 'undefined' || useRateLimit && Popup.checkRateLimit('redrawTableRow', rowId, 30000))
       return;
     // first check if window is active
     let window = await browser.windows.getCurrent();
@@ -3582,7 +3599,6 @@ class Popup {
       return;
     let row = Popup.table.DataTable.row('#' + rowId);
     if (row !== 'undefined' && row.length === 1) {
-      console.debug("Biet-O-Matic: redrawTableRow()  redrawing table row %s now.", rowId);
       row.invalidate('data').draw(false);
     }
   }
@@ -3600,7 +3616,6 @@ class Popup {
       return;
     let cell = Popup.table.DataTable.cell("#" + rowId, cellId);
     if (cell !== 'undefined' && cell.length === 1) {
-      console.debug("Biet-O-Matic: redrawTableCell() redrawing table cell %s for article %s now.", cellId, rowId);
       cell.invalidate('data').draw(false);
     }
   }
