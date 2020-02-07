@@ -3013,6 +3013,17 @@ class ArticlesTable {
     });
 
     /*
+     * When the overview page gets activated, then refressh the complete table to immediately show changes
+     */
+    browser.tabs.onActivated.addListener(activeInfo => {
+      if (this.currentWindowId === activeInfo.windowId) {
+        if (this.popup.tabId === activeInfo.tabId) {
+          Popup.redrawTable(false);
+        }
+      }
+    });
+
+    /*
      * tab reloaded or URL changed
      * The following cases should be handled:
      * - Same page, but maybe updated info
@@ -3409,7 +3420,7 @@ class Popup {
   }
 
   static async getOwnTabId() {
-    let tab = browser.tabs.getCurrent();
+    let tab = await browser.tabs.getCurrent();
     if (typeof tab === 'undefined')
       return null;
     else
@@ -3569,10 +3580,10 @@ class Popup {
    * - this function checks if the BE overview page is active and aborts if not
    *   If redraw occurs for inactive page, the memory leak piles up
    */
-  static async redrawTable() {
+  static async redrawTable(useRateLimit= true) {
     if (Popup.table == null || typeof Popup.table.DataTable === 'undefined')
       return;
-    if (Popup.checkRateLimit('redrawTable', 'articles',30000))
+    if (useRateLimit && Popup.checkRateLimit('redrawTable', 'articles', 30000))
       return;
     // first check if window is active
     let window = await browser.windows.getCurrent();
