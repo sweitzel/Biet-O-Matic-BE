@@ -280,5 +280,8 @@
   },
   "popup_timeDiff1": {
     "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (~$1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
+  },
+  "generic_currency": {
+    "message": "Währung"
   }
 }

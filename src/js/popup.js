@@ -951,6 +951,7 @@ class Article {
     let messages = [];
     const checkList = {
       articleDescription: {i18nKey: 'generic_description', defaultText: '.Description'},
+      articleCurrency: {i18nKey: 'generic_currency', defaultText: '.Currency'},
       articleBidPrice: {i18nKey: 'generic_price', defaultText: '.Price'},
       articleBidCount: {i18nKey: 'popup_numberbids', defaultText: '.Number of Bids'},
       articleBuyPrice: {i18nKey: 'popup_buynowprice', defaultText: '.Buy-It-Now Price'},
@@ -1940,6 +1941,27 @@ class ArticlesTable {
         informTab: updatedFromRemote,
         updatedFromRemote: updatedFromRemote
       });
+    }
+  }
+
+  async addWatchListItems() {
+    let items = await EbayParser.getWatchListItems();
+    for (let articleId of items) {
+      let article = new Article(this.popup, {articleId: articleId});
+      // run this asynchronously to speed up adding articles from watchlist
+      article.getRefreshedInfo()
+        .then(articleInfo => {
+          article.updateInfo(articleInfo, false);
+          // assign to group
+          article.articleGroup = "Watchlist";
+          this.addArticle(article);
+          article.updateInfoInStorage({}, null, false).catch(e => {
+            console.log("Biet-O-Matic: addWatchListItems() failed to store article %s: %s", article.articleId, e);
+          });
+        })
+        .catch(e => {
+          console.log("Biet-O-Matic: Article %s updateInfo() failed: %s", article.articleId, e);
+        });
     }
   }
 
@@ -3536,6 +3558,20 @@ class Popup {
         }
       }
     });
+
+    $('#inpAddWatchItems').on('click', function () {
+      $(this).parent().addClass('ui-state-disabled');
+      Popup.table.addWatchListItems()
+        .then(function () {
+          window.setTimeout(function () {
+            $('#inpAddWatchItems').parent().removeClass('ui-state-disabled');
+          }, 10000);
+        })
+        .catch(e => {
+          console.log("Biet-O-Matic: addWatchListItems() failed: " + e);
+        });
+    });
+
   }
 
   /*
@@ -3815,4 +3851,6 @@ document.addEventListener('DOMContentLoaded', function () {
     .catch(e => {
       console.log("Biet-O-Matic: Popup initialization failed: " + e);
     });
+
+  //EbayParser.getWatchListItems();
 });

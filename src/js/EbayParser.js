@@ -507,6 +507,26 @@ class EbayParser {
     return result;
   }
 
+  /*
+   * Access the ebay watchlist and return the item ids
+   * this is limited to 100 items
+   */
+  static async getWatchListItems() {
+    // todo use the localized ebay platform
+    let response = await fetch('https://www.ebay.de/myb/WatchList?custom_list_id=WATCH_LIST&sort=ending_soon&items_per_page=100');
+    if (!response.ok)
+      throw new Error(`Failed to fetch ebay time(2): HTTP ${response.status} - ${response.statusText}`);
+    const htmlString = await response.text();
+    let doc = document.implementation.createHTMLDocument("eBay Watch List");
+    doc.documentElement.innerHTML = htmlString;
+    let result = [];
+    // <input class="checkbox__custom-control checkbox__control item-checkbox" data-itemid="164047573456" data-variationid=""
+    $(doc).find('input[data-itemid]').each((index, element) => {
+      result.push(element.dataset.itemid);
+    });
+    return result;
+  }
+
 }
 // auction states as communicated to the overview page
 EbayParser.auctionEndStates = {

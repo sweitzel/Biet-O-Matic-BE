@@ -280,5 +280,9 @@
   },
   "popup_timeDiff1": {
     "message": "The time difference of your system to the ebay time is too large (~$1s). Please ensure your clock is precise to ensure reliable automatic bidding is possible."
+  },
+  "generic_currency": {
+    "message": "Currency"
   }
+
 }

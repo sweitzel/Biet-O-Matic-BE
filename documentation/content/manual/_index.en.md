@@ -62,6 +62,8 @@ For more information please have a look at the function documentation (see menu 
 ### Supported eBay platforms
 {{< hint info >}}
 Only www.ebay.de and www.ebay.com are supported by Bid-O-Matic BE.
+If the Browser is set to German language, BE will automatically use the ebay.de platform.
+For all other languages ebay.com will be used. 
 {{< /hint >}}
 
 Even though only ebay.com and ebay.de are supported by BE, you can still use this extension.

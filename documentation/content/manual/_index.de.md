@@ -11,7 +11,7 @@ type: "docs"
 
 Nachdem Biet-O-Matic BE (im folgenden nur BE genannt) zum Browser hinzugefügt wurde,
 ist es auch direkt ohne weitere Konfiguration einsatzbereit. Es muss nur sichergestellt sein, das sie bereits an der 
-ebay Plattform angemeldet sind. Die Anmeldung bei eBay wird nicht durch BE durchgeführt.
+eBay Plattform angemeldet sind. Die Anmeldung bei eBay wird nicht durch BE durchgeführt.
 
 * Öffnen Sie BE, in dem sie das BE Symbol (Auktionshammer auf gelbem Hintergrund) aktivieren.
     * Das Symbol befindet sich überlicherweise sichtbar in der Browser Menüleiste, in der sich auch die Addresseingabe befindet.
@@ -52,10 +52,12 @@ Für mehr Informationen schauen sie sich bitte auch die Funktions-Dokumentation 
 ### Unterstützte eBay Plattformen
 {{< hint info >}}
 Es werden nur die Platformen ebay.de und ebay.com unterstützt.
+Wenn der Browser auf Deutsch eingestellt ist, wird automatisch ebay.de als Plattform verwendet.
+Für alle anderen Sprachen wird ebay.com verwendet.
 {{< /hint >}}
 
 Wenn sie jedoch aus einem anderen Land stammen, und trotzdem Biet-O-Matic BE nutzen wollen ist dies möglich:
-Sie über ebay.com nationale und internationale Einkäufe tätigen.
+Sie können über ebay.com nationale und internationale Einkäufe tätigen.
 
 Da BE keine Anmeldung an eBay ausführt, stellen sie sicher, das sie sich einmal per Hand auf einer eBay Seite angemeldet
 haben.
