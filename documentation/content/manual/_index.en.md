@@ -146,3 +146,8 @@ The following parameters currently exist:
 * Do not background-refresh closed items
     * When enabled, BE will not automatically update information for items that are not currently open in a tab.
     * Note that this can be useful in case you notice BE crashing due to memory issues, when BE is running unattended for long times.
+* Do not perform regular clock check
+    * If enabled, BE will not perform regular clock check against the ebay time.
+* Override eBay Platform
+    * This is only relevant for the watch list synchronisation.
+    * By default BE uses ebay.de for german browser UI language, and ebay.com for all other languages.
