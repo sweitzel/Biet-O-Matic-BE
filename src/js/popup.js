@@ -707,7 +707,7 @@ class OptionCompactView {
  * -
  */
 class Article {
-  constructor(popup, info, tab = null) {
+  constructor(info, tab = null) {
     if (info == null || !info.hasOwnProperty('articleId'))
       throw new Error("Failed to initialize new Article, articleId missing in info!");
     this.articleId = info.articleId;
@@ -728,7 +728,6 @@ class Article {
     });
     // add open tab info
     if (tab != null) this.tabId = tab.id;
-    this.popup = popup;
     this.articleDetailsShown = false;
   }
 
@@ -1376,7 +1375,7 @@ class Article {
     let tab = await browser.tabs.create({
       url: this.getUrl(),
       active: false,
-      openerTabId: this.popup.tabId
+      openerTabId: Popup.tabId
     });
     //this.tabId = tab.id;
     if (tabOpenedForBidding) {
@@ -1502,9 +1501,7 @@ class Article {
  */
 class ArticlesTable {
   // selector = '#articles'
-  constructor(popup, selector) {
-    this.popup = popup;
-    this.currentWindowId = popup.whoIAm.currentWindow.id;
+  constructor(selector) {
     if ($(selector).length === 0)
       throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
     $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation('generic_noGroup', ".No Group");
@@ -1687,7 +1684,7 @@ class ArticlesTable {
       Article.getInfoFromTab(myTab, "addArticlesFromTabs")
         .then(articleInfo => {
           if (typeof articleInfo !== 'undefined' && articleInfo.hasOwnProperty('detail')) {
-            let article = new Article(this.popup, articleInfo.detail, myTab);
+            let article = new Article(articleInfo.detail, myTab);
             article.init()
               .then(article => {
                 this.addOrUpdateArticle(article, myTab, false);
@@ -1728,7 +1725,7 @@ class ArticlesTable {
       //console.debug("Biet-O-Matic: addArticlesFromStorage(%s) info=%s", articleId, JSON.stringify(info));
       // add article if not already in table
       if (this.getRow("#" + articleId).length < 1) {
-        let article = new Article(this.popup, info);
+        let article = new Article(info);
         // add article to table asynchronously to avoid UI blocking
         article.init()
           .then(a => {
@@ -1930,7 +1927,7 @@ class ArticlesTable {
     }
     if (rowByArticleId.length === 0) {
       // article not in table - simply add it
-      let article = new Article(this.popup, articleInfo, tab);
+      let article = new Article(articleInfo, tab);
       article.init().then(a => {
         this.addArticle(a);
       });
@@ -1956,7 +1953,7 @@ class ArticlesTable {
         articlePlatform = options.ebayPlatform;
       let items = await EbayParser.getWatchListItems(articlePlatform);
       for (let articleId of items) {
-        let article = new Article(this.popup, {articleId: articleId});
+        let article = new Article({articleId: articleId});
         // check if article is in table
         let row = this.getRow('#' + articleId);
         if (row != null && row.length === 1) {
@@ -2510,7 +2507,7 @@ class ArticlesTable {
       browser.tabs.create({
         url: article.getUrl(),
         active: false,
-        openerTabId: this.popup.tabId
+        openerTabId: Popup.tabId
       }).then(tab => {
         article.tabId = tab.id;
         // redraw article row to ensure all icons and links are refreshed
@@ -2865,7 +2862,7 @@ class ArticlesTable {
       switch (request.action) {
         case 'ebayArticleUpdated':
           try {
-            if (this.currentWindowId === sender.tab.windowId) {
+            if (Popup.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event ebayArticleUpdated received from tab %s, articleId=%s, articleDescription=%s",
                 sender.tab.id, request.detail.articleId, request.detail.articleDescription);
               this.updateArticle(request.detail, null);
@@ -2878,7 +2875,7 @@ class ArticlesTable {
           break;
         case 'ebayArticleMaxBidUpdated':
           try {
-            if (this.currentWindowId === sender.tab.windowId) {
+            if (Popup.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event ebayArticleMaxBidUpdate received from tab %s, detail=%s",
                 sender.tab.id, JSON.stringify(request));
               let articleId;
@@ -2898,7 +2895,7 @@ class ArticlesTable {
           break;
         case 'ebayArticleRefresh':
           try {
-            if (this.currentWindowId === sender.tab.windowId) {
+            if (Popup.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event ebayArticleRefresh(%s) received from tab %s",
                 request.articleId, sender.tab.id);
               // determine row by articleId
@@ -2927,7 +2924,7 @@ class ArticlesTable {
           break;
         case 'getArticleInfo':
           try {
-            if (this.currentWindowId === sender.tab.windowId) {
+            if (Popup.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event getArticleInfo(%s) received from tab %s",
                 request.articleId, sender.tab.id);
               if (request.hasOwnProperty('articleId')) {
@@ -2949,7 +2946,7 @@ class ArticlesTable {
           break;
         case 'getAutoBidState':
           try {
-            if (this.currentWindowId === sender.tab.windowId) {
+            if (Popup.currentWindowId === sender.tab.windowId) {
               let articleId;
               if (request.hasOwnProperty('articleId'))
                 articleId = request.articleId;
@@ -2972,7 +2969,7 @@ class ArticlesTable {
           break;
         case 'getBidLockState':
           try {
-            if (this.currentWindowId === sender.tab.windowId) {
+            if (Popup.currentWindowId === sender.tab.windowId) {
               let articleId;
               if (request.hasOwnProperty('articleId'))
                 articleId = request.articleId;
@@ -2995,7 +2992,7 @@ class ArticlesTable {
           break;
         case 'addArticleLog':
           try {
-            if (this.currentWindowId === sender.tab.windowId) {
+            if (Popup.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event addArticleLog received from tab %s", sender.tab.id);
               const article = this.getRow("#" + request.articleId).data();
               // redraw status (COLUMN 6)
@@ -3013,7 +3010,7 @@ class ArticlesTable {
           break;
         case 'ebayArticleSetAuctionEndState':
           try {
-            if (this.currentWindowId === sender.tab.windowId) {
+            if (Popup.currentWindowId === sender.tab.windowId) {
               if (!request.hasOwnProperty('articleId') || request.articleId === 'undefined')
                 return Promise.reject("ebayArticleSetAuctionEndState: articleId missing");
               const row = this.getRow("#" + request.articleId);
@@ -3044,7 +3041,7 @@ class ArticlesTable {
          */
         case 'ebayArticleGetAdjustedBidTime':
           try {
-            if (this.currentWindowId === sender.tab.windowId) {
+            if (Popup.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event ebayArticleGetAdjustedBidTime received: article=%s, sender=%O",
                 request.articleId, sender);
               if (!request.hasOwnProperty('articleId')) {
@@ -3067,8 +3064,8 @@ class ArticlesTable {
      * When the overview page gets activated, then refressh the complete table to immediately show changes
      */
     browser.tabs.onActivated.addListener(activeInfo => {
-      if (this.currentWindowId === activeInfo.windowId) {
-        if (this.popup.tabId === activeInfo.tabId) {
+      if (Popup.currentWindowId === activeInfo.windowId) {
+        if (Popup.tabId === activeInfo.tabId) {
           Popup.redrawTable(false);
         }
       }
@@ -3086,7 +3083,7 @@ class ArticlesTable {
      */
     browser.tabs.onUpdated.addListener((tabId, changeInfo, tabInfo) => {
       try {
-        if (this.currentWindowId === tabInfo.windowId) {
+        if (Popup.currentWindowId === tabInfo.windowId) {
           // "https://www.ebay.de/c/18021266829#oid184096781363"
           const ebayRecommendationUrl = /(www\.ebay\.[a-z]{1,3})\/c\/([0-9]+)#oid([0-9]+)/;
           if (changeInfo.status === 'loading' && tabInfo.hasOwnProperty('url') && ebayRecommendationUrl.test(tabInfo.url)) {
@@ -3097,7 +3094,7 @@ class ArticlesTable {
             if (typeof row !== 'undefined' && row.length === 1) {
               browser.tabs.update(tabId, {
                 url: row.data().getUrl(),
-                openerTabId: this.popup.tabId,
+                openerTabId: Popup.tabId,
               }).then(() => {
                 console.log("onUpdatedListener found bad ebay t=%O c=%s, redirecting to %s : %s",
                   tabInfo, JSON.stringify(changeInfo), host, articleId);
@@ -3404,9 +3401,7 @@ class Popup {
   constructor(version = 'v0.0.0') {
     // BOM-BE version
     $('#bomVersion').text('Biet-O-Matic BE ' + version);
-
     this.whoIAm = null;
-    this.tabId = null;
   }
 
   /*
@@ -3480,7 +3475,8 @@ class Popup {
 
   async init() {
     this.whoIAm = await Popup.detectWhoIAm();
-    this.tabId = await Popup.getOwnTabId();
+    Popup.currentWindowId = this.whoIAm.currentWindow.id;
+    Popup.tabId = await Popup.getOwnTabId();
     Popup.cachedGroups = await Group.getAll();
     Popup.lang = navigator.languages ? navigator.languages[0] : navigator.language;
     // just store the first part (en-US -> en)
@@ -3498,7 +3494,7 @@ class Popup {
         console.log("Biet-O-Matic: Group.removeAllUnused() failed: %s", e.message);
       });
 
-    Popup.table = new ArticlesTable(this, '#articles');
+    Popup.table = new ArticlesTable('#articles');
 
     /*
      * restore settings from session storage (autoBidEnabled, bidAllEnabled, compactView)
@@ -3572,7 +3568,7 @@ class Popup {
     // toggle autoBid for window when button in browser menu clicked
     // the other button handler is setup below
     browser.browserAction.onClicked.addListener((tab, clickData) => {
-      if (this.whoIAm.currentWindow.id === tab.windowId) {
+      if (Popup.currentWindowId === tab.windowId) {
         console.debug('Biet-O-Matic: browserAction.onClicked listener fired: tab=%O, clickData=%O', tab, clickData);
         // only toggle favicon for ebay tabs
         if (tab.url.startsWith(browser.runtime.getURL("")) || tab.url.match(/^https?:\/\/.*\.ebay\.(de|com)\/itm/i)) {
@@ -3796,9 +3792,12 @@ class Popup {
 }
 
 // static class-var declaration outside the class
+Popup.cachedGroups = {};
 Popup.rateLimit = {};
 Popup.alreadyRunning = {};
+Popup.tabId = null;
 Popup.table = null;
+Popup.currentWindowId = null;
 
 //region Favicon Handling
 class Favicon {
@@ -3875,7 +3874,7 @@ document.addEventListener('DOMContentLoaded', function () {
   popup.init()
     .then(() => {
       console.info("Biet-O-Matic: Initialization for window with id = %d completed (lang=%s).",
-        popup.whoIAm.currentWindow.id, Popup.lang);
+        Popup.currentWindowId, Popup.lang);
     })
     .catch(e => {
       console.log("Biet-O-Matic: Popup initialization failed: " + e);
