@@ -1945,23 +1945,49 @@ class ArticlesTable {
   }
 
   async addWatchListItems() {
-    let items = await EbayParser.getWatchListItems();
-    for (let articleId of items) {
-      let article = new Article(this.popup, {articleId: articleId});
-      // run this asynchronously to speed up adding articles from watchlist
-      article.getRefreshedInfo()
-        .then(articleInfo => {
-          article.updateInfo(articleInfo, false);
-          // assign to group
-          article.articleGroup = "Watchlist";
-          this.addArticle(article);
-          article.updateInfoInStorage({}, null, false).catch(e => {
-            console.log("Biet-O-Matic: addWatchListItems() failed to store article %s: %s", article.articleId, e);
+    // use platform based on browser language by default
+    try {
+      let articlePlatform = 'ebay.com';
+      if (Popup.lang === 'de')
+        articlePlatform = 'ebay.de';
+      // check for user defined platform
+      let options = await browser.storage.sync.get({ebayPlatform: null});
+      if (options.hasOwnProperty('ebayPlatform') && options.ebayPlatform != null)
+        articlePlatform = options.ebayPlatform;
+      let items = await EbayParser.getWatchListItems(articlePlatform);
+      for (let articleId of items) {
+        let article = new Article(this.popup, {articleId: articleId});
+        // check if article is in table
+        let row = this.getRow('#' + articleId);
+        if (row != null && row.length === 1) {
+          continue;
+        }
+        // run this asynchronously to speed up adding articles from watchlist
+        article.getRefreshedInfo()
+          .then(articleInfo => {
+            // assign to group
+            article.articleGroup = Popup.getTranslation('generic_watchListGroupName', '.Watch List');
+            article.articlePlatform = articlePlatform;
+            article.updateInfo(articleInfo, false);
+            this.addArticle(article);
+            article.updateInfoInStorage({}, null, false).catch(e => {
+              console.log("Biet-O-Matic: addWatchListItems() failed to store article %s: %s", article.articleId, e);
+            });
+          })
+          .catch(e => {
+            console.log("Biet-O-Matic: Article %s updateInfo() failed: %s", article.articleId, e);
           });
-        })
-        .catch(e => {
-          console.log("Biet-O-Matic: Article %s updateInfo() failed: %s", article.articleId, e);
-        });
+      }
+    } catch(e) {
+      console.log("Biet-O-Matic: addWatchListItems() failed: " + e);
+      let messages = document.querySelector('#messages');
+      if (messages != null && typeof messages !== 'undefined') {
+        let span = document.createElement('span');
+        span.classList.add('ui-state-highlight');
+        span.innerText = e.message;
+        $(messages).empty();
+        messages.appendChild(span);
+      }
     }
   }
 
@@ -2433,11 +2459,14 @@ class ArticlesTable {
       article.removeAllLogs();
       row.child(false);
       article.removeInfoFromStorage()
-        .then(() => {
-          row.invalidate('data').draw(false);
+        .then(function() {
+          const rowFresh = Popup.table.DataTable.row(rowNode);
+          if (typeof rowFresh === 'undefined' || rowFresh.length !== 1)
+            return;
+          rowFresh.invalidate('data').draw(false);
         })
         .catch(e => {
-          console.log("Biet-O-Matic: removeArticle(%s) removeInfoFromStorage failed: %s", article.articleId, e.message);
+          console.log("Biet-O-Matic: removeArticle(%s) removeInfoFromStorage failed: %s", article.articleId, e);
         });
     } catch (e) {
       console.log("Biet-O-Matic: removeArticle(%s) failed: %s", rowNode, e.message);

@@ -113,6 +113,9 @@
   "generic_configuration": {
     "message": "Einstellungen"
   },
+  "generic_currency": {
+    "message": "Währung"
+  },
   "generic_description": {
     "message": "Beschreibung"
   },
@@ -185,6 +188,9 @@
   "generic_updated": {
     "message": "Aktualisiert"
   },
+  "generic_watchListGroupName": {
+    "message": "Beobachtete Artikel"
+  },
   "popup_activateArticleAutoBid": {
     "message": "Aktiviert den Automatikmodus für diesen Artikel"
   },
@@ -248,6 +254,12 @@
   "popup_deactivateArticleAutoBid": {
     "message": "Deaktiviert den Automatikmodus für diesen Artikel"
   },
+  "popup_ebayError": {
+    "message": "Ein Fehler wurde von $1 gemeldet: HTTP $2 - $3"
+  },
+  "popup_ebayLoginRequired": {
+    "message": "Die Beobachtungsliste konnte nicht von $1 abgerufen werden. Bitte stellen sie sicher, das sie bei eBay mit ihrem Nutzer angemeldet sind."
+  },
   "popup_enterMinAmount": {
     "message": "Geben Sie minimal $1 ein"
   },
@@ -280,8 +292,5 @@
   },
   "popup_timeDiff1": {
     "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (~$1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
-  },
-  "generic_currency": {
-    "message": "Währung"
   }
 }

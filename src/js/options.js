@@ -7,10 +7,12 @@ function save_options() {
   let disableSleepPrevention = document.getElementById('disableSleepPrevention').checked;
   let disableArticleRefresh = document.getElementById('disableArticleRefresh').checked;
   let disableClockCheck = document.getElementById('disableClockCheck').checked;
+  let ebayPlatform = document.getElementById('ebayPlatform').value;
   browser.storage.sync.set({
     disableSleepPrevention: disableSleepPrevention,
     disableArticleRefresh: disableArticleRefresh,
-    disableClockCheck: disableClockCheck
+    disableClockCheck: disableClockCheck,
+    ebayPlatform: ebayPlatform
   })
     .then(() => {
       // Update status to let user know options were saved.
@@ -32,11 +34,13 @@ function restore_options() {
   browser.storage.sync.get({
     disableSleepPrevention: false,
     disableArticleRefresh: false,
-    disableClockCheck: false
+    disableClockCheck: false,
+    ebayPlatform: null
   }).then((items) => {
       document.getElementById('disableSleepPrevention').checked = items.disableSleepPrevention;
       document.getElementById('disableArticleRefresh').checked = items.disableArticleRefresh;
       document.getElementById('disableClockCheck').checked = items.disableClockCheck;
+      document.getElementById('ebayPlatform').value = items.ebayPlatform;
     }).catch(e => {
       console.log("Unable to load options: " + e);
     });

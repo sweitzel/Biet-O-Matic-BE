@@ -49,8 +49,20 @@ und der Artikel bleibt in der Tabelle.
   auf den geänderten Zellen visualisiert. Die Visualisierung bleibt bis zum neu laden der Seite bestehen.
 
 {{< hint info >}}
-Der Artikel Automatikmodus wird automatisch deaktiviert, wenn der Artikel Preis während der Auktion über das definierte Maximalgebot geht.
+Der Artikel Automatikmodus wird automatisch deaktiviert, wenn der Artikel-Preis während der Auktion über das definierte Maximalgebot geht.
 {{< /hint >}}
+
+#### eBay Beobachtungsliste
+> BE unterstützt den Import von bis zu 100 Artikeln aus der Beobachtungsliste.
+
+Ebay bietet eine sogenannte Beobachtungsliste, in der Artikel gesammelt werden können. Auf jeder Artikelseite gibt es
+einen Knopf "Auf die Beobachtungsliste" über den Artikel sehr einfach für später gespeichert werden können.
+
+Sie können diese Artikel auch in BE einlesen. Drücken sie hierfür auf der BE Übersichtsseite den Knopf "Beobachtete Artikel hinzufügen".
+Dies fügt alle aktuell beobachteten Artikel in die Gruppe "Watchlist" hinzu.
+Bitte beachten sie das die Beobachtungsliste per Hand aufgeräumt werden muss. 
+BE löscht keine Artikel aus der Beobachtungsliste, wenn diese aus BE entfernt werden.
+Hinweis: BE verwendet ebay.de um die Beobachteten Artikel abzurufen. Dies kann in den internen Parametern umgestellt werden.
 
 ### Ereignis-Protokollierung
 

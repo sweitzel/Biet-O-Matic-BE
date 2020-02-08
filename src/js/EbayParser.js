@@ -511,11 +511,14 @@ class EbayParser {
    * Access the ebay watchlist and return the item ids
    * this is limited to 100 items
    */
-  static async getWatchListItems() {
-    // todo use the localized ebay platform
-    let response = await fetch('https://www.ebay.de/myb/WatchList?custom_list_id=WATCH_LIST&sort=ending_soon&items_per_page=100');
-    if (!response.ok)
-      throw new Error(`Failed to fetch ebay time(2): HTTP ${response.status} - ${response.statusText}`);
+  static async getWatchListItems(ebayPlatform = 'ebay.com') {
+    let response = await fetch(`https://www.${ebayPlatform}/myb/WatchList?custom_list_id=WATCH_LIST&sort=ending_soon&items_per_page=100`);
+    if (response.redirected) {
+      throw new Error(browser.i18n.getMessage('popup_ebayLoginRequired', [ebayPlatform]));
+    }
+    if (!response.ok) {
+      throw new Error(browser.i18n.getMessage('popup_ebayError', [ebayPlatform, response.status.toString(), response.statusText]));
+    }
     const htmlString = await response.text();
     let doc = document.implementation.createHTMLDocument("eBay Watch List");
     doc.documentElement.innerHTML = htmlString;

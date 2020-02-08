@@ -50,6 +50,17 @@ and the item will remain in the table.
 The item auto-bid mode is automatically deactivated if the item price goes above the defined maximum bid during the auction.
 {{< /hint >}}
 
+#### eBay Watch List
+> BE supports importing up to 100 items from the Watch List.
+
+Ebay offers a so-called watch list, in which articles can be collected. On each article page there is a button
+"Add to watch list" which allows you to easily save the article for later.
+
+You can also import these articles into BE. To do so, press the button "Add Items from Watch List" on the BE overview page.
+This will add all currently watched items to the group "Watchlist".
+Please note that the watch list must be cleaned up manually. BE will not delete any items from the watch list if they are removed from BE.
+Note: BE uses the ebay.com platform to retrieve the watchlist (this can be overridden in the internal parameters).
+
 ### Event logging
 BE generates three types of logs:
 

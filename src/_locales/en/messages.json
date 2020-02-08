@@ -113,6 +113,9 @@
   "generic_configuration": {
     "message": "Config"
   },
+  "generic_currency": {
+    "message": "Currency"
+  },
   "generic_description": {
     "message": "Description"
   },
@@ -185,6 +188,9 @@
   "generic_updated": {
     "message": "Updated"
   },
+  "generic_watchListGroupName": {
+    "message": "Watch List"
+  },
   "popup_activateArticleAutoBid": {
     "message": "Activates item auto-bid"
   },
@@ -248,6 +254,12 @@
   "popup_deactivateArticleAutoBid": {
     "message": "Deactivates item auto-bid"
   },
+  "popup_ebayError": {
+    "message": "Error returned from $1: HTTP $2 - $3"
+  },
+  "popup_ebayLoginRequired": {
+    "message": "Failed to retrieve $1 watch list. Please ensure you are logged in."
+  },
   "popup_enterMinAmount": {
     "message": "Enter at least $1"
   },
@@ -280,9 +292,5 @@
   },
   "popup_timeDiff1": {
     "message": "The time difference of your system to the ebay time is too large (~$1s). Please ensure your clock is precise to ensure reliable automatic bidding is possible."
-  },
-  "generic_currency": {
-    "message": "Currency"
   }
-
 }
