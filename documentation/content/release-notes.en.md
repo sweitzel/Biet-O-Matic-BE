@@ -10,6 +10,22 @@ type: "docs"
 ## Bid-O-Matic BE Version 0.4
 Bid-O-Matic is now available for all larger browser platforms. 
 
+### Bid-O-Matic BE Version 0.4.3
+{{< hint info>}}
+Published on Sunday, 08.02.2020 
+{{< /hint >}}
+
+* Add support for adding items from ebay watch list.
+    * This will add all items on the watch list to a group named "Watch List"
+    * BE is not able to remove items from the Watch List. Please use ebay functionality.
+* Change interval for regular clock check to from each minute to 3..10 minutes (random)
+* Add internal parameter to turn regular clock check off.
+* Add internal parameter to override ebay platform (only used for watch list sync)
+* Do not redraw overview table if tab/window not active.
+* Adjust item background refresh interval based on when the item is ending.
+* Redraw overview table when tab becomes active.
+* Fix issue with BE overview page activation which could get stuck before.
+
 ### Bid-O-Matic BE Version 0.4.2
 {{< hint info>}}
 Published on Sunday, 02.02.2020 

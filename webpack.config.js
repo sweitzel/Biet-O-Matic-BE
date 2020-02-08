@@ -137,6 +137,6 @@ var options = {
 };
 
 // always include source-map
-options.devtool = "source-map";
+options.devtool = "cheap-source-map";
 
 module.exports = options;

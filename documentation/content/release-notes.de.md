@@ -10,6 +10,23 @@ type: "docs"
 ## Biet-O-Matic BE Version 0.4
 Biet-O-Matic steht nun für alle größeren Browser zur Verfügung. 
 
+### Bid-O-Matic BE Version 0.4.3
+{{< hint info>}}
+Veröffentlicht am Sonntag, 08.02.2020 
+{{< /hint >}}
+
+* Funktionalität für hinzufügen von Artikeln aus der eBay Beobachtungsliste hinzugefügt
+    * Dadurch werden alle Artikel auf der Beobachtungsliste zu einer BE Gruppe namens "Beobachtete Artikel" hinzugefügt.
+    * BE kann keine Elemente aus der eBay-Beobachtungsliste entfernen. Bitte nutzen Sie die eBay-Funktionalität.
+* Geändertes Interval für die regelmäßige Prüfung der Uhrzeit von 3 bis 10 Minuten (zufällig).
+* Interner Parameter hinzugefügt, um die regelmäßige Prüfung der Uhrzeit auszuschalten.
+* Interner Parameter hinzugefügt, um die ebay-Plattform welche für die Synchronisierung der Beobachtungsliste genutzt wird zu überschreiben.
+* Unterbinden der Aktualisierung der Übersichtstabelle, wenn der Übersichtsseite oder das Fenster nicht aktiv sind.
+* Interval für Hintergrundaktualisierung von Artikeln geändert. Es ist nun abhängig vom Auktionsende des Artikels.
+    * Je näher das Ende der Auktion, desto öfter wird die Informationen für den Artikel aktualisiert.
+* Wenn die Übersichtsseite aktiviert wird, wird auch die Tabelle aktualisiert.
+* Es wurde ein Problem bei der Aktivierung des BE Übersichtsseite behoben. Die Aktivierung konnte manchmal fehlschlagen.
+
 ### Biet-O-Matic BE Version 0.4.2
 {{< hint info>}}
 Erschienen am Sonntag, 02.02.2020 
