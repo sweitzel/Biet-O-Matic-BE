@@ -187,7 +187,20 @@ class EbayParser {
         if (domEntry != null) {
           let value = null;
           if (key === "articleEndTime") {
-            value = EbayParser.parseEndTime(domEntry);
+            // determine auction end time from ebay raptor javascript object
+            // this is more reliable (time zone of user) because the ebay time is in UTC.
+            for (let script of this.data.scripts) {
+              if (script.src === "" && script.type === "text/javascript") {
+                const regex = /"endTime":([0-9]{13}),/
+                if (regex.test(script.text)) {
+                  value = script.text.match(regex)[1];
+                  console.debug("Biet-O-Matic: articleEndTime determined from raptor js: %s", value);
+                  break;
+                }
+              }
+            }
+            if (value == null)
+              value = EbayParser.parseEndTime(domEntry);
           } else if (key === "articleBidPrice" || key === 'articleBuyPrice') {
             /*
              * It would be easy to just take the price from the content attribute
@@ -316,12 +329,18 @@ class EbayParser {
     // domValue.innerText:
     //   normal Article: "Restzeit:↵4T 00Std ↵(08. Dez. 2019 17:30:42 MEZ)"
     //   ended Article: "01. Dez. 2019 12:35:50 MEZ"
-    let regex = /^[(]?([0-9]{2})\.\s(.+)\.\s([0-9]{4})\s+([0-9]{2}):([0-9]{2}):([0-9]{2})\s+([A-Z]{3})[)]?$/i;
+    let regex = /^[(]?([0-9]{2})\.\s(.+)\.\s([0-9]{4})\s+([0-9]{2}):([0-9]{2}):([0-9]{2})\s+([A-Z]{3,4})[)]?$/i;
     if (regex.test(text)) {
       let m = text.match(regex);
+      const year = parseInt(m[3], 10);
+      const month = months[m[2]];
+      const day = parseInt(m[1], 10);
+      const hour = parseInt(m[4], 10);
+      const minute = parseInt(m[5], 10);
+      const second = parseInt(m[6], 10);
+      const tz = m[7];
       // new Date(year, monthIndex [, day [, hour [, minutes [, seconds [, milliseconds]]]]]);
-      let date = new Date(parseInt(m[3], 10), months[m[2]],
-        parseInt(m[1], 10), parseInt(m[4], 10), parseInt(m[5], 10), parseInt(m[6], 10));
+      const date = new Date(year, month, day, hour, minute, second);
       //console.debug("Biet-O-Matic: Input Date=%O, regexMatch=%O, date=%O", text, m, date);
       return date.valueOf();
     } else {
