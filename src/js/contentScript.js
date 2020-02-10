@@ -25,7 +25,7 @@ class EbayArticle {
   get() {
     const result = {};
     Object.keys(this).sort().forEach(key => {
-      if (key === 'perfInfo' || key === 'ebayParser') return;
+      if (key === 'perfInfo') return;
       result[key] = this[key];
     });
     return result;
@@ -160,34 +160,35 @@ class EbayArticle {
   /*
    * set new MaxBidInput value and autoBid checked status
    */
-  updateMaxBidInfo(info) {
+  updateMaxBidInfo(storageInfo) {
     // id=MaxBidId defined by eBay
     const maxBidInput = document.getElementById('MaxBidId');
     // id=BomAutoBid defined by us
     const autoBidInput = document.getElementById('BomAutoBid');
 
     if (maxBidInput != null) {
-      if (info.articleMaxBid != null) {
+      if (storageInfo.articleMaxBid != null) {
         try {
-          if (typeof info.articleMaxBid === 'string')
-            info.articleMaxBid = Number.parseFloat(info.articleMaxBid.toString());
-          maxBidInput.value = info.articleMaxBid.toLocaleString('de-DE',
+          if (typeof storageInfo.articleMaxBid === 'string')
+            storageInfo.articleMaxBid = Number.parseFloat(storageInfo.articleMaxBid.toString());
+          maxBidInput.value = storageInfo.articleMaxBid.toLocaleString('de-DE',
             {useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2});
         } catch (e) {
           console.warn("Biet-O-Matic: updateMaxBidInfo() Failed to parse, info.articleMaxBid=%s (%s)",
-            info.articleMaxBid, typeof info.articleMaxBid);
-          maxBidInput.value = info.articleMaxBid.toString();
+            storageInfo.articleMaxBid, typeof storageInfo.articleMaxBid);
+          maxBidInput.value = storageInfo.articleMaxBid.toString();
         }
       } else {
-        info.articleMaxBid = this.articleMaxBid;
+        storageInfo.articleMaxBid = this.articleMaxBid;
       }
       if (autoBidInput != null) {
-        if (info.articleAutoBid != null) {
-          autoBidInput.checked = info.articleAutoBid;
+        if (storageInfo.articleAutoBid != null) {
+          autoBidInput.checked = storageInfo.articleAutoBid;
         }
       }
-      Object.assign(this, info);
-      this.activateAutoBidButton(info.articleMaxBid, null);
+      // Note do not merge storage into this, because this would overwrite potentially updated local values
+      //Object.assign(this, storageInfo);
+      this.activateAutoBidButton(storageInfo.articleMaxBid, null);
     }
   }
 
@@ -930,10 +931,12 @@ class EbayArticle {
 
 (function () {
   'use strict';
-  // check if the contentScript was already loaded
+  /*
+   * check if the contentScript was already loaded
+   * - reload can happen also due to basic ebay functionality, e.g. Image fullscreen view
+   */
   if (document.getElementById('BomAutoBid') != null) {
     console.debug("Biet-O-Matic: RELOADED EXTENSION, window=%O", window);
-    location.reload();
     // return value will be passed back to executeScript
     return false;
   }
