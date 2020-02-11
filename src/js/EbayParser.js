@@ -187,20 +187,26 @@ class EbayParser {
         if (domEntry != null) {
           let value = null;
           if (key === "articleEndTime") {
-            // determine auction end time from ebay raptor javascript object
-            // this is more reliable (time zone of user) because the ebay time is in UTC.
-            for (let script of this.data.scripts) {
-              if (script.src === "" && script.type === "text/javascript") {
-                const regex = /"endTime":([0-9]{13}),/
-                if (regex.test(script.text)) {
-                  value = script.text.match(regex)[1];
-                  console.debug("Biet-O-Matic: articleEndTime determined from raptor js: %s", value);
-                  break;
+            try {
+              // determine auction end time from ebay raptor javascript object
+              // this is more reliable (time zone of user) because the ebay time is in UTC.
+              for (let script of this.data.scripts) {
+                if (script.src === "" && script.type === "text/javascript") {
+                  const regex = /"endTime":([0-9]{13}),/
+                  if (regex.test(script.text)) {
+                    value = Number.parseInt(script.text.match(regex)[1], 10);
+                    console.debug("Biet-O-Matic: articleEndTime determined from raptor js: %s", value);
+                    break;
+                  }
                 }
               }
+            } catch(e) {
+              console.log("Biet-O-Matic: Cannot parse endTime from raptor js: " + e);
             }
-            if (value == null)
+            if (value == null) {
+              // parse traditionally via timems (good) or text field (bad)
               value = EbayParser.parseEndTime(domEntry);
+            }
           } else if (key === "articleBidPrice" || key === 'articleBuyPrice') {
             /*
              * It would be easy to just take the price from the content attribute
