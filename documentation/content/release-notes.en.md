@@ -10,7 +10,7 @@ type: "docs"
 ## Bid-O-Matic BE Version 0.4
 Bid-O-Matic is now available for all larger browser platforms. 
 
-### Bid-O-Matic BE Version 0.4.3
+### Bid-O-Matic BE Version 0.4.4
 {{< hint info>}}
 Published on Thursday, 13.02.2020 
 {{< /hint >}}
