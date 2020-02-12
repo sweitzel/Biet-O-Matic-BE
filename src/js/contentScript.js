@@ -644,7 +644,7 @@ class EbayArticle {
       }
 
       this.storePerfInfo(EbayArticle.getTranslation('cs_phase3', '.Waiting for bid time'));
-      const wakeUpInMs = (modifiedEndTime - Date.now()) - 2500;
+      const wakeUpInMs = (modifiedEndTime - Date.now()) - 3000;
       await EbayArticle.wait(wakeUpInMs);
 
       // check again if autobid is enabled (except if we should bid for all articles anyway)
