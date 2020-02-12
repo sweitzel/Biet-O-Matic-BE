@@ -12,6 +12,21 @@ Biet-O-Matic steht nun für alle größeren Browser zur Verfügung.
 
 ### Bid-O-Matic BE Version 0.4.3
 {{< hint info>}}
+Veröffentlicht am Donnerstag, 13.02.2020 
+{{< /hint >}}
+
+* Problem bei der Artikel-Feldaktualisierung behoben.
+  * Der Artikeltab hat die gespeicherten Informationen verwendet, anstatt die frisch ermittelten.
+* Problem beim ermitteln der Auktionszeit behoben, welches die Zeitzonen unterschiede zwischen ebay.de und dem PC des Nutzers nicht berücksichtigte.
+  * Gelöst durch Parsen der Auktions Endzeit vom eBay Raptor JS Objekt.
+* Zeitpunkt der Gebotabgabe von 2.5s auf 3s vor Auktionsende geändert
+* Refresh der Tabelleninhalte korrigiert
+* Hintergrundaktualisierung der Artikel nochmals geändert.
+  * Aktualisierung stündlich wenn Auktionsende > 12 Stunden, ansonsten alle 5min
+  * Aktualisierung erfolgt nun sequentiell anstatt parallel, um Leistungsprobleme zu vermeiden
+
+### Bid-O-Matic BE Version 0.4.3
+{{< hint info>}}
 Veröffentlicht am Sonntag, 08.02.2020 
 {{< /hint >}}
 

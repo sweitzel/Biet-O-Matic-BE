@@ -12,6 +12,21 @@ Bid-O-Matic is now available for all larger browser platforms.
 
 ### Bid-O-Matic BE Version 0.4.3
 {{< hint info>}}
+Published on Thursday, 13.02.2020 
+{{< /hint >}}
+
+* Problem with item field updates fixed
+  * The contentScript would use the stored information instead of the fresh parsed
+* Fixed problem with auction end-time calculation that did not take into account the time zone differences between ebay.de and the user's PC.
+  * Solved by parsing the auction end time from the eBay Raptor JS info.
+* Changed bidding time from 2.5s to 3s before auction ends
+* Refresh of table contents corrected
+* Background update of the articles changed again.
+  * Update every hour if auction end > 12 hours, otherwise every 5min
+  * Updating is now sequential instead of parallel to avoid performance issues
+
+### Bid-O-Matic BE Version 0.4.3
+{{< hint info>}}
 Published on Sunday, 08.02.2020 
 {{< /hint >}}
 
