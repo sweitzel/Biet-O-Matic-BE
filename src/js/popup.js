@@ -1237,7 +1237,10 @@ class Article {
        * - if the article price went higher than the maxBid, then auction will fail and we do not need to block
        * - if the article now has a final auction state, we do not need to block (handle successful auction too)
        */
-      ArticlesTable.refreshArticle(articleId, articles[articleId].articleEndTime);
+      ArticlesTable.refreshArticle(articleId, articles[articleId].articleEndTime, false)
+          .catch(e => {
+          console.log("Biet-O-Matic: getBidLockState() refreshArticle %s failed: %s", articleId, e);
+        });
 
       result.bidIsLocked = true;
       result.message = Popup.getTranslation('popup_bidCollision',
@@ -2529,32 +2532,25 @@ class ArticlesTable {
    * - also called by getBidLockState to update auction state info
    * - prevent duplicate execution by refreshArticleLock
    */
-  static refreshArticle(articleId, articleEndTime) {
+  static async refreshArticle(articleId, articleEndTime, useRateLimit = true) {
     /*
      * Ratelimit the article refresh:
      * - > 12hours ago or in the future: 1x every hour
-     * - > 2hours ago or in the future: 1x every 15 minutes
+     * - > 2hours ago or in the future: 1x every 5 minutes
      * - ends within 1hour: every 5 minutes
      * - ends within 5 minutes: every minute
      */
-    let rateLimitMs = 60000;
-    let timeLeft = Date.now() - articleEndTime;
-    if (timeLeft > 43200*1000 || timeLeft < -43200*1000 ) {
-      // > 12 hours -> refresh every hour
-      rateLimitMs = 60 * 60 * 1000;
-    } else if (timeLeft > 7200*1000 || timeLeft < -7200*1000) {
-      // > 2 hours -> refresh every 15 minutes
-      rateLimitMs = 15 * 60 * 1000;
-    } else if (timeLeft > 3600*1000 || timeLeft < 0) {
-      // > 2 hours or in past -> refresh every 10 minutes
-      rateLimitMs = 10 * 60 * 1000;
-    } else if (timeLeft > 300*1000) {
-      // > 5 minutes -> refresh every 5 minutes
-      rateLimitMs = 5 * 60 * 1000;
-    }
-    if (Popup.checkRateLimit('refreshArticle', articleId, rateLimitMs)) {
-      //console.debug("Biet-O-Matic: refreshArticle(%s) Skip refreshing (ratelimit=%ds)", articleId, rateLimitMs / 1000);
-      return;
+    if (useRateLimit) {
+      let rateLimitMs = 300000;
+      let timeLeft = Date.now() - articleEndTime;
+      if (timeLeft > 43200*1000 || timeLeft < -7200*1000 ) {
+        // > 12 hours -> refresh every hour
+        rateLimitMs = 60 * 60 * 1000;
+      }
+      if (Popup.checkRateLimit('refreshArticle', articleId, rateLimitMs)) {
+        //console.debug("Biet-O-Matic: refreshArticle(%s) Skip refreshing (ratelimit=%ds)", articleId, rateLimitMs / 1000);
+        return;
+      }
     }
     let row = Popup.table.DataTable.row("#" + articleId);
     if (typeof row === 'undefined' || row.length !== 1) {
@@ -2568,18 +2564,16 @@ class ArticlesTable {
     if (cell.length === 1) {
       cell.node().classList.add('loading-spinner');
     }
-    article.getRefreshedInfo()
-      .then(info => {
-        // apply the update info
-        Popup.table.updateArticle(info, row, {onlyIfExistsInStorage: true});
-        let cellLoc = Popup.table.DataTable.cell("#" + info.articleId, 'articleDetailsControl:name');
-        if (cellLoc.length === 1) {
-          cellLoc.node().classList.remove('loading-spinner');
-        }
-      })
+    // use await, which will lead to sequential article refresh to prevent overloading the browser / system
+    let articleInfo = await article.getRefreshedInfo()
       .catch(e => {
         console.warn(`Biet-O-Matic: refreshArticle(${article.articleId}) Failed to refresh: ${e}`);
       });
+    // apply the update info
+    Popup.table.updateArticle(articleInfo, row, {onlyIfExistsInStorage: true});
+    if (cell.length === 1) {
+      cell.node().classList.remove('loading-spinner');
+    }
   }
 
   // switch datatable compact mode
@@ -2815,14 +2809,14 @@ class ArticlesTable {
       const localState = AutoBid.getLocalState();
       if (Popup.table == null || !localState.autoBidEnabled) return;
       console.debug("Biet-O-Matic: regularRefreshArticleInfo() will execute now.");
-      Popup.table.DataTable.rows().every(index => {
+      Popup.table.DataTable.rows().every(async (index) => {
         let row = Popup.table.DataTable.row(index);
         let article = row.data();
         try {
           // skip articles with open tab
           if (article.hasOwnProperty('tabId') && article.tabId != null) return;
           // Note: the refresh function will use a rate limit which depends on the article end time
-          ArticlesTable.refreshArticle(article.articleId, article.articleEndTime);
+          await ArticlesTable.refreshArticle(article.articleId, article.articleEndTime);
         } catch(e) {
           console.log("regularRefreshArticleInfo() Internal Error inside loop: " + e);
         } finally {
@@ -2835,7 +2829,7 @@ class ArticlesTable {
     } finally {
       window.setTimeout(function() {
         ArticlesTable.regularRefreshArticleInfo();
-      }, 60000);
+      }, 300000);
     }
   }
 
@@ -3655,11 +3649,11 @@ class Popup {
     if (tab.active === false)
       return;
     console.debug("Biet-O-Matic: redrawTable() redrawing table now.");
-    Popup.table.DataTable.draw(false);
+    Popup.table.DataTable.rows().invalidate('data').draw(false);
   }
 
   static async redrawTableRow(rowId, useRateLimit = true) {
-    if (typeof rowId === 'undefined' || useRateLimit && Popup.checkRateLimit('redrawTableRow', rowId, 30000))
+    if (typeof rowId === 'undefined' || (useRateLimit && Popup.checkRateLimit('redrawTableRow', rowId, 30000)))
       return;
     // first check if window is active
     let window = await browser.windows.getCurrent();
