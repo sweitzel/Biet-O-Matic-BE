@@ -1968,11 +1968,14 @@ class ArticlesTable {
             // assign to group
             article.articleGroup = Popup.getTranslation('generic_watchListGroupName', '.Watch List');
             article.articlePlatform = articlePlatform;
-            article.updateInfo(articleInfo, false);
-            this.addArticle(article);
-            article.updateInfoInStorage({}, null, false).catch(e => {
-              console.log("Biet-O-Matic: addWatchListItems() failed to store article %s: %s", article.articleId, e);
-            });
+            // only add item if auction ends in the future or does not have unlimited end time (ignore buy-it now)
+            if (articleInfo.hasOwnProperty('articleEndTime') && articleInfo.articleEndTime != null && articleInfo.articleEndTime > Date.now()) {
+              article.updateInfo(articleInfo, false);
+              this.addArticle(article);
+              article.updateInfoInStorage({}, null, false).catch(e => {
+                console.log("Biet-O-Matic: addWatchListItems() failed to store article %s: %s", article.articleId, e);
+              });
+            }
           })
           .catch(e => {
             console.log("Biet-O-Matic: Article %s updateInfo() failed: %s", article.articleId, e);
