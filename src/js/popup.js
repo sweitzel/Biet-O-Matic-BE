@@ -15,6 +15,7 @@ import browser from "webextension-polyfill";
 import $ from 'jquery';
 
 import 'jquery-ui-dist/jquery-ui.css';
+import 'jquery-ui-dist/jquery-ui.js';
 
 // datatables.net + responsive, jquery-ui design
 import 'datatables.net-jqui/css/dataTables.jqueryui.css';
@@ -81,7 +82,10 @@ class Group {
       name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
     const result = {autoBid: true, bidAll: false};
     if (Popup.cachedGroups.hasOwnProperty(name)) {
+      console.debug("Biet-O-Matic: getStateCached(%s) found in cache: %s", name, JSON.stringify(Popup.cachedGroups[name]));
       Object.assign(result, Popup.cachedGroups[name]);
+    } else {
+      console.debug("Biet-O-Matic: getStateCached(%s) NOT found in cache: %s", name, result);
     }
     return result;
   }
@@ -1952,7 +1956,7 @@ class ArticlesTable {
         articlePlatform = 'ebay.de';
       // check for user defined platform
       let options = await browser.storage.sync.get({ebayPlatform: null});
-      if (options.hasOwnProperty('ebayPlatform') && options.ebayPlatform != null)
+      if (options.hasOwnProperty('ebayPlatform') && options.ebayPlatform != null && options.ebayPlatform !== "")
         articlePlatform = options.ebayPlatform;
       let items = await EbayParser.getWatchListItems(articlePlatform);
       for (let articleId of items) {
@@ -1991,6 +1995,61 @@ class ArticlesTable {
         $(messages).empty();
         messages.appendChild(span);
       }
+    }
+  }
+
+  /*
+   * User initiated cleanup of items
+   * - group select (or all groups)
+   * - buy-it-now items
+   * - expired auctions
+   */
+  static cleanupItems() {
+    try {
+      let removedCount = 0;
+      let formData = new FormData(document.querySelector('#cleanupForm'));
+      let group = formData.get('group');
+      let cleanExpired = formData.get('cleanExpired');
+      let cleanBuyItNow = formData.get('cleanBuyItNow');
+      // iterate through all items
+      Popup.table.DataTable.rows().every(function (index) {
+        const row = Popup.table.DataTable.row(index);
+        const article = row.data();
+        let articleGroup = article.articleGroup;
+        if (articleGroup == null || typeof articleGroup === 'undefined')
+          articleGroup = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
+        // buy it now
+        if (cleanBuyItNow && (!article.hasOwnProperty('articleEndTime') || article.articleEndTime == null)) {
+          if (group === '' || group === articleGroup) {
+            Popup.table.removeArticle(row);
+            //row.remove().draw(false);
+            removedCount++;
+          }
+        }
+        // auction more than a minute in past?
+        if (cleanExpired && (article.hasOwnProperty('articleEndTime') && (article.articleEndTime + 60000) < Date.now())) {
+          if (group === '' || group === articleGroup) {
+            Popup.table.removeArticle(row);
+            //row.remove().draw(false);
+            removedCount++;
+          }
+        }
+      });
+      if (removedCount === 0) {
+        Popup.addUserMessage({
+          message: Popup.getTranslation("popup_cleanupNone", '.No items have been removed.'),
+          level: "info",
+          duration: 10000
+        });
+      } else {
+        Popup.addUserMessage({
+          message: Popup.getTranslation("popup_cleanupDone", '$1 items have been removed.', removedCount.toString(10)),
+          level: "info",
+          duration: 15000
+        });
+      }
+    } catch(e) {
+      console.log("Biet-O-Matic: cleanupItems() Internal error while cleanup items: ", e);
     }
   }
 
@@ -3492,6 +3551,30 @@ class Popup {
       });
 
     Popup.table = new ArticlesTable('#articles');
+    Popup.cleanupDialog = $("#dialog-form").dialog({
+      autoOpen: false,
+      height: "auto",
+      width: 400,
+      resizable: false,
+      modal: true,
+      buttons: [
+        {
+          text: Popup.getTranslation('popup_cleanup', '.Cleanup'),
+          click: function() {
+            ArticlesTable.cleanupItems();
+            $(this).dialog("close");
+          }
+        }
+      ],
+      close: function() {
+        Popup.cleanupForm[0].reset();
+      }
+    });
+    Popup.cleanupForm = Popup.cleanupDialog.find("form").on("submit", function(event) {
+      event.preventDefault();
+      ArticlesTable.cleanupItems();
+      Popup.cleanupDialog.dialog("close");
+    });
 
     /*
      * restore settings from session storage (autoBidEnabled, bidAllEnabled, compactView)
@@ -3546,6 +3629,37 @@ class Popup {
   }
 
   /*
+   * adds a message to be displayed to the user
+   * info.message = i18n translated message
+   * info.level = info|warn
+   * info.duration = optional display duration (default unlimited)
+   * info.cleanAll = optionally clean all old messages
+   */
+  static addUserMessage(info) {
+    let messages = document.querySelector('#messages');
+    if (messages != null && typeof messages !== 'undefined') {
+      if (info.cleanAll)
+        $(messages).empty();
+      let span = document.createElement('span');
+      if (info.hasOwnProperty('level') && info.level === 'warning')
+        span.classList.add('ui-state-highlight');
+      else if (info.level === 'error')
+        span.classList.add('ui-state-error');
+      else
+        span.classList.add('ui-state-default');
+      span.innerText = info.message;
+      if (info.hasOwnProperty('duration')) {
+        $(span).hide().appendTo('#messages').show('slow')
+          .delay(info.duration).hide('slow').queue(function() {
+            $(this).remove();
+          });
+      } else {
+        messages.appendChild(span);
+      }
+    }
+  }
+
+  /*
    * register events:
    * - pingPopup: from background script to identify popup tabs (required without tabs permission)
    * - browserAction clicked
@@ -3594,6 +3708,9 @@ class Popup {
         });
     });
 
+    $('#butCleanupItems').on('click', function () {
+      Popup.cleanupDialog.dialog("open");
+    });
   }
 
   /*

@@ -23,6 +23,7 @@
           </label>
         </div>
         <div style="position: absolute;right: 0;top: 0;">
+          <button id="butCleanupItems" class="ui-button" title="Artikel aufräumen"><i class="fas fa-broom"></i></button>
           <label for="inpAddWatchItems" class="ui-button" style="display: inline-block;white-space: nowrap;"
                  title="Fügt alle Artikel aus der eBay Beobachtungsliste hinzu.">
             <input id="inpAddWatchItems" name="autoBid" type="checkbox" style="display: none"/>
@@ -80,6 +81,27 @@
              value="Abgelaufene Artikel entfernen" style="margin-left: 20px"/>
     </fieldset>
   </div>
+</div>
+<div id="dialog-form" title="Artikel aufräumen">
+  <p class="validateTips">Bitte wählen sie aus, welche Artikel aufgeräumt werden sollen</p>
+  <form id="cleanupForm">
+    <fieldset name="group">
+      <legend>Gruppen Auswahl</legend>
+      <div class="settings">
+        <label for="group">Gruppe</label>
+        <input type="text" list="groups" maxlength="32" name="group" id="group" placeholder="Alle" class="text ui-widget-content ui-corner-all">
+      </div>
+    </fieldset>
+    <fieldset name="settings">
+      <legend>Artikel Auswahl</legend>
+      <div class="settings">
+        <label for="cleanExpired">Abgelaufene Artikel entfernen</label>
+        <input type="checkbox" name="cleanExpired" id="cleanExpired">
+        <label for="cleanBuyItNow">Sofortkauf Artikel entfernen</label>
+        <input type="checkbox" name="cleanBuyItNow" id="cleanBuyItNow">
+      </div>
+    </fieldset>
+  </form>
 </div>
 <footer>
   <div class="footer">

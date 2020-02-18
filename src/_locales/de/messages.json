@@ -248,6 +248,15 @@
   "popup_changesMisc": {
     "message": "$1: $2 sonstige Änderungen"
   },
+  "popup_cleanup": {
+    "message": "Aufräumen"
+  },
+  "popup_cleanupDone": {
+    "message": "$1 Artikel wurden entfernt."
+  },
+  "popup_cleanupNone": {
+    "message": "Es wurden keine Artikel entfernt."
+  },
   "popup_closeArticleTab": {
     "message": "Schließt den Artikel Tab"
   },

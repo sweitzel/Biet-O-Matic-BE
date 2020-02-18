@@ -248,6 +248,15 @@
   "popup_changesMisc": {
     "message": "$1: $2 other changes"
   },
+  "popup_cleanup": {
+    "message": "Cleanup"
+  },
+  "popup_cleanupDone": {
+    "message": "$1 items have been removed."
+  },
+  "popup_cleanupNone": {
+    "message": "No items have been removed."
+  },
   "popup_closeArticleTab": {
     "message": "Closes the item tab"
   },

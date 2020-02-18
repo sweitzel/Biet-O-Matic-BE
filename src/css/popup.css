@@ -267,6 +267,26 @@ body {
   font-size: 75%;
 }
 
+/* alignment for form settings
+ * https://stackoverflow.com/questions/9686538/align-labels-in-form-next-to-input
+ */
+div.settings {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  grid-gap: 5px;
+}
+div.settings label {
+  text-align: right;
+}
+div.settings label:after {
+  content: ":";
+}
+.ui-widget-overlay {
+  opacity: 0.5;
+  filter: Alpha(Opacity=50);
+  background-color: black;
+}
+
 /* raleway-regular - latin_latin-ext */
 /*
 @font-face {
