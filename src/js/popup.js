@@ -145,11 +145,13 @@ class Group {
     if (state.autoBid) {
       $(inpGroupAutoBid).siblings('span').removeClass('autoBidDisabled');
       $(inpGroupAutoBid).siblings('span').addClass('autoBidEnabled');
-      $(inpGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_active', '.active'));
+      $(inpGroupAutoBid).siblings('span').attr('data-i18n-after',
+        Popup.getTranslation('generic_active', '.active'));
     } else {
       $(inpGroupAutoBid).siblings('span').removeClass('autoBidEnabled');
       $(inpGroupAutoBid).siblings('span').addClass('autoBidDisabled');
-      $(inpGroupAutoBid).attr('data-i18n-after', Popup.getTranslation('generic_inactive', '.inactive'));
+      $(inpGroupAutoBid).siblings('span').attr('data-i18n-after',
+        Popup.getTranslation('generic_inactive', '.inactive'));
     }
   }
 
@@ -3375,7 +3377,7 @@ class ArticlesTable {
         const name = e.currentTarget.dataset.name;
         if (e.target.id.includes('GroupAutoBid')) {
           Group.toggleAutoBid(name)
-            .then(() => Group.renderAutoBid('inpGroupAutoBid', name))
+            .then(Group.renderAutoBid('inpGroupAutoBid', name))
             .catch(e => {
               console.log("Biet-O-Matic: Failed to toggle group '%s' autoBid state: %s", name, e.message);
             });

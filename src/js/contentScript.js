@@ -375,7 +375,7 @@ class EbayArticle {
               let info = ebayParser.parsePageRefresh();
               Object.assign(this, info);
               info = null;
-              ebayParser.data = null;
+              ebayParser.cleanup();
               this.activateAutoBidButton(this.articleMaxBid, this.articleMinimumBid);
               // send info to extension popup about new price
               browser.runtime.sendMessage({
@@ -445,7 +445,7 @@ class EbayArticle {
     try {
       this.storePerfInfo(EbayArticle.getTranslation('cs_initialisation', '.Initialization'));
       // if end time reached, abort directly
-      if ((this.hasOwnProperty('auctionEnded') && this.auctionEnded) || this.endTime <= Date.now()) {
+      if ((this.hasOwnProperty('auctionEnded') && this.auctionEnded) || this.endTime < Date.now()) {
         throw {
           component: EbayArticle.getTranslation('cs_bidding', '.Bidding'),
           level: EbayArticle.getTranslation('generic_cancel', '.Cancel'),
