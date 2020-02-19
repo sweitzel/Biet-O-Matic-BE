@@ -194,6 +194,12 @@
   "popup_activateArticleAutoBid": {
     "message": "Activates item auto-bid"
   },
+  "popup_addWatchListItemsFailed": {
+    "message": "Error while adding items from watchlist: $1"
+  },
+  "popup_addedWatchListItems": {
+    "message": "Added $1 items from watchlist."
+  },
   "popup_adjustedBidtime": {
     "message": "Adjusted bid-time by $1s due to risk of colliding with item $2"
   },

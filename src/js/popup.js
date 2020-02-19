@@ -1959,6 +1959,7 @@ class ArticlesTable {
       if (options.hasOwnProperty('ebayPlatform') && options.ebayPlatform != null && options.ebayPlatform !== "")
         articlePlatform = options.ebayPlatform;
       let items = await EbayParser.getWatchListItems(articlePlatform);
+      let addedCount = 0;
       for (let articleId of items) {
         let article = new Article({articleId: articleId});
         // check if article is in table
@@ -1967,31 +1968,32 @@ class ArticlesTable {
           continue;
         }
         // run this asynchronously to speed up adding articles from watchlist
-        article.getRefreshedInfo()
-          .then(articleInfo => {
-            // assign to group
-            article.articleGroup = Popup.getTranslation('generic_watchListGroupName', '.Watch List');
-            article.articlePlatform = articlePlatform;
-            article.updateInfo(articleInfo, false);
-            this.addArticle(article);
-            article.updateInfoInStorage({}, null, false).catch(e => {
-              console.log("Biet-O-Matic: addWatchListItems() failed to store article %s: %s", article.articleId, e);
-            });
-          })
+        let articleInfo = await article.getRefreshedInfo()
           .catch(e => {
             console.log("Biet-O-Matic: Article %s updateInfo() failed: %s", article.articleId, e);
           });
+        // assign to group
+        article.articleGroup = Popup.getTranslation('generic_watchListGroupName', '.Watch List');
+        article.articlePlatform = articlePlatform;
+        article.updateInfo(articleInfo, false);
+        this.addArticle(article);
+        article.updateInfoInStorage({}, null, false).catch(e => {
+          console.log("Biet-O-Matic: addWatchListItems() failed to store article %s: %s", article.articleId, e);
+        });
+        addedCount++;
       }
-    } catch(e) {
+      Popup.addUserMessage({
+        message: Popup.getTranslation('popup_addedWatchListItems', 'Added $1 items from watch list.', addedCount.toString(10)),
+        level: "info",
+        duration: 30000
+      });
+    } catch (e) {
       console.log("Biet-O-Matic: addWatchListItems() failed: " + e);
-      let messages = document.querySelector('#messages');
-      if (messages != null && typeof messages !== 'undefined') {
-        let span = document.createElement('span');
-        span.classList.add('ui-state-highlight');
-        span.innerText = e.message;
-        $(messages).empty();
-        messages.appendChild(span);
-      }
+      Popup.addUserMessage({
+        message: Popup.getTranslation('popup_addWatchListItemsFailed', 'Failed to add items from watch list: $1', e.message),
+        level: "error",
+        duration: 60000
+      });
     }
   }
 
@@ -3600,20 +3602,17 @@ class Popup {
         console.log("Biet-O-Matic: Regular clock check has been deactivated by user.");
         return;
       }
-      const diff = EbayParser.getEbayTimeDifference();
+      const diff = await EbayParser.getEbayTimeDifference();
       if (diff > 1000) {
-        let messages = document.querySelector('#messages');
-        if (messages != null && typeof messages !== 'undefined') {
-          let span = document.createElement('span');
-          span.classList.add('ui-state-highlight');
-          span.innerText = Popup.getTranslation(
+        Popup.addUserMessage({
+          message: Popup.getTranslation(
             'popup_timeDiff1',
             '.The time difference of your computer vs. the eBay time is too large: $1s',
             [(diff / 1000).toFixed(2).toString()]
-          );
-          $(messages).empty();
-          messages.appendChild(span);
-        }
+          ),
+          level: "warning",
+          duration: 60000
+        });
       }
     } catch (e) {
       console.warn("Biet-O-Matic: regularCheckEbayTime() Internal Error: " + e);
