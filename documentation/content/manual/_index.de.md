@@ -154,6 +154,10 @@ Aktuell gibt es folgende Parameter (Seite aktuell nicht übersetzt):
     * Hinweis: Dies kann hilfreich sein um Abstürze zu verhindern, wenn BE lange Zeit unbeafsichtigt laufen soll.
 * "Do not perform regular clock check"
     * Wenn aktiviert, führt BE keine regelmäßige Überprüfung der Uhrzeit ihres Systems gegen die eBay-Zeit durch.
+* "Enable Compact Saving"
+    * Wenn aktiviert, speichert BE den Auktionsstatus als Text statt als HTML. Dies sieht zwar nicht ganz so hübsch
+      in der Tabelle aus, benötigt aber deutlich weniger Speicher, so dass ungefähr **doppelt soviele Artikel**
+      in BE verwaltet werden können.
 * Override eBay Platform
     * Dies ist nur für die synchronisation der Beobachtungsliste relevant.
     * Standardmäßig verwendet BE ebay.de wenn der Browser auf deutsche Benutzersprache eingstellt ist.  

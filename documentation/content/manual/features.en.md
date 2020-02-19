@@ -35,6 +35,14 @@ and the item will remain in the table.
 
 {{< image src="/features_be_artikel_maxbid.de.gif" alt="Define item maximum bid" >}}
 
+{{< hint info >}}
+BE can manage approximately 70..80 items in the table before the storage provided by the browser is full (technical limit).
+If the save operation fails, an error will be printed visible in the top region of the overview page.
+The table should be cleaned from no-longer needed items at this point.
+You can also enable the internal parameter "Enable Compact Saving" 
+(see [Internal configuration parameters]({{< ref "/manual#internal-configuration-parameters" >}})),
+{{< /hint >}}
+
 * The desired maximum bid for an item can be entered directly in the overview table.
   The updated value is also communicated back to the eBay item tab.
 * If you enter a value which is lower than the minimum bid[^1], the entry will be automatically adjusted to the

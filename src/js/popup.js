@@ -965,7 +965,7 @@ class Article {
       articlePaymentMethods: {i18nKey: 'popup_paymentmethods', defaultText: '.Payment Methods'},
       articleMinimumBid: {i18nKey: 'popup_minimumbid', defaultText: '.Minimum Bid'},
       articleEndTime: {i18nKey: 'popup_auctionendtime', defaultText: '.Auction End Time'},
-      articleAuctionStateText: {i18nKey: 'generic_status', defaultText: '.Status'},
+      articleAuctionState: {i18nKey: 'generic_status', defaultText: '.Status'},
       articleImage: {i18nKey: 'generic_picture', defaultText: '.Picture'},
       articleAutoBid: {i18nKey: 'generic_articleAutoBid', defaultText: '.Article Auto-Bid'},
       articleMaxBid: {i18nKey: 'generic_articleMaxBid', defaultText: '.Article Maximum Bid'},
@@ -975,11 +975,16 @@ class Article {
     for (const key in checkList) {
       if (info.hasOwnProperty(key) && info[key] !== this[key]) {
         const msg = Popup.getTranslation(checkList[key].i18nKey, checkList[key].defaultText);
-        messages.push(Article.getDiffMessage(msg, this[key], info[key]));
-        this[key] = info[key];
-        if (key === 'articleAuctionStateText') {
-          this.articleAuctionState = info.articleAuctionState;
+        if (key === 'articleAuctionState') {
+          if (this.hasOwnProperty('articleAuctionStateText')) {
+            if (info.hasOwnProperty('articleAuctionStateText'))
+              messages.push(Article.getDiffMessage(msg, this.articleAuctionStateText, info.articleAuctionStateText));
+            this.articleAuctionStateText = info.articleAuctionStateText;
+          }
+        } else {
+          messages.push(Article.getDiffMessage(msg, this[key], info[key]));
         }
+        this[key] = info[key];
         result.modifiedForStorage++;
         if (key !== 'articleMaxBid' && key !== 'articleAutoBid' && key !== 'articleGroup')
           result.modified.push(key);
@@ -1057,7 +1062,7 @@ class Article {
     const text = await response.text();
     //console.log("Fetch result: %s", text);
     let ebayParser = new EbayParser(this.getUrl(), text);
-    ebayParser.init();
+    await ebayParser.init();
     const info = ebayParser.parsePage();
     ebayParser.cleanup();
     return info;
@@ -1187,6 +1192,10 @@ class Article {
         } else if (article.hasOwnProperty('articleAuctionStateText')) {
           // determine auctionEndState from text
           const auctionEndState = EbayParser.getAuctionEndState({auctionEndStateText: article.auctionEndStateText});
+          articles[article.articleId].auctionEndState = auctionEndState.id;
+        } else if (article.hasOwnProperty('articleAuctionState')) {
+          // determine auctionEndState from text
+          const auctionEndState = EbayParser.getAuctionEndState({auctionEndState: article.auctionEndState});
           articles[article.articleId].auctionEndState = auctionEndState.id;
         }
       } catch(e) {

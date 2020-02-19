@@ -32,7 +32,7 @@ class EbayParser {
    * Initialize the EbayArticle object
    * - check if the page is in expected format
    */
-  init(oldInfo) {
+  async init(oldInfo) {
     // first we check if the page is a expected Article Page
     const body = this.data.getElementById("Body");
     if (body == null) {
@@ -52,6 +52,8 @@ class EbayParser {
     if (typeof oldInfo !== "undefined" && oldInfo.auctionEnded) {
       throw new Error("Biet-O-Mat: skipping on this page; bidding already performed.");
     }
+    let globalOptions = await browser.storage.sync.get({enableCompactSaving: false});
+    this.enableCompactSaving = globalOptions.enableCompactSaving;
   }
 
   cleanup() {
@@ -236,20 +238,29 @@ class EbayParser {
             //console.debug("articleBidCount=%s", domEntry.textContent.trim());
             value = Number.parseInt(domEntry.textContent.trim(), 10);
           } else if (key === "articleAuctionState") {
-            try {
-              // attempt to sanitize the html
-              EbayParser.cleanupHtmlString(domEntry);
-            } catch (e) {
-              console.log("Biet-O-Matic: cleanupHtmlString() Internal error: %s", e.message);
-            } finally {
-              value = domEntry.outerHTML;
+            // artcleAuctionState is quite large, allow optionally to only store the innerText
+            if (this.enableCompactSaving) {
+              value = domEntry.textContent
+                .trim()
+                .replace(/\n/g, '')
+                .replace(/\s+/g, ' ')
+                .replace(/[\s-\|]+$/g, '');
+            } else {
+              try {
+                // attempt to sanitize the html
+                EbayParser.cleanupHtmlString(domEntry);
+              } catch (e) {
+                console.log("Biet-O-Matic: cleanupHtmlString() Internal error: %s", e.message);
+              } finally {
+                value = domEntry.outerHTML;
+              }
+              //result.articleAuctionStateText = $(value).find('span.msgTextAlign')[0].innerText.trim();
+              result.articleAuctionStateText = $(value)[0].textContent
+                .trim()
+                .replace(/\n/g, '')
+                .replace(/\s+/g, ' ')
+                .replace(/[\s-\|]+$/g, '');
             }
-            //result.articleAuctionStateText = $(value).find('span.msgTextAlign')[0].innerText.trim();
-            result.articleAuctionStateText = $(value)[0].textContent
-              .trim()
-              .replace(/\n/g, '')
-              .replace(/\s+/g, ' ')
-              .replace(/[\s-\|]+$/g, '');
           } else if (key === 'articleImage') {
             // store primary Image URL
             value = domEntry.src;
@@ -380,6 +391,11 @@ class EbayParser {
       if (ebayArticleInfo.hasOwnProperty('articleAuctionStateText') && ebayArticleInfo.articleAuctionStateText !== "") {
         for (const key of Object.keys(EbayParser.auctionEndStates)) {
           if (matches(key, ebayArticleInfo.articleAuctionStateText))
+            return EbayParser.auctionEndStates[key];
+        }
+      } else if (ebayArticleInfo.hasOwnProperty('articleAuctionState') && ebayArticleInfo.articleAuctionState !== "") {
+        for (const key of Object.keys(EbayParser.auctionEndStates)) {
+          if (matches(key, ebayArticleInfo.articleAuctionState))
             return EbayParser.auctionEndStates[key];
         }
       }

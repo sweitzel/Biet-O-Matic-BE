@@ -41,7 +41,7 @@ class EbayArticle {
     let info;
     try {
       let ebayParser = new EbayParser(window.location.href);
-      ebayParser.init(oldInfo);
+      await ebayParser.init(oldInfo);
       info = ebayParser.parsePage();
       ebayParser.cleanup();
     } catch (e) {

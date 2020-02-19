@@ -148,6 +148,9 @@ The following parameters currently exist:
     * Note that this can be useful in case you notice BE crashing due to memory issues, when BE is running unattended for long times.
 * Do not perform regular clock check
     * If enabled, BE will not perform regular clock check against the ebay time.
+* Enable Compact Saving
+    * If enabled, BE will save the auction state as text instead of HTML. This will not look as nice in the table,
+    but you can manage **approximately twice as much items** with BE before the sync storage is full.
 * Override eBay Platform
     * This is only relevant for the watch list synchronisation.
     * By default BE uses ebay.de for german browser UI language, and ebay.com for all other languages.

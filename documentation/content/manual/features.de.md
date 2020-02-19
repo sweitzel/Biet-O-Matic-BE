@@ -37,6 +37,13 @@ und der Artikel bleibt in der Tabelle.
 
 {{< image src="/features_be_artikel_maxbid.de.gif" alt="Artikel Gebot definieren" >}}
 
+{{< hint info >}}
+BE kann ungefähr 70-80 Artikel gleichzeitig in der Tabelle verwalten, bevor der synchronisierte Speicher voll ist.
+Wenn der Speicher voll ist, wird ein Fehler ausgegeben, und die Tabelle sollte bereinigt werden. 
+Es kann auch die interne Option "Enable Compact Saving" aktiviert werden
+(siehe [Interne Konfigurationsparameter]({{< ref "/manual#interne-konfigurationsparameter" >}})), 
+{{< /hint >}}
+
 * Das gewünschte Maximalgebot für einen Artikel kann direkt in der Überssichtstabelle eingegeben werden.
   Der aktualisierte Wert wird auch dem eBay Artikel Tab mitgeteilt.
 * Bei Eingabe eines Wertes welcher niedriger als der Minimalerhöhungspreis[^1] ist, wird die Eingabe automatisch auf den
@@ -60,7 +67,8 @@ einen Knopf "Auf die Beobachtungsliste" über den Artikel sehr einfach für spä
 
 Sie können diese Artikel auch in BE einlesen. Drücken sie hierfür auf der BE Übersichtsseite den Knopf "Beobachtete Artikel hinzufügen".
 Dies fügt alle aktuell beobachteten Artikel in die Gruppe "Watchlist" hinzu.
-Bitte beachten sie das die Beobachtungsliste per Hand aufgeräumt werden muss. 
+Bitte beachten sie, dass die Beobachtungsliste per Hand aufgeräumt werden muss.
+BE fügt alle Artikel hinzu, egal ob abgelaufene Auktionen oder Sofortkauf Artikel. 
 BE löscht keine Artikel aus der Beobachtungsliste, wenn diese aus BE entfernt werden.
 Hinweis: BE verwendet ebay.de um die Beobachteten Artikel abzurufen. Dies kann in den internen Parametern umgestellt werden.
 
