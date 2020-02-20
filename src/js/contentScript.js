@@ -931,6 +931,7 @@ class EbayArticle {
 
 (function () {
   'use strict';
+  console.debug("Biet-O-Matic: Content Script starting.");
   /*
    * check if the contentScript was already loaded
    * - reload can happen also due to basic ebay functionality, e.g. Image fullscreen view

@@ -62,24 +62,6 @@
     </table>
     <datalist id="groups"></datalist>
   </fieldset>
-
-  <div id="internal" style="margin-top: 2em;" class="hidden">
-    <fieldset style="width: 1024px">
-      <legend>Memory Consumption</legend>
-      <p>The browser is limiting the number of entries in the sync storage. Usually to 512 Entries with maximum of 100kb size.</p>
-      <label for="inpStorageCount">
-        Elements: <input id="inpStorageCount" name="Elements" type="number" disabled readonly/>
-      </label>
-      <label for="inpStorageSize">
-        Size in byte: <input id="inpStorageSize" name="Size" type="text" disabled readonly/>
-      </label>
-      <input id="inpStorageClearAll" type="button" title="Removes following elements: Maximum Bids, Group Assignments, Automatic Bid flag"
-             value="Remove all entries" style="margin-left: 20px"/>
-      <input id="inpRemoveOldArticles" type="button"
-             title="Removes expired Auctions from the storage (Close tabs manually)"
-             value="Remove expired Articles" style="margin-left: 20px"/>
-    </fieldset>
-  </div>
 </div>
 <div id="dialog-form" title="Cleanup Items">
   <p class="validateTips">Please select which items you would like to cleanup:</p>
