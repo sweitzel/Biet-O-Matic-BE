@@ -305,7 +305,19 @@
   "popup_show_articleEvents": {
     "message": "Zeigt Artikel Ereignisprotokoll"
   },
+  "popup_storageReadFailed": {
+    "message": "Fehler beim lesen vom browser.storage.sync Speicher: $1"
+  },
+  "popup_storageUsedFailed": {
+    "message": "Fehler beim prüfen wieviel Speicher im 'browser.storage.sync' Bereich belegt ist: $1"
+  },
+  "popup_storageUsedInfo": {
+    "message": "Es sind aktuell $1% des 'browser.storage.sync' Speichers belegt."
+  },
   "popup_timeDiff1": {
     "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (~$1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
+  },
+  "popup_updateStorageFailed": {
+    "message": "Fehler beim schreiben des Browser sync.storage für Artikel $1: $2"
   }
 }

@@ -1853,7 +1853,15 @@ class ArticlesTable {
       } else {
         article.updateInfoInStorage(articleInfo, options.informTab ? article.tabId : null, options.onlyIfExistsInStorage)
           .catch(e => {
-            console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e);
+            console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
+            Popup.addUserMessage({
+              message: Popup.getTranslation(
+                'popup_updateStorageFailed',
+                '.Failed to update sync storage for item $1: $2', [article.articleId, e.message]
+              ),
+              level: "error",
+              duration: 60000
+            });
           });
       }
       modifiedInfo.modified.forEach(key => {
@@ -3474,50 +3482,52 @@ class Popup {
    * Check Storage permission granted and update the HTML with relevant internal information
    * - also add listener for storageClearAll button and clear complete storage on request.
    */
-  static async checkBrowserStorage() {
-    // total elements
-    let inpStorageCount = await browser.storage.sync.get(null);
-    // update html element storageCount
-    $('#inpStorageCount').val(Object.keys(inpStorageCount).length);
+  static checkBrowserStorage() {
+    // get total elements
+    browser.storage.sync.get(null)
+      .catch(e => {
+        Popup.addUserMessage({
+          message: Popup.getTranslation(
+            'popup_storageReadFailed',
+            '.Failed to read from browser.storage.sync area: $1',
+            [e.message]
+          ),
+          duration: 15000
+        });
+      });
 
     // total size
     if ('getBytesInUse' in browser.storage.sync) {
-      let inpStorageSize = await browser.storage.sync.getBytesInUse(null);
-      $('#inpStorageSize').val(inpStorageSize);
-    }
-
-    $('#inpStorageClearAll').on('click', async e => {
-      console.debug('Biet-O-Matic: Clear all data from local and sync storage, %O', e);
-      await browser.storage.sync.clear();
-      window.localStorage.clear();
-      // reload page
-      browser.tabs.reload();
-    });
-    $('#inpRemoveOldArticles').on('click', async function () {
-      // sync storage
-      let result = await browser.storage.sync.get(null);
-      Object.keys(result).forEach(function (articleId) {
-        let data = result[articleId];
-        //Date.now = 1576359588  yesterday = 1576265988;
-        let diff = (Date.now() - data.endTime) / 1000;
-        if (data.hasOwnProperty('endTime') && diff > 86400) {
-          console.debug("Biet-O-Matic: Deleting Article %s from sync storage, older 1 day (%s > 86000s)", articleId, diff);
-          browser.storage.sync.remove(articleId).catch(e => {
-            console.log("Biet-O-Matic: Unable to remove article %s from sync storage: %s", e.message);
+      browser.storage.sync.getBytesInUse(null)
+        .then(bytesUsed => {
+          const bytesUsedPct = (bytesUsed / (100*1024))*100;
+          let level = "info"
+          // warning > 80%, error > 95%
+          if (bytesUsedPct > 95)
+            level = "error"
+          else if (bytesUsedPct > 80)
+            level = "warning"
+          Popup.addUserMessage({
+            message: Popup.getTranslation(
+              'popup_storageUsedInfo',
+              '.Memory consumption in browser.storage.sync is $1%',
+              bytesUsedPct.toFixed(2)
+            ),
+            level: level,
+            duration: 30000
           });
-        }
-        // localStorage (logs)
-        Object.keys(window.localStorage).forEach(key => {
-          let value = JSON.parse(window.localStorage.getItem(key));
-          let diff = (Date.now() - value[0].timestamp) / 1000;
-          if (diff > 10000) {
-            console.debug("Biet-O-Matic: Deleting Article %s log entries from localStorage, older 1 day (%s, %s > 86000s)",
-              key, value[0].timestamp, diff);
-            window.localStorage.removeItem(key);
-          }
+        })
+        .catch(e => {
+          Popup.addUserMessage({
+            message: Popup.getTranslation(
+              'popup_storageUsedFailed',
+              '.Failed to determine how much space is used in browser.storage.sync: $1',
+              [e.message]
+            ),
+            duration: 15000
+          });
         });
-      });
-    });
+    }
   }
 
   /*
@@ -3594,7 +3604,7 @@ class Popup {
 
     await Popup.table.addArticlesFromStorage();
     await Popup.table.addArticlesFromTabs();
-    await Popup.checkBrowserStorage();
+    Popup.checkBrowserStorage();
     await Popup.regularCheckEbayTime()
       .catch(e => {
         console.log("Biet-O-Matic: regularCheckEbayTime() failed: " + e);

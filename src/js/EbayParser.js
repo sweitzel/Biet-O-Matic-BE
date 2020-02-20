@@ -393,7 +393,8 @@ class EbayParser {
           if (matches(key, ebayArticleInfo.articleAuctionStateText))
             return EbayParser.auctionEndStates[key];
         }
-      } else if (ebayArticleInfo.hasOwnProperty('articleAuctionState') && ebayArticleInfo.articleAuctionState !== "") {
+      } else if (!ebayArticleInfo.hasOwnProperty('articleAuctionStateText')
+        && ebayArticleInfo.hasOwnProperty('articleAuctionState') && ebayArticleInfo.articleAuctionState !== "") {
         for (const key of Object.keys(EbayParser.auctionEndStates)) {
           if (matches(key, ebayArticleInfo.articleAuctionState))
             return EbayParser.auctionEndStates[key];
