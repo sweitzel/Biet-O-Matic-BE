@@ -10,6 +10,22 @@ type: "docs"
 ## Biet-O-Matic BE Version 0.4
 Biet-O-Matic steht nun für alle größeren Browser zur Verfügung. 
 
+### Bid-O-Matic BE Version 0.4.5
+{{< hint info>}}
+Veröffentlicht am Donnerstag, 20.02.2020 
+{{< /hint >}}
+
+* Minimale Firefox-Version auf 57 angehoben.
+* Unterstützung für das Aufräumen von Artikeln hinzugefügt (Besensymbol auf der Übersichtsseite).
+* Fehler im Text des Gruppen-Automatikmodus-Knopfes behoben.
+* Unterstützung für Statusmeldung bezüglich hinzufügen von Elementen aus der Beobachtungsliste ergänzt.
+* Anzeige von Fehlermeldung hinzugefügt, sollte ein Speichervorgang fehlschlagen (z.B. Quota Fehler).
+* Option für die Aktivierung der kompakteren Speicherung der Artikel-Informationen hinzugefügt.
+    * Durch diese Option können ca. doppelt soviele Artikel mit BE verwaltet werden.
+    * siehe [Interne Konfigurationsparameter]({{< ref "/manual#interne-konfigurationsparameter" >}}) 
+* Anzeige des freien Speichers beim Laden der BE Übersichtsseite hinzugefügt.
+    * \> 80% gelb, \> 95% rot
+
 ### Bid-O-Matic BE Version 0.4.4
 {{< hint info>}}
 Veröffentlicht am Donnerstag, 13.02.2020 
@@ -19,11 +35,11 @@ Veröffentlicht am Donnerstag, 13.02.2020
   * Der Artikeltab hat die gespeicherten Informationen verwendet, anstatt die frisch ermittelten.
 * Problem beim ermitteln der Auktionszeit behoben, welches die Zeitzonen unterschiede zwischen ebay.de und dem PC des Nutzers nicht berücksichtigte.
   * Gelöst durch Parsen der Auktions Endzeit vom eBay Raptor JS Objekt.
-* Zeitpunkt der Gebotabgabe von 2.5s auf 3s vor Auktionsende geändert
-* Refresh der Tabelleninhalte korrigiert
+* Zeitpunkt der Gebotabgabe von 2.5s auf 3s vor Auktionsende geändert.
+* Refresh der Tabelleninhalte korrigiert.
 * Hintergrundaktualisierung der Artikel nochmals geändert.
-  * Aktualisierung stündlich wenn Auktionsende > 12 Stunden, ansonsten alle 5min
-  * Aktualisierung erfolgt nun sequentiell anstatt parallel, um Leistungsprobleme zu vermeiden
+  * Aktualisierung stündlich wenn Auktionsende > 12 Stunden, ansonsten alle 5min.
+  * Aktualisierung erfolgt nun sequentiell anstatt parallel, um Leistungsprobleme zu vermeiden.
 
 ### Bid-O-Matic BE Version 0.4.3
 {{< hint info>}}

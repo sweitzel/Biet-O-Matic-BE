@@ -10,6 +10,21 @@ type: "docs"
 ## Bid-O-Matic BE Version 0.4
 Bid-O-Matic is now available for all larger browser platforms. 
 
+### Bid-O-Matic BE Version 0.4.5
+{{< hint info>}}
+Published on Thursday, 20.02.2020 
+{{< /hint >}}
+
+* Change minimum Firefox version to 57.
+* Add support for cleaning up items (Broom icon on overview page).
+* Fix group autoBid text display.
+* Add info messages for adding items from watchlist.
+* Add error message if save operation fails.
+* Add option "Enable Compact Saving" to allow managing more items with BE.
+    * see [Internal configuration parameters]({{< ref "/manual#internal-configuration-parameters" >}})
+* Add display of free sync storage after BE loaded.
+    * \> 80% yellow, \> 95% red
+
 ### Bid-O-Matic BE Version 0.4.4
 {{< hint info>}}
 Published on Thursday, 13.02.2020 
