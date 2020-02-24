@@ -82,7 +82,7 @@ class Group {
       name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
     const result = {autoBid: true, bidAll: false};
     if (Popup.cachedGroups.hasOwnProperty(name)) {
-      console.debug("Biet-O-Matic: getStateCached(%s) found in cache: %s", name, JSON.stringify(Popup.cachedGroups[name]));
+      //console.debug("Biet-O-Matic: getStateCached(%s) found in cache: %s", name, JSON.stringify(Popup.cachedGroups[name]));
       Object.assign(result, Popup.cachedGroups[name]);
     } else {
       console.debug("Biet-O-Matic: getStateCached(%s) NOT found in cache: %s", name, result);
@@ -976,9 +976,8 @@ class Article {
       if (info.hasOwnProperty(key) && info[key] !== this[key]) {
         const msg = Popup.getTranslation(checkList[key].i18nKey, checkList[key].defaultText);
         if (key === 'articleAuctionState') {
-          if (this.hasOwnProperty('articleAuctionStateText')) {
-            if (info.hasOwnProperty('articleAuctionStateText'))
-              messages.push(Article.getDiffMessage(msg, this.articleAuctionStateText, info.articleAuctionStateText));
+          if (info.hasOwnProperty('articleAuctionStateText')) {
+            messages.push(Article.getDiffMessage(msg, this.articleAuctionStateText, info.articleAuctionStateText));
             this.articleAuctionStateText = info.articleAuctionStateText;
           }
         } else {
@@ -986,7 +985,7 @@ class Article {
         }
         this[key] = info[key];
         result.modifiedForStorage++;
-        if (key !== 'articleMaxBid' && key !== 'articleAutoBid' && key !== 'articleGroup')
+        if (key !== 'articleMaxBid' && key !== 'articleAutoBid' && key !== 'articleGroup' && key !== 'articleAuctionState')
           result.modified.push(key);
       }
     }
@@ -3288,6 +3287,13 @@ class ArticlesTable {
           .catch(e => {
             console.log("Biet-O-Matic: Articles Table - Cannot activate Article Tab %d: %s", tabId, e.message);
           });
+      }
+    });
+
+    // if the user selected the group input, then clear the value to show all options
+    this.DataTable.on('focusin', 'tr input', e => {
+      if (e.target.id.startsWith('inpGroup_')) {
+        $(e.target).val('');
       }
     });
 
