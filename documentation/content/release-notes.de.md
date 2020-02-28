@@ -11,9 +11,9 @@ type: "docs"
 Biet-O-Matic steht nun für alle größeren Browser zur Verfügung. 
 
 ### Bid-O-Matic BE Version 0.4.6
-{{{< Hinweis-Info>}}}
+{{< hint info>}}
 Veröffentlicht am Freitag, 28.02.2020 
-{{< /Hinweis >}}}
+{{< /hint >}}
 
 * Von der Artikelseite aus wird die Aktivierung des Artikel-Automatikmodus nur zugelassen, wenn BE den Artikel bereits hinzugefügt hat.
   Dies konnte u.U. zum Verlust der Einstellung und damit zu Problemen beim Bieten führen.
