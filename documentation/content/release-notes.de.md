@@ -10,6 +10,17 @@ type: "docs"
 ## Biet-O-Matic BE Version 0.4
 Biet-O-Matic steht nun für alle größeren Browser zur Verfügung. 
 
+### Bid-O-Matic BE Version 0.4.6
+{{{< Hinweis-Info>}}}
+Veröffentlicht am Freitag, 28.02.2020 
+{{< /Hinweis >}}}
+
+* Von der Artikelseite aus wird die Aktivierung des Artikel-Automatikmodus nur zugelassen, wenn BE den Artikel bereits hinzugefügt hat.
+  Dies konnte u.U. zum Verlust der Einstellung und damit zu Problemen beim Bieten führen.
+* Von der Artikelseite aus können Sie nun die Aktivierung des Artikel-Automatikmodus veranlassen, ohne das Höchstgebot zu definieren.
+  Der Preis wird an den zu diesem Zeitpunkt minimal akzeptablen Angebotspreis angepasst. 
+* Gruppenauswahl verbessert, indem der Filter beim fokussieren zurückgesetzt wird. Dies ermöglicht die Auswahl aller Gruppen.
+
 ### Bid-O-Matic BE Version 0.4.5
 {{< hint info>}}
 Veröffentlicht am Donnerstag, 20.02.2020 

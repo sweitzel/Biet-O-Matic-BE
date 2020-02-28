@@ -10,6 +10,17 @@ type: "docs"
 ## Bid-O-Matic BE Version 0.4
 Bid-O-Matic is now available for all larger browser platforms. 
 
+### Bid-O-Matic BE Version 0.4.6
+{{< hint info>}}
+Published on Friday, 28.02.2020 
+{{< /hint >}}
+
+* From item page, only allow activation of item auto-bid when BE already added the item.
+  This could lead to losing the setting and thus bidding issues.
+* From item page, allow activation of item auto-bid without defining maximum bid.
+  The price will be adjusted to the minimum acceptable bid price at that moment. 
+* Improve group chooser by resetting filter on focus. This allows selection of all groups.
+
 ### Bid-O-Matic BE Version 0.4.5
 {{< hint info>}}
 Published on Thursday, 20.02.2020 
