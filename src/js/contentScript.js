@@ -154,7 +154,7 @@ class EbayArticle {
         this.updateMaxBidInfo(storInfo);
       }
     });
-    //this.activateAutoBidButton();
+    this.activateAutoBidButton();
   }
 
   /*
@@ -300,9 +300,15 @@ class EbayArticle {
               articleAutoBid: bomAutoBidNew.checked,
               articleMinimumBid: minBidValue
             }
-          }).catch((e) => {
-            console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
-          });
+          })
+            .then(result => {
+              if (!result) {
+                console.warn("Biet-O-Matic: Cannot set maxBid value, BE has not added this item yet.");
+              }
+            })
+            .catch((e) => {
+              console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
+            });
         }
       });
     }
@@ -341,9 +347,16 @@ class EbayArticle {
               articleMaxBid: maxBidInputValue,
               articleAutoBid: bomAutoBidNew.checked
             }
-          }).catch((e) => {
-            console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
-          });
+          })
+            .then(result => {
+              if (!result) {
+                console.warn("Biet-O-Matic: Cannot enable autoBid, BE has not added this item yet.");
+                bomAutoBidNew.checked = !bomAutoBidNew.checked;
+              }
+            })
+            .catch((e) => {
+              console.warn("Biet-O-Matic: sendMessage(ebayArticleMaxBidUpdated) failed: %O", e);
+            });
         }
       });
     }

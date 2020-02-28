@@ -976,6 +976,7 @@ class Article {
       if (info.hasOwnProperty(key) && info[key] !== this[key]) {
         const msg = Popup.getTranslation(checkList[key].i18nKey, checkList[key].defaultText);
         if (key === 'articleAuctionState') {
+          // only add message if StateText is present, else it (should be) HTML
           if (info.hasOwnProperty('articleAuctionStateText')) {
             messages.push(Article.getDiffMessage(msg, this.articleAuctionStateText, info.articleAuctionStateText));
             this.articleAuctionStateText = info.articleAuctionStateText;
@@ -990,7 +991,7 @@ class Article {
       }
     }
 
-    if (shouldLogChange && result.modifiedForStorage > 0) {
+    if (shouldLogChange && result.modifiedForStorage > 0 && messages.length > 0) {
       this.addLog({
         component: Popup.getTranslation('generic_item', '.Item'),
         level: Popup.getTranslation('generic_updated', '.Updated'),
@@ -2957,9 +2958,12 @@ class ArticlesTable {
               else
                 articleId = request.articleId;
               const row = this.getRow("#" + articleId);
-              if (row != null && row.length === 1)
+              if (row != null && row.length === 1) {
                 this.updateRowMaxBid(request.detail, row);
-              return Promise.resolve(true);
+                return Promise.resolve(true);
+              } else {
+                return Promise.resolve(false);
+              }
             }
           } catch (e) {
             console.warn("Biet-O-Matic: Event.ebayArticleMaxBidUpdated internal error: %s", e);
