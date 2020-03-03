@@ -330,7 +330,7 @@ class EbayParser {
     let months = {
       'Jan': 0,
       'Feb': 1,
-      'Mär': 2,
+      'Mrz': 2,
       'Apr': 3,
       'Mai': 4,
       'Jun': 5,
