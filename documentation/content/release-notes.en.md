@@ -10,6 +10,13 @@ type: "docs"
 ## Bid-O-Matic BE Version 0.4
 Bid-O-Matic is now available for all larger browser platforms. 
 
+### Bid-O-Matic BE Version 0.4.7
+{{< hint info>}}
+Published on Tuesday, 03.03.2020 
+{{< /hint >}}
+
+* Fix date parsing of auction end date in March (german only)
+
 ### Bid-O-Matic BE Version 0.4.6
 {{< hint info>}}
 Published on Friday, 28.02.2020 
