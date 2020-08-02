@@ -72,26 +72,25 @@ var options = {
     new webpack.EnvironmentPlugin({
       npm_package_Version: '0.0.0',
       NODE_ENV: 'production', // use 'development' unless process.env.NODE_ENV is defined
-      DEBUG: false
+      DEBUG: true
     }),
     new webpack.DefinePlugin({
       'BOM_VERSION': JSON.stringify(process.env.npm_package_version),
     }),
-    new CopyWebpackPlugin([{
-      from: manifestFile,
-      to: path.join(buildPath, "manifest.json"),
-      transform: function (content, path) {
-        // generates the manifest file using the package.json informations
-        return Buffer.from(JSON.stringify({
-          version: process.env.npm_package_version,
-          ...JSON.parse(content.toString())
-        }));
-      }
-    }]),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, "src", "options.html"),
-      filename: "options.html",
-      chunks: ['options']
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: manifestFile,
+          to: path.join(buildPath, "manifest.json"),
+          transform: function (content, path) {
+            // generates the manifest file using the package.json informations
+            return Buffer.from(JSON.stringify({
+              version: process.env.npm_package_version,
+              ...JSON.parse(content.toString())
+            }))
+          }
+        }
+      ]
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, "src", "popup.de.html"),
@@ -103,32 +102,44 @@ var options = {
       filename: "popup.en.html",
       chunks: ['popup']
     }),
+    new HtmlWebpackPlugin({
+      template: path.join(__dirname, "src", "options.html"),
+      filename: "options.html",
+      chunks: ['options']
+    }),
     new WriteFilePlugin(),
     // Ignore all locale files of moment.js
     new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
-    new CopyWebpackPlugin([
-      {
-        from:  path.join(__dirname, "src", "_locales"),
-        to: path.join(buildPath, "_locales")
-      }
-    ]),
-    new CopyWebpackPlugin([
-      {
-        from:  path.join(__dirname, "src", "*.png"),
-        to: buildPath,
-        flatten: true
-      }
-    ]),
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from:  path.resolve(__dirname, "src", "icon48.png"),
+          to: buildPath,
+          flatten: true
+        },
+        {
+          from:  path.resolve(__dirname, "src", "icon128.png"),
+          to: buildPath,
+          flatten: true
+        },
+        {
+          from:  path.resolve(__dirname, "src", "_locales"),
+          to: path.join(buildPath, "_locales")  
+        }
+      ]
+    }),
     // Run hugo command after build
     new ShellPlugin({
       onBuildEnd: ['hugo.bat']
     }),
-    new CopyWebpackPlugin([
-      {
-        from:  path.join(__dirname, "documentation", "public"),
-        to: path.join(buildPath, "doc")
-      }
-    ]),
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from:  path.join(__dirname, "documentation", "public"),
+          to: path.join(buildPath, "doc")
+        }  
+      ]
+    }),
     new ZipPlugin({
       path: path.join(__dirname),
       filename: "bom-be_" + process.env.npm_package_version + ".zip",

@@ -29,7 +29,7 @@ import 'datatables.net-rowgroup-jqui';
 
 // date-fns as alternative to moment
 import {format, formatDistanceToNow} from 'date-fns';
-import {de, en} from 'date-fns/locale';
+import {de, enUS} from 'date-fns/locale';
 
 // FontAwesome
 import '@fortawesome/fontawesome-free/css/all.css';
