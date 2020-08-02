@@ -1,4 +1,4 @@
 public/
-exampleSite/
-.github/
+exampleSite/public/
+**/_gen
 .DS_Store

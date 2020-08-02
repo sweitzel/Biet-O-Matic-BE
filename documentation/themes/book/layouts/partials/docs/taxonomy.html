@@ -1,20 +1,19 @@
-<aside class="book-toc fixed">
 <nav>
   <ul>
   {{ range $term, $_ := .Site.Taxonomies }}
-  {{ with $.Site.GetPage (printf "/%s" $term) }}
+    {{ with $.Site.GetPage (printf "/%s" $term | urlize) }}
     <li class="book-section-flat">
       <strong>{{ .Title | title }}</strong>
       <ul>
       {{ range .Pages }}
-        <li>
+        <li class="flex justify-between">
           <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+          <span>{{ len .Pages }}</span>
         </li>
       {{ end }}
       </ul>
     </li>
-  {{ end }}
+    {{ end }}
   {{ end }}
   </ul>
 </nav>
-</aside>

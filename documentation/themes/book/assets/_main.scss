@@ -1,21 +1,16 @@
 html {
   font-size: $font-size-base;
-  letter-spacing: 0.33px;
   scroll-behavior: smooth;
+  touch-action: manipulation;
 }
 
-html,
 body {
   min-width: $body-min-width;
-  overflow-x: hidden;
-}
-
-body {
   color: $body-font-color;
   background: $body-background;
 
+  letter-spacing: 0.33px;
   font-weight: $body-font-weight;
-
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -37,14 +32,14 @@ h5 {
 a {
   text-decoration: none;
   color: $color-link;
-
-  &:visited {
-    color: $color-visited-link;
-  }
 }
 
 img {
   vertical-align: baseline;
+}
+
+:focus {
+  @include outline;
 }
 
 aside nav ul {
@@ -54,6 +49,7 @@ aside nav ul {
 
   li {
     margin: 1em 0;
+    position: relative;
   }
 
   a {
@@ -65,18 +61,8 @@ aside nav ul {
   }
 
   ul {
-    padding-left: $padding-16;
+    padding-inline-start: $padding-16;
   }
-}
-
-// Classes to hide nested levels of ToC/Menu
-.levels-1 ul ul,
-.levels-2 ul ul ul,
-.levels-3 ul ul ul ul,
-.levels-4 ul ul ul ul ul,
-.levels-5 ul ul ul ul ul ul,
-.levels-6 ul ul ul ul ul ul ul {
-  display: none;
 }
 
 ul.pagination {
@@ -105,7 +91,7 @@ ul.pagination {
     height: 1.5em;
     width: auto;
     vertical-align: middle;
-    margin-right: $padding-8;
+    margin-inline-end: $padding-8;
   }
 }
 
@@ -116,16 +102,27 @@ ul.pagination {
   nav {
     width: $menu-width;
     padding: $padding-16;
+    background: $body-background;
 
     @include fixed;
   }
 
   a {
     color: inherit;
+    word-wrap: break-word;
   }
 
   a.active {
     color: $color-link;
+  }
+
+  a.collapsed {
+    display: flex;
+    justify-content: space-between;
+
+    &::after {
+      content: "▸";
+    }
   }
 }
 
@@ -142,7 +139,7 @@ ul.pagination {
   }
 
   > ul {
-    padding-left: 0;
+    padding-inline-start: 0;
   }
 }
 
@@ -157,8 +154,12 @@ ul.pagination {
 }
 
 .book-header {
-  margin-bottom: $padding-16;
   display: none;
+  margin-bottom: $padding-16;
+
+  label {
+    line-height: 0;
+  }
 }
 
 .book-search {
@@ -166,18 +167,12 @@ ul.pagination {
   margin: $padding-16 0;
   border-bottom: 1px solid transparent;
 
-  &::after {
-    display: block;
-    content: "";
-    clear: both;
-  }
-
   input {
     width: 100%;
     padding: $padding-8;
 
     border: 0;
-    border-radius: $padding-4;
+    border-radius: $border-radius;
 
     background: $gray-100;
     color: $body-font-color;
@@ -189,9 +184,9 @@ ul.pagination {
 
   .book-search-spinner {
     position: absolute;
-    margin: $padding-8;
-    right: 0;
     top: 0;
+    margin: $padding-8;
+    margin-inline-start: calc(100% - #{$padding-16 + $padding-8});
 
     width: $padding-16;
     height: $padding-16;
@@ -201,6 +196,10 @@ ul.pagination {
     border-radius: 50%;
 
     @include spin(1s);
+  }
+
+  small {
+    opacity: 0.5;
   }
 }
 
@@ -225,14 +224,17 @@ ul.pagination {
 }
 
 .book-footer {
-  display: flex;
   padding-top: $padding-16;
   font-size: $font-size-14;
 
   img {
     height: 1em;
-    margin-right: $padding-8;
+    margin-inline-end: $padding-8;
   }
+}
+
+.book-comments {
+  margin-top: $padding-16;
 }
 
 .book-languages {
@@ -242,43 +244,49 @@ ul.pagination {
   padding: $padding-16;
   margin: -$padding-16;
 
-  &:hover .book-languages-list {
-    display: block;
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      white-space: nowrap;
+      cursor: pointer;
+    }
+  }
+
+  &:hover,
+  &:focus,
+  &:focus-within {
+    .book-languages-list {
+      display: block;
+    }
   }
 
   .book-languages-list {
     display: none;
 
     position: absolute;
-    bottom: 0;
+    bottom: 100%;
     left: 0;
     padding: $padding-8 0;
 
     background: $body-background;
     box-shadow: 0 0 $padding-4 rgba(0, 0, 0, 0.1);
 
-    li {
-      padding: $padding-8 $padding-16;
-      white-space: nowrap;
+    li img {
+      opacity: 0.25;
     }
 
-    img {
-      opacity: .1;
-    }
-
-    li.active img {
-      opacity: 1;
+    li.active img,
+    li:hover img {
+      opacity: initial;
     }
 
     a {
       color: inherit;
+      padding: $padding-8 $padding-16;
     }
-  }
-
-  ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
   }
 }
 
@@ -289,40 +297,76 @@ ul.pagination {
 // Responsive styles
 aside nav,
 .book-page,
+.book-header aside,
 .markdown {
   transition: 0.2s ease-in-out;
-  transition-property: transform, margin-left, opacity;
-  will-change: transform, margin-left;
+  transition-property: transform, margin, opacity, visibility;
+  will-change: transform, margin, opacity;
 }
 
-@media screen and (max-width: $md-breakpoint) {
+@media screen and (max-width: $mobile-breakpoint) {
+  #menu-control,
+  #toc-control {
+    display: inline;
+  }
+
+  .book-menu {
+    visibility: hidden;
+    margin-inline-start: -$menu-width;
+    font-size: $font-size-base;
+    z-index: 1;
+  }
+
   .book-toc {
     display: none;
   }
-}
-
-@media screen and (max-width: $sm-breakpoint) {
-  .book-menu {
-    margin-left: -$menu-width;
-    font-size: $font-size-base;
-  }
 
   .book-header {
-    display: flex;
+    display: block;
   }
 
-  #menu-control:checked + main {
-    .book-menu nav,
-    .book-page {
+  #menu-control:focus ~ main label[for="menu-control"] {
+    @include outline;
+  }
+
+  #menu-control:checked ~ main {
+    .book-menu {
+      visibility: initial;
+    }
+
+    .book-menu nav {
       transform: translateX($menu-width);
+      box-shadow: 0 0 $padding-8 rgba(0, 0, 0, 0.1);
     }
 
-    .book-header label {
-      transform: rotate(90deg);
-    }
-
-    .markdown {
+    .book-page {
       opacity: 0.25;
+    }
+
+    .book-menu-overlay {
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+  }
+
+  #toc-control:focus ~ main label[for="toc-control"] {
+    @include outline;
+  }
+
+  #toc-control:checked ~ main {
+    .book-header aside {
+      display: block;
+    }
+  }
+
+  //for RTL support
+  body[dir="rtl"] #menu-control:checked + main {
+    .book-menu nav {
+      transform: translateX(-$menu-width);
     }
   }
 }
