@@ -3571,7 +3571,7 @@ class Popup {
     if (Popup.lang === 'de')
       Popup.locale = de;
     else
-      Popup.locale = en;
+      Popup.locale = enUS;
 
     this.registerEvents();
 

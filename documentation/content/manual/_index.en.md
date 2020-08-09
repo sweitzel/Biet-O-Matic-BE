@@ -109,7 +109,7 @@ See section [Features]({{< ref "/manual/features" >}})
 
 ### Item Information
 
-* Information about an item are saved in the `browser.sync.storage` when the user enters a maximum bid or group for it.
+* Information about an item are saved in the `browser.storage.sync` area when the user enters a maximum bid or group for it.
 * The information is also available on other (own) computers if the user has activated session synchronization.
 
 ### Event Logs
