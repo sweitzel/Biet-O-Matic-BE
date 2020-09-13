@@ -112,8 +112,7 @@ Siehe Abschnitt [Funktionen]({{< ref "/manual/features" >}})
 
 ## Gespeicherte Daten
 ### Artikel Informationen
-* Informationen über Artikel werden im `browser.sync.storage` gesichert, sobald der Benutzer ein Maximal Gebot oder Gruppe für
-diesen Artikel eingibt.
+* Informationen über Artikel werden im Speicherbereich `browser.storage.sync` gesichert, sobald der Benutzer ein Maximal Gebot oder Gruppe für diesen Artikel eingibt.
 * Die Informationen stehen auch auf anderen (eigenen) Rechnern zur Verfügung, falls der Benutzer die Sitzungs Synchronisation
 aktiviert hat.
 

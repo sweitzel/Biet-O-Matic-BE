@@ -11,6 +11,15 @@
   "browser_action": {
     "default_title": "__MSG_appOpen__"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://offer.ebay.com/*",
+        "https://offer.ebay.de/*"
+      ],
+      "js": ["contentScript_offer.bundle.js"]
+    }
+  ],
   "permissions": [
     "https://*.ebay.com/*",
     "https://*.ebay.de/*",
