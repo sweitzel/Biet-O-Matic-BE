@@ -720,6 +720,7 @@ class Article {
     this.articleGroup = null;
     this.articleMaxBid = null;
     this.articleAutoBid = false;
+    this.offerTabId = null;
     // normal article, from open tab
     // Note: if the contentScript adds new attributes, they should be added here
     const elements = [
@@ -1127,7 +1128,16 @@ class Article {
     if (this.hasOwnProperty('articlePlatform'))
       return `https://cgi.${this.articlePlatform}/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&nordt=true&orig_cvip=true&rt=nc`;
     else
-      return `https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&nordt=true&orig_cvip=true&rt=nc'`;
+      return `https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&nordt=true&orig_cvip=true&rt=nc`;
+  }
+
+  // return the offer link for that article
+  // https://offer.ebay.de/ws/eBayISAPI.dll?MakeBid&fromPage=2047675&item=124336100157&maxbid=3,00&fb=2&bu=confirm
+  getOfferUrl() {
+    if (this.hasOwnProperty('articlePlatform'))
+      return `https://offer.${this.articlePlatform}/ws/eBayISAPI.dll?MakeBid&fromPage=2047675&item=${this.articleId}&maxbid=${this.articleMaxBid}&fb=2&bu=bid`;
+    else
+      return `https://offer.ebay.de/ws/eBayISAPI.dll?MakeBid&fromPage=2047675&item=${this.articleId}&maxbid=${this.articleMaxBid}&fb=2&bu=bid`;
   }
 
   // returns the autoBid state for window, article group and article
@@ -1386,52 +1396,76 @@ class Article {
   }
 
   // open article in a new tab
-  async openTab(tabOpenedForBidding = false) {
-    console.log("Biet-O-Matic: Article.openTab(%s) Opening Article Tab (tabOpenedForBidding=%s)",
-      this.articleId, tabOpenedForBidding);
-    // orig_cvip will go directly to the original bidding page
+  async openTab() {
+    console.log("Biet-O-Matic: Article.openTab(%s) Opening Article Tab", this.articleId);
     let tab = await browser.tabs.create({
       url: this.getUrl(),
       active: false,
       openerTabId: Popup.tabId
     });
+    return tab.id;
+  }
+
+  // open offer page for article in a new tab
+  async openOfferTab() {
+    console.log("Biet-O-Matic: Article.openOfferTab(%s) Opening Article Offer Tab", this.articleId);
+    let tab = await browser.tabs.create({
+      url: this.getOfferUrl(),
+      active: false,
+      openerTabId: Popup.tabId
+    });
     //this.tabId = tab.id;
-    if (tabOpenedForBidding) {
-      this.tabOpenedForBidding = true;
-      this.addLog({
-        component: Popup.getTranslation('cs_bidding', '.Bidding'),
-        level: "Info",
-        message: Popup.getTranslation('popup_articleTabOpenedForBidding',
-          '.Item tab opened for bidding (tab $1)', tab.id.toString())
-      });
-    }
+    this.tabOpenedForBidding = true;
+    this.addLog({
+      component: Popup.getTranslation('cs_bidding', '.Bidding'),
+      level: "Info",
+      message: Popup.getTranslation('popup_articleTabOpenedForBidding',
+        '.Item tab opened for bidding (tab $1)', tab.id.toString())
+    });
     return tab.id;
   }
 
   // close the article tab, except its active
-  closeTab(onlyCloseIfNotActive = false, onlyCloseIfOpenedForBidding = true) {
+  closeTab(onlyCloseIfNotActive = false) {
     if (this.tabId == null) {
       console.debug("Biet-O-Matic: Article.closeTab() Article %s, Tab=%s: Skip - no tabId", this.articleId, this.tabId);
       return;
     }
-    if (onlyCloseIfOpenedForBidding && !this.tabOpenedForBidding) {
-      return;
-    }
     browser.tabs.get(this.tabId).then(tab => {
-      if ((this.hasOwnProperty('tabOpenedForBidding') && this.tabOpenedForBidding === false) || (onlyCloseIfNotActive && tab.active)) {
-        console.debug("Biet-O-Matic: Article.closeTab() Article %s, Tab=%s: Dont close (%O)", this.articleId, this.tabId, tab);
+      if (onlyCloseIfNotActive && tab.active) {
+        console.debug("Biet-O-Matic: Article.closeTab() Article %s, Tab=%s: Dont close - its active", this.articleId, this.tabId);
         return;
       }
       browser.tabs.remove(this.tabId).then(() => {
         console.debug("Article.closeTab() Article %s, Tab=%s: Closed.", this.articleId, this.tabId);
-        // hopefully this will lead to log entry for article
-        if (this.hasOwnProperty('tabOpenedForBidding'))
-          delete this.tabOpenedForBidding;
       }).catch(e => {
         console.log("Biet-O-Matic: Article.closeTab() browser.tabs.remove failed: %s", e.message);
       });
     }).catch(e => {
       console.log("Biet-O-Matic: Article.closeTab() browser.tabs.get failed: %s", e.message);
+    });
+  }
+
+  // close the article offer tab
+  closeOfferTab(onlyCloseIfNotActive = false) {
+    if (this.offerTabId == null) {
+      console.debug("Biet-O-Matic: Article.closeOfferTab() Article %s: Skip - offerTabId is null", this.articleId);
+      return;
+    }
+    browser.tabs.get(this.offerTabId).then(tab => {
+      if (onlyCloseIfNotActive && tab.active) {
+        console.debug("Biet-O-Matic: Article.closeOfferTab() Article %s, Tab=%s: Dont close - its active", this.articleId, this.tabId);
+        return;
+      }
+      browser.tabs.remove(this.offerTabId).then(() => {
+        console.debug("Article.closeOfferTab() Article %s, Tab=%s: Closed.", this.articleId, this.offerTabId);
+        if (this.hasOwnProperty('tabOpenedForBidding'))
+          delete this.tabOpenedForBidding;
+      }).catch(e => {
+        console.log("Biet-O-Matic: Article.closeOfferTab() browser.tabs.remove failed: %s", e.message);
+      });
+    }).catch(e => {
+      console.log("Biet-O-Matic: Article.closeOfferTab() browser.tabs.get failed: %s", e.message);
     });
   }
 
@@ -1476,7 +1510,7 @@ class Article {
     }
     // close tab in 10 seconds if its still inactive (if the user activates the tab, it will stay open)
     window.setTimeout(() => {
-      this.closeTab(true);
+      this.closeOfferTab(true);
     }, 10000);
   }
 
@@ -2781,14 +2815,14 @@ class ArticlesTable {
       // window autoBid enabled?
       if (AutoBid.getLocalState().autoBidEnabled) {
         console.debug("Biet-O-Matic: openArticleTabsForBidding() called");
-        this.DataTable.rows().every(await ArticlesTable.openArticleForBidding);
+        this.DataTable.rows().every(ArticlesTable.openArticleForBidding);
       }
     } catch (e) {
       console.warn("Biet-O-Matic: openArticleTabsForBidding() Internal Error: " + e);
     } finally {
       window.setTimeout(() => {
         this.regularOpenArticlesForBidding();
-      }, 30000);
+      }, 10000);
     }
   }
 
@@ -2802,68 +2836,64 @@ class ArticlesTable {
         return;
       }
       const timeLeftSeconds = (article.articleEndTime - Date.now()) / 1000;
-      // skip if articleEndTime is in the past
-      if (timeLeftSeconds < 0 || timeLeftSeconds > 90) {
-        //console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, not ending within 90s: %ss",
+      // skip if articleEndTime is in the past or bidding not yet due
+      if (timeLeftSeconds < 0 || timeLeftSeconds > 60) {
+        //console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, not ending within 60s: %ss",
         //  article.articleId, timeLeftSeconds);
         return;
       }
+
+      let shouldOpenTab = true;
+
       // get group autoBid state
       const groupState = await Group.getState(article.articleGroup)
         .catch(e => console.warn("Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state: " + e));
-      if (groupState.autoBid) {
-        let shouldOpenTab = true;
-        // skip if tab already opened
-        if (article.tabOpenedForBidding) {
-          console.debug("Biet-O-Matic: openArticleTabsForBidding() Skipping, article %s is already open", article.articleId);
-          return;
-        }
-        // check and skip if tab has autoBid disabled
-        if (article.articleAutoBid === false) {
+
+      if (article.articleAutoBid === false) {
+        console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Article autoBid is disabled", article.articleId);
+        article.addLog({
+          component: Popup.getTranslation('cs_bidding', '.Bidding'),
+          level: "Info",
+          message: "Skip bidding - article auto bid is disabled."
+        });
+        shouldOpenTab = false;
+      } else if (groupState.autoBid === false) {
+        console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Group '%s' autoBid is disabled", article.articleId, article.articleGroup);
+        article.addLog({
+          component: Popup.getTranslation('cs_bidding', '.Bidding'),
+          level: "Info",
+          message: `Skip bidding - group ${article.articleGroup} auto bid is disabled.`
+        });
+        shouldOpenTab = false;
+      } else if (article.tabOpenedForBidding && article.offerTabId != null) {
+        // check if offer tab is really open
+        try {
+          let offerTab = await browser.tabs.get(article.offerTabId);
+          console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, offer tab is already open", article.articleId);
+          article.addLog({
+            component: Popup.getTranslation('cs_bidding', '.Bidding'),
+            level: "Info",
+            message: "Not opening offer tab - already open."
+          });
           shouldOpenTab = false;
-        } else if (article.hasOwnProperty('tabId') && article.tabId != null && typeof article.tabId !== 'undefined') {
-          shouldOpenTab = false;
-          // reload a tab if auction ends within 30..90 seconds - the reloadTab will rateLimit it self to 1 per 60s
-          if (timeLeftSeconds > 30) {
-            const reloaded = await ArticlesTable.reloadTab(article.tabId)
-              .catch(e => {
-                console.log("Biet-O-Matic: openArticleTabsForBidding() reloadTab failed: " + e);
-              });
-            if (reloaded) {
-              console.debug("Biet-O-Matic: openArticleTabsForBidding() Article %s tab %s has been reloaded for bidding.",
-                article.articleId, article.tabId);
-            }
-          }
+        } catch {
+          // tab is open, nothing to do
         }
-        // schedule to open tab, if not already scheduled
-        if (shouldOpenTab) {
-          // set timer to open tab 60 seconds before auction ends
-          const wakeUpInMs = (article.articleEndTime - Date.now()) - 60000;
-          if (wakeUpInMs > 0) {
-            console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - Opening tab via wakeUp timer: %sms",
-              article.articleId, wakeUpInMs);
-            window.setTimeout(function (tmpArticle) {
-              tmpArticle.openTab(true)
-                .catch(e => {
-                  console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${tmpArticle.articleId} for bidding: ${e.message}`);
-                });
-            }, wakeUpInMs, article);
-          } else {
-            console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s Opening tab now",
-              article.articleId, wakeUpInMs);
-            await article.openTab(true)
-              .catch(e => {
-                console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
-              });
-          }
-        } else {
-          console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s - should not open tab (already open=%d)",
-            article.articleId, article.tabId);
-        }
-      } else {
-        // group autoBid is disabled, do not open tab
-        console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Group '%s' autoBid is disabled",
-          article.articleId, article.articleGroup);
+      }
+
+      // open tab
+      if (shouldOpenTab) {
+        console.debug("Biet-O-Matic: openArticleTabsForBiddingAsync() Article %s Opening tab now.", article.articleId);
+        let tabId = await article.openOfferTab(true)
+          .catch(e => {
+            console.warn(`Biet-O-Matic: openArticleTabsForBidding() Unable to open tab for article ${article.articleId} for bidding: ${e.message}`);
+            article.addLog({
+              component: Popup.getTranslation('cs_bidding', '.Bidding'),
+              level: "Error",
+              message: "Opening offer tab now failed."
+            });
+        });
+        article.offerTabId = tabId;
       }
     } catch(e) {
       console.log("regularOpenArticleForBidding() Internal Error in rows.every: " + e);
@@ -2874,7 +2904,7 @@ class ArticlesTable {
 
   /*
    * Refresh article information
-   * - skip if tab is open (article will update itself)
+   * - skip if article tab is open (article will update itself)
    * - skip if autoBid is off for this window
    */
   static async regularRefreshArticleInfo() {
