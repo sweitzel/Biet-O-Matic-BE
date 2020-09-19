@@ -844,7 +844,9 @@ class Article {
     return {
       articleId: article.articleId,
       articleDescription: article.articleDescription,
-      tabId: article.tabId
+      articleEndTime: article.articleEndTime,
+      tabId: article.tabId,
+      offerTabId: article.offerTabId
     };
   }
 
@@ -920,7 +922,7 @@ class Article {
     // merge new info into existing settings
     let mergedStoredInfo = Object.assign({}, oldStoredInfo, newStoredInfo);
     let diffText = Article.getDiffMessage(Popup.getTranslation('generic_updated', '.Updated'), oldStoredInfo, newStoredInfo);
-    //console.log("oldInfo=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, newStoredInfo, mergedStoredInfo, diffText);
+    console.log("oldInfo=%O, info=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, info, newStoredInfo, mergedStoredInfo, diffText);
     if (diffText != null) {
       // store the info back to the storage
       await browser.storage.sync.set({[this.articleId]: mergedStoredInfo});
@@ -943,6 +945,7 @@ class Article {
     delete info.articleDetailsShown;
     delete info.perfInfo;
     delete info.ebayParser;
+    delete info.modifiedEndTime;
   }
 
   /*
@@ -1085,6 +1088,10 @@ class Article {
     if (messageObject.hasOwnProperty('level'))
       message.level = messageObject.level;
 
+    // simple duplicate message detection
+    if (this.tmpLastLogMessage === message.message)
+      return;
+
     // get info for article from storage
     let log = this.getLog();
     console.debug("Biet-O-Matic: addLog(%s) info=%s", this.articleId, JSON.stringify(message));
@@ -1098,6 +1105,8 @@ class Article {
       row.child(ArticlesTable.renderArticleLog(this));
       Popup.redrawTableCell(this.articleId, 'articleDetailsControl:name');
     }
+    // for duplicate message detection
+    this.tmpLastLogMessage = message.message;
   }
 
   // return the log for the article from the storage, or null if none
@@ -1263,7 +1272,7 @@ class Article {
        * - if the article now has a final auction state, we do not need to block (handle successful auction too)
        */
       ArticlesTable.refreshArticle(articleId, articles[articleId].articleEndTime, false)
-          .catch(e => {
+        .catch(e => {
           console.log("Biet-O-Matic: getBidLockState() refreshArticle %s failed: %s", articleId, e);
         });
 
@@ -1381,7 +1390,6 @@ class Article {
         const diff = (articles[key].articleEndTime - (articles[previous].articleEndTime - minDiffMs)) / 1000;
         articles[key].adjustmentReason = Popup.getTranslation('popup_adjustedBidtime',
           '.Bid time was adjusted by $1s, due to collision with item $2', [diff.toString(10), previous.toString()]);
-        // todo adjust the bidding preparation time (currently hardcoded to 30s)
         // leave 5s buffer
         if (articles[previous].articleEndTime < (Date.now() + 5000)) {
           console.warn(`Biet-O-Matic: Failed to adjust Article ${key} bidding time, would be too close to its end time!`);
@@ -1905,15 +1913,16 @@ class ArticlesTable {
     //this.highlightArticleIfExpired(row);
   }
 
-  // update articleStatus column with given message
+  // Update articleStatus column with given message
+  // Note: the info will not be persisted
   updateArticleStatus(articleId, message) {
     const row = this.getRow("#" + articleId);
     if (row == null || row.length !== 1) {
       console.log("updateArticleStatus() Cannot determine row from articleId %s", articleId);
       return;
     }
-    Popup.redrawTableCell(articleId, 'articleAuctionState:name');
     row.data().articleAuctionState = message;
+    Popup.redrawTableCell(articleId, 'articleAuctionState:name');
   }
 
   /*
@@ -2043,7 +2052,7 @@ class ArticlesTable {
     } catch (e) {
       console.log("Biet-O-Matic: addWatchListItems() failed: " + e);
       Popup.addUserMessage({
-        message: Popup.getTranslation('popup_addWatchListItemsFailed', 'Failed to add items from watch list: $1', e.message),
+        message: Popup.getTranslation('popup_addWatchListItemsFailed', 'Failed to add items from watch list: $1', [e.message]),
         level: "error",
         duration: 60000
       });
@@ -2802,7 +2811,7 @@ class ArticlesTable {
  * - abort if autoBid is disabled
  * - for all tabs in the table
  *   - skip if articleEndTime not defined (sofortkauf)
- *   - skip if articleEndTime in past or after 60 seconds
+ *   - skip if articleEndTime in in past or in more than 60s + bidTime
  *   - skip if group autoBid is disabled
  *   - if tab is open just reload it
  *   - open tab
@@ -2812,11 +2821,8 @@ class ArticlesTable {
     try {
       // redraw the table to ensure the times and certain info are refreshed
       //Popup.redrawTable();
-      // window autoBid enabled?
-      if (AutoBid.getLocalState().autoBidEnabled) {
-        console.debug("Biet-O-Matic: openArticleTabsForBidding() called");
-        this.DataTable.rows().every(ArticlesTable.openArticleForBidding);
-      }
+      console.debug("Biet-O-Matic: openArticleTabsForBidding() called");
+      this.DataTable.rows().every(ArticlesTable.openArticleForBidding);
     } catch (e) {
       console.warn("Biet-O-Matic: openArticleTabsForBidding() Internal Error: " + e);
     } finally {
@@ -2836,8 +2842,13 @@ class ArticlesTable {
         return;
       }
       const timeLeftSeconds = (article.articleEndTime - Date.now()) / 1000;
-      // skip if articleEndTime is in the past or bidding not yet due
-      if (timeLeftSeconds < 0 || timeLeftSeconds > 60) {
+      let bidTime = 5;
+      let options = await browser.storage.sync.get({bidTime: null});
+      if (options.hasOwnProperty('bidTime') && options.bidTime != null && Number.isInteger(options.bidTime)) {
+        bidTime = options.bidTime;
+      }
+      // skip if articleEndTime is in the past or the bidding process is not yet due
+      if (timeLeftSeconds < 0 || timeLeftSeconds > (60 + bidTime)) {
         //console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, not ending within 60s: %ss",
         //  article.articleId, timeLeftSeconds);
         return;
@@ -2845,7 +2856,19 @@ class ArticlesTable {
 
       let shouldOpenTab = true;
 
-      // get group autoBid state
+      // check Global autoBid state
+      if (AutoBid.getLocalState().autoBidEnabled === false) {
+        console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Global autoBid is disabled", article.articleId);
+        article.addLog({
+          component: Popup.getTranslation('cs_bidding', '.Bidding'),
+          level: "Info",
+          message: Popup.getTranslation('cs_autobidInactiveForWindow', '.Global Auto-Bid is inactive')
+        });
+        shouldOpenTab = false;
+        
+      }
+ 
+      // check Group autoBid state
       const groupState = await Group.getState(article.articleGroup)
         .catch(e => console.warn("Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state: " + e));
 
@@ -2854,15 +2877,16 @@ class ArticlesTable {
         article.addLog({
           component: Popup.getTranslation('cs_bidding', '.Bidding'),
           level: "Info",
-          message: "Skip bidding - article auto bid is disabled."
+          message: Popup.getTranslation('cs_autobidInactiveForArticle', ".Auto-bid is inactive for this item")
         });
         shouldOpenTab = false;
       } else if (groupState.autoBid === false) {
-        console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Group '%s' autoBid is disabled", article.articleId, article.articleGroup);
+        console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Group '%s' autoBid is disabled",
+          article.articleId, article.articleGroup);
         article.addLog({
           component: Popup.getTranslation('cs_bidding', '.Bidding'),
           level: "Info",
-          message: `Skip bidding - group ${article.articleGroup} auto bid is disabled.`
+          message: Popup.getTranslation('cs_autobidInactiveForGroup', ".Auto-bid is inactive for group $1", article.articleGroup)
         });
         shouldOpenTab = false;
       } else if (article.tabOpenedForBidding && article.offerTabId != null) {
@@ -2873,11 +2897,11 @@ class ArticlesTable {
           article.addLog({
             component: Popup.getTranslation('cs_bidding', '.Bidding'),
             level: "Info",
-            message: "Not opening offer tab - already open."
+            message: "Not opening offer tab - already open."  // TODO translation
           });
           shouldOpenTab = false;
         } catch {
-          // tab is open, nothing to do
+          // will open tab (shouldOpenTab stays true)
         }
       }
 
@@ -2962,7 +2986,7 @@ class ArticlesTable {
   registerEvents() {
     // listen to global events (received from other Browser window or background script)
     browser.runtime.onMessage.addListener((request, sender) => {
-      //console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
+      console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
       switch (request.action) {
         case 'ebayArticleUpdated':
           try {
@@ -3157,7 +3181,10 @@ class ArticlesTable {
               const row = this.getRow("#" + request.articleId);
               const article = row.data();
               // {articleEndTime: <adjustedTime>, adjustmentReason}
-              return Promise.resolve(article.perlenschnur());
+              if (article != null)
+                return Promise.resolve(article.perlenschnur());
+              else
+                return Promise.resolve(null);
             }
           } catch (e) {
             console.log("Biet-O-Matic: Event.ebayArticleGetAdjustedBidTime failed: %s", e);

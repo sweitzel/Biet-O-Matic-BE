@@ -216,7 +216,7 @@
     "message": "Entfernt alle Ereignisse und Einstellungen für diesen Artikel"
   },
   "popup_articleTabOpenedForBidding": {
-    "message": "Artikel Tab wurde zum Bieten geöffnet (Tab=$1)"
+    "message": "Angebots-Tab wurde zum Bieten geöffnet (Tab=$1)"
   },
   "popup_auctionendtime": {
     "message": "Auktions Endzeitpunkt"

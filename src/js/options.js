@@ -18,12 +18,15 @@ function save_options() {
   let disableClockCheck = document.getElementById('disableClockCheck').checked;
   let enableCompactSaving = document.getElementById('enableCompactSaving').checked;
   let ebayPlatform = document.getElementById('ebayPlatform').value;
+  let bidTime = Number.parseInt(document.getElementById('bidTime').value);
+
   browser.storage.sync.set({
     disableSleepPrevention: disableSleepPrevention,
     disableArticleRefresh: disableArticleRefresh,
     disableClockCheck: disableClockCheck,
     enableCompactSaving: enableCompactSaving,
-    ebayPlatform: ebayPlatform
+    ebayPlatform: ebayPlatform,
+    bidTime: bidTime
   })
     .then(() => {
       // Update status to let user know options were saved.
@@ -47,13 +50,15 @@ function restore_options() {
     disableArticleRefresh: false,
     disableClockCheck: false,
     enableCompactSaving: false,
-    ebayPlatform: null
+    ebayPlatform: null,
+    bidTime: 5
   }).then((items) => {
     document.getElementById('disableSleepPrevention').checked = items.disableSleepPrevention;
     document.getElementById('disableArticleRefresh').checked = items.disableArticleRefresh;
     document.getElementById('disableClockCheck').checked = items.disableClockCheck;
     document.getElementById('enableCompactSaving').checked = items.enableCompactSaving;
     document.getElementById('ebayPlatform').value = items.ebayPlatform;
+    document.getElementById('bidTime').value = Number.parseInt(items.bidTime);
   }).catch(e => {
     console.log("Unable to load options: " + e);
   });

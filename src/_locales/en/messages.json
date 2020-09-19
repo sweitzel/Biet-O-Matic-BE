@@ -216,7 +216,7 @@
     "message": "Removes all events and configuration for this item"
   },
   "popup_articleTabOpenedForBidding": {
-    "message": "Item tab has been opened for bidding (tab=$1)"
+    "message": "Offer tab has been opened for bidding (tab=$1)"
   },
   "popup_auctionendtime": {
     "message": "Auction End Time"
