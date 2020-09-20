@@ -922,7 +922,7 @@ class Article {
     // merge new info into existing settings
     let mergedStoredInfo = Object.assign({}, oldStoredInfo, newStoredInfo);
     let diffText = Article.getDiffMessage(Popup.getTranslation('generic_updated', '.Updated'), oldStoredInfo, newStoredInfo);
-    console.log("oldInfo=%O, info=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, info, newStoredInfo, mergedStoredInfo, diffText);
+    //console.log("oldInfo=%O, info=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, info, newStoredInfo, mergedStoredInfo, diffText);
     if (diffText != null) {
       // store the info back to the storage
       await browser.storage.sync.set({[this.articleId]: mergedStoredInfo});
@@ -946,6 +946,7 @@ class Article {
     delete info.perfInfo;
     delete info.ebayParser;
     delete info.modifiedEndTime;
+    delete info.tmpLastLogMessage;
   }
 
   /*
@@ -1271,7 +1272,7 @@ class Article {
        * - if the article price went higher than the maxBid, then auction will fail and we do not need to block
        * - if the article now has a final auction state, we do not need to block (handle successful auction too)
        */
-      ArticlesTable.refreshArticle(articleId, articles[articleId].articleEndTime, false)
+      ArticlesTable.refreshArticle(articleId, null, false)
         .catch(e => {
           console.log("Biet-O-Matic: getBidLockState() refreshArticle %s failed: %s", articleId, e);
         });
@@ -1427,29 +1428,33 @@ class Article {
     this.addLog({
       component: Popup.getTranslation('cs_bidding', '.Bidding'),
       level: "Info",
-      message: Popup.getTranslation('popup_articleTabOpenedForBidding',
+      message: Popup.getTranslation('popup_offerTabOpenedForBidding',
         '.Item tab opened for bidding (tab $1)', tab.id.toString())
     });
     return tab.id;
   }
 
-  // close the article tab, except its active
+  // close the article tab, (optionally) except its active
   closeTab(onlyCloseIfNotActive = false) {
     if (this.tabId == null) {
       console.debug("Biet-O-Matic: Article.closeTab() Article %s, Tab=%s: Skip - no tabId", this.articleId, this.tabId);
       return;
     }
-    browser.tabs.get(this.tabId).then(tab => {
-      if (onlyCloseIfNotActive && tab.active) {
-        console.debug("Biet-O-Matic: Article.closeTab() Article %s, Tab=%s: Dont close - its active", this.articleId, this.tabId);
-        return;
-      }
-      browser.tabs.remove(this.tabId).then(() => {
-        console.debug("Article.closeTab() Article %s, Tab=%s: Closed.", this.articleId, this.tabId);
-      }).catch(e => {
-        console.log("Biet-O-Matic: Article.closeTab() browser.tabs.remove failed: %s", e.message);
-      });
-    }).catch(e => {
+    browser.tabs.get(this.tabId)
+      .then(tab => {
+        if (onlyCloseIfNotActive && tab.active) {
+          console.debug("Biet-O-Matic: Article.closeTab() Article %s, Tab=%s: Dont close - its active", this.articleId, this.tabId);
+          return;
+        }
+        browser.tabs.remove(this.tabId)
+          .then(() => {
+            console.debug("Article.closeTab() Article %s, Tab=%s: Closed.", this.articleId, this.tabId);
+          })
+          .catch(e => {
+            console.log("Biet-O-Matic: Article.closeTab() browser.tabs.remove failed: %s", e.message);
+          });
+      })
+    .catch(e => {
       console.log("Biet-O-Matic: Article.closeTab() browser.tabs.get failed: %s", e.message);
     });
   }
@@ -2606,7 +2611,7 @@ class ArticlesTable {
     try {
       // also close eventually open tab
       if (article != null && typeof article !== 'undefined' && article.hasOwnProperty('tabId') && article.tabId != null)
-        article.closeTab(false, false);
+        article.closeTab(false);
       row.remove().draw(false);
     } catch (e) {
       console.info("Biet-O-Matic: removeArticleFromTable(%s) failed: %s", e.message);
@@ -2630,22 +2635,23 @@ class ArticlesTable {
     const article = row.data();
     if (article.tabId == null) {
       console.debug("Biet-O-Matic: toggleArticleTab(%s) Opening", article.articleId);
-      browser.tabs.create({
-        url: article.getUrl(),
-        active: false,
-        openerTabId: Popup.tabId
-      }).then(tab => {
-        article.tabId = tab.id;
-        // redraw article row to ensure all icons and links are refreshed
-        Popup.redrawTableRow(row.id(), false);
-      });
+      article.openTab()
+        .then(tabId => {
+          article.tabId = tabId;
+          // redraw article row to ensure all icons and links are refreshed
+          Popup.redrawTableRow(row.id(), false);
+        });
     } else {
       console.debug("Biet-O-Matic: toggleArticleTab(%s) Closing tab %d", article.articleId, article.tabId);
-      browser.tabs.remove(article.tabId).then(() => {
-        article.tabId = null;
-        // redraw article row to ensure all icons and links are refreshed
-        Popup.redrawTableRow(row.id(), false);
-      });
+      article.closeTab(false);
+      Popup.redrawTableRow(row.id(), false);
+      /*browser.tabs.remove(article.tabId)
+        .then(() => {
+          article.tabId = null;
+          // redraw article row to ensure all icons and links are refreshed
+          Popup.redrawTableRow(row.id(), false);
+        });
+      */
     }
   }
 
@@ -2893,17 +2899,19 @@ class ArticlesTable {
         // check if offer tab is really open
         try {
           let offerTab = await browser.tabs.get(article.offerTabId);
-          console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, offer tab is already open", article.articleId);
-          article.addLog({
-            component: Popup.getTranslation('cs_bidding', '.Bidding'),
-            level: "Info",
-            message: "Not opening offer tab - already open."  // TODO translation
-          });
           shouldOpenTab = false;
+          console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, offer tab is already open", article.articleId);
         } catch {
           // will open tab (shouldOpenTab stays true)
         }
-      }
+        if (!shouldOpenTab) {
+          article.addLog({
+            component: Popup.getTranslation('cs_bidding', '.Bidding'),
+            level: "Info",
+            message: Popup.getTranslation('popup_offerTabIsOpen', ".Offer Tab is open ($1)", [article.offerTabId])
+          });  
+        }
+    }
 
       // open tab
       if (shouldOpenTab) {
@@ -2986,7 +2994,7 @@ class ArticlesTable {
   registerEvents() {
     // listen to global events (received from other Browser window or background script)
     browser.runtime.onMessage.addListener((request, sender) => {
-      console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
+      //console.debug('runtime.onMessage listener fired: request=%O, sender=%O', request, sender);
       switch (request.action) {
         case 'ebayArticleUpdated':
           try {
@@ -3126,12 +3134,26 @@ class ArticlesTable {
             if (Popup.currentWindowId === sender.tab.windowId) {
               console.debug("Biet-O-Matic: Browser Event addArticleLog received from tab %s", sender.tab.id);
               const article = this.getRow("#" + request.articleId).data();
-              // redraw status (COLUMN 6)
-              if (request.detail.message.level !== Popup.getTranslation('generic_perfornmance', 'Performance')) {
-                this.updateArticleStatus(request.articleId, request.detail.message.message);
-              }
-              if (article != null)
+              if (article != null) {
+                if (request.detail.message.level === Popup.getTranslation('generic_perfornmance', 'Performance')) {
+                  // only refresh manually, if the article tab is not open
+                  if (article.tabId == null) {
+                    /*
+                     * reload article info (will become active later, in one of the next calls)
+                     * - if the article price went higher than the maxBid, then auction will fail and we do not need to block
+                     * - if the article now has a final auction state, we do not need to block (handle successful auction too)
+                     */
+                    ArticlesTable.refreshArticle(request.articleId, null, false)
+                      .catch(e => {
+                        console.log("Biet-O-Matic: addArticleLog - async refreshArticle %s failed: %s", request.articleId, e);
+                      });  
+                  }
+                } else {
+                  // redraw status (COLUMN 6)
+                  this.updateArticleStatus(request.articleId, request.detail.message.message);
+                }
                 article.addLog(request.detail.message);
+              }
               return Promise.resolve(true);
             }
           } catch (e) {

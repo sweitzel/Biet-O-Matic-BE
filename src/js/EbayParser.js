@@ -573,7 +573,8 @@ class EbayParser {
   }
 
 }
-// auction states as communicated to the overview page
+// Auction states as communicated to the overview page
+// this is used to detect auction end state - non ideal but what are the alternatives?
 EbayParser.auctionEndStates = {
   ended: {
     id: 0,

@@ -47,6 +47,12 @@
   "cs_biddingSuccess": {
     "message": "Auktion erfolgreich. Artikel ersteigert."
   },
+  "cs_bidInSeconds": {
+    "message": "Automatisches bieten in $1s"
+  },
+  "cs_bidInSecondsShort": {
+    "message": "Biete in $1s..."
+  },
   "cs_bomAutoBidHint": {
     "message": "Bitte prüfen sie auch, ob der Automatikmodus für die Gruppe und global ebenfalls aktiv sind."
   },
@@ -72,16 +78,13 @@
     "message": "Phase 1: Bietvorbereitung"
   },
   "cs_phase2": {
-    "message": "Phase 2: Gebotsabgabe"
+    "message": "Phase 2: Warte auf Zeitpunkt für Gebotsbestätigung"
   },
   "cs_phase3": {
-    "message": "Phase 3: Warte auf Zeitpunkt für Gebotsbestätigung"
+    "message": "Phase 3: Vorbereiten"
   },
   "cs_phase4": {
     "message": "Phase 4: Gebot wurde abgegeben"
-  },
-  "cs_phase4test": {
-    "message": "Phase 4: Test Bieten abgeschlossen"
   },
   "cs_problemWithBidding": {
     "message": "Problem von eBay gemeldet"
@@ -215,8 +218,11 @@
   "popup_articleRemove": {
     "message": "Entfernt alle Ereignisse und Einstellungen für diesen Artikel"
   },
-  "popup_articleTabOpenedForBidding": {
+  "popup_offerTabOpenedForBidding": {
     "message": "Angebots-Tab wurde zum Bieten geöffnet (Tab=$1)"
+  },
+  "popup_offerTabIsOpen": {
+    "message": "Angebots-Tab ist offen (Tab=$1)"
   },
   "popup_auctionendtime": {
     "message": "Auktions Endzeitpunkt"

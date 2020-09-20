@@ -128,7 +128,8 @@ class EbayOffer {
       const timeLeftInSeconds = Math.floor((this.modifiedEndTime - Date.now()) / 1000);
       const bidTimeSeconds = timeLeftInSeconds - this.bidTime;
       if (bidTimeSeconds > 0) {
-        confirmButton[0].value = `Automatisch bieten in ${bidTimeSeconds}s`;
+        confirmButton[0].value = EbayOffer.getTranslation('cs_bidInSeconds', '.Automatic bidding in $1s', [bidTimeSeconds]);
+        document.title = EbayOffer.getTranslation('cs_bidInSecondsShort', '.Bidding in $1s', [bidTimeSeconds]);
       }
     } catch (e) {
       console.warn("Biet-O-Matic: regularUpdatePage() Internal Error: " + e);
@@ -141,6 +142,7 @@ class EbayOffer {
 
   // schedule the confirmation at proper time
   scheduleConfirmAction() {
+    this.storePerfInfo(EbayOffer.getTranslation('cs_phase2', '.Waiting for bid'));
     const timeToBid = this.modifiedEndTime - Date.now() - (this.bidTime * 1000)
     window.setTimeout(() => {
       this.confirmBid()
@@ -155,7 +157,7 @@ class EbayOffer {
   // - this function will be called at the bidTime
   // - we have to check if the autoBid is still active (single purchase group)
   async confirmBid() {
-    this.storePerfInfo(EbayOffer.getTranslation('cs_phase3', '.Started bid process'));
+    this.storePerfInfo(EbayOffer.getTranslation('cs_phase3', '.Preparing'));
 
     // check window/group autoBid status
     let autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
@@ -196,7 +198,12 @@ class EbayOffer {
         message: EbayOffer.getTranslation('cs_autobidInactiveForArticle',
           '.Auto-bid is inactive for this article.')
       };
-    }    
+    }
+    let simulate = false;
+    if (autoBidInfo.simulation) {
+      console.debug("Biet-O-Matic: Enable simulated bidding.");
+      simulate = true;
+    }
 
     // check bid-lock. When another article auction is still running for the same group, we cannot peform bid
     let bidLockInfo = await browser.runtime.sendMessage({action: 'getBidLockState', articleId: this.articleId});
@@ -217,9 +224,6 @@ class EbayOffer {
       };
     }
 
-    // press confirm  button
-    this.storePerfInfo(EbayOffer.getTranslation('cs_phase4', '.Bid submitted'));
-
     // get confirm button
     const confirmButton = await EbayOffer.waitFor('input[name="confirmbid"]', 2000)
     .catch(() => {
@@ -231,19 +235,22 @@ class EbayOffer {
           'Element with name=confirmbid could not be found!')
       };
     });
-    console.log("XXX confirmButton=%O", confirmButton);
-    confirmButton.click();
 
-    // the page will now redirect to offer.ebay.xx again, so this content script should reload.
+    if (simulate) {
+      EbayOffer.sendArticleLog(this.articleId, {
+        component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+        level: "Info",
+        message: "Bid not sent (test mode active)",
+      });
+    } else {
+      confirmButton.click();
+    }
+    this.storePerfInfo(EbayOffer.getTranslation('cs_phase4', '.Bid submitted'));
+
+    // Note: The page will now redirect to offer.ebay.xx again, so this content script should reload.
 
     // finally also send performance info to popup
     this.sendBidPerfInfo();
-  }
-
-  // determine the current auction state (div with id 'st')
-  // and forward it as is to the popup to display it to the user. 
-  forwardTempStatus() {
-    
   }
 
   /*

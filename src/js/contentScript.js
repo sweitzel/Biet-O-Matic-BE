@@ -464,8 +464,6 @@ class EbayArticle {
     }
     // determine auction state - if any yet
     let currentState = EbayParser.getAuctionEndState(ebayArticleInfo);
-    // info related to previous bidding
-    const bidInfo = JSON.parse(window.sessionStorage.getItem("bidInfo:" + ebayArticleInfo.articleId));
     // info from sync storage
     const articleStoredInfo = await browser.storage.sync.get(ebayArticleInfo.articleId);
 
@@ -494,35 +492,6 @@ class EbayArticle {
       }
     }
 
-    /*
-     * If bidInfo exists in sessionStorage, it means a bid process was started before reload
-     * we will inform the popup about the state indicated now on the page
-     */
-    if (bidInfo != null) {
-      console.debug("Biet-O-Matic: handleReload(%s) Found bidInfo in sessionStorage: %s",
-        ebayArticleInfo.articleId, JSON.stringify(bidInfo));
-      // go back to previous page (?)
-      // remove bidinfo if the auction for sure ended
-      if (bidInfo.hasOwnProperty('bidPerformed') || bidInfo.articleEndTime <= Date.now()) {
-        ebayArticleInfo.auctionEndState = currentState.id;
-        console.debug("Biet-O-Matic: Setting auctionEnded now. state=%s (%d)",
-          ebayArticleInfo.articleAuctionStateText, currentState.id);
-        await EbayArticle.sendAuctionEndState(ebayArticleInfo)
-          .catch(e => {
-            console.warn("Sending initial auction end state failed: " + e);
-          });
-        console.debug("Biet-O-Matic: Setting auctionEnded now. sendAuctionEndState finished");
-        window.sessionStorage.removeItem("bidInfo:" + ebayArticleInfo.articleId);
-        // set this, so the script will not trigger parsing further down
-        ebayArticleInfo.auctionEnded = true;
-      } else {
-        // todo bidInfo should probably be deleted in some cases, to ensure that when a page was reloaded after
-        //  the bidding procedure was triggered once, the bidding can still be done
-      }
-    } else {
-      console.debug("Biet-O-Matic: handleReload(%s) No bidInfo in sessionStorage: %s",
-        ebayArticleInfo.articleId, JSON.stringify(bidInfo));
-    }
     return ebayArticleInfo;
   }
 

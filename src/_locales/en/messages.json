@@ -47,6 +47,12 @@
   "cs_biddingSuccess": {
     "message": "Auction was successful. Item purchased."
   },
+  "cs_bidInSeconds": {
+    "message": "Automated bid in $1s"
+  },
+  "cs_bidInSecondsShort": {
+    "message": "Bidding in $1s..."
+  },
   "cs_bomAutoBidHint": {
     "message": "Please ensure group and global auto-bid are also enabled."
   },
@@ -72,16 +78,13 @@
     "message": "Phase 1: Preparing the bidding process"
   },
   "cs_phase2": {
-    "message": "Phase 2: Submitting bid"
+    "message": "Phase 2: Waiting for bid-confirm time"
   },
   "cs_phase3": {
-    "message": "Phase 3: Waiting for bid-confirm time"
+    "message": "Phase 3: Preparing"
   },
   "cs_phase4": {
     "message": "Phase 4: Bid has been submitted"
-  },
-  "cs_phase4test": {
-    "message": "Phase 4: Test bid ended"
   },
   "cs_problemWithBidding": {
     "message": "Problem reported by ebay"
@@ -215,8 +218,11 @@
   "popup_articleRemove": {
     "message": "Removes all events and configuration for this item"
   },
-  "popup_articleTabOpenedForBidding": {
+  "popup_offerTabOpenedForBidding": {
     "message": "Offer tab has been opened for bidding (tab=$1)"
+  },
+  "popup_offerTabIsOpen": {
+    "message": "Offer tab is open (Tab=$1)"
   },
   "popup_auctionendtime": {
     "message": "Auction End Time"
