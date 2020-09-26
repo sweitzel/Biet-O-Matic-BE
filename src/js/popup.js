@@ -1063,7 +1063,7 @@ class Article {
   async getRefreshedInfo() {
     const response = await fetch(this.getUrl());
     if (!response.ok)
-      throw new Error(`Failed to fetch information for article ${this.articleId}: HTTP ${response.status} - ${response.statusText}`);
+      throw new Error(`Failed to fetch information for item ${this.articleId}: HTTP ${response.status} - ${response.statusText}`);
     const text = await response.text();
     //console.log("Fetch result: %s", text);
     let ebayParser = new EbayParser(this.getUrl(), text);
@@ -1272,7 +1272,7 @@ class Article {
        * - if the article price went higher than the maxBid, then auction will fail and we do not need to block
        * - if the article now has a final auction state, we do not need to block (handle successful auction too)
        */
-      ArticlesTable.refreshArticle(articleId, null, false)
+      ArticlesTable.refreshArticle(articleId, articles[articleId].articleEndTime, false)
         .catch(e => {
           console.log("Biet-O-Matic: getBidLockState() refreshArticle %s failed: %s", articleId, e);
         });
@@ -1872,6 +1872,7 @@ class ArticlesTable {
                   onlyIfExistsInStorage: false,
                   updatedFromRemote: false
                 }) {
+    if (articleInfo == null || typeof articleInfo === 'undefined') return;
     if (row == null)
       row = this.getRow("#" + articleInfo.articleId);
     if (row == null || row.length !== 1) return;
@@ -2658,26 +2659,32 @@ class ArticlesTable {
   /*
    * Refresh Article information
    * - this should be called only by the Window with Auto-Bid enabled, e.g. every 5 minutes
-   * - also called by getBidLockState to update auction state info
-   * - prevent duplicate execution by refreshArticleLock
+   * - also called by getBidLockState to update auction state info (useRateLimit=false)
+   * - also called when the popup initializes (useRateLimit=false)
+   * - when useRateLimit=false, only current items will be refreshed
    */
   static async refreshArticle(articleId, articleEndTime, useRateLimit = true) {
-    /*
-     * Ratelimit the article refresh:
-     * - > 12hours ago or in the future: 1x every hour
-     * - > 2hours ago or in the future: 1x every 5 minutes
-     * - ends within 1hour: every 5 minutes
-     * - ends within 5 minutes: every minute
-     */
+    const timeLeft = Date.now() - articleEndTime;
     if (useRateLimit) {
+      /*
+      * Ratelimit the article refresh:
+      * - > 12hours ago or in the future: 1x every hour
+      * - > 2hours ago or in the future: 1x every 5 minutes
+      * - ends within 1hour: every 5 minutes
+      * - ends within 5 minutes: every minute
+      */
       let rateLimitMs = 300000;
-      let timeLeft = Date.now() - articleEndTime;
       if (timeLeft > 43200*1000 || timeLeft < -7200*1000 ) {
         // > 12 hours -> refresh every hour
         rateLimitMs = 60 * 60 * 1000;
       }
       if (Popup.checkRateLimit('refreshArticle', articleId, rateLimitMs)) {
         //console.debug("Biet-O-Matic: refreshArticle(%s) Skip refreshing (ratelimit=%ds)", articleId, rateLimitMs / 1000);
+        return;
+      }
+    } else {
+      // refresh only items which end within +/- 5 minutes
+      if (timeLeft < -300*1000 || timeLeft > 300*1000 ) {
         return;
       }
     }
@@ -2701,7 +2708,9 @@ class ArticlesTable {
     // apply the update info
     Popup.table.updateArticle(articleInfo, row, {onlyIfExistsInStorage: true});
     if (cell.length === 1) {
-      cell.node().classList.remove('loading-spinner');
+      window.setTimeout((cellNode) => {
+        cellNode.classList.remove('loading-spinner');
+      }, 2000, cell.node());
     }
   }
 
@@ -2947,25 +2956,7 @@ class ArticlesTable {
         console.log("Biet-O-Matic: Regular item refresh has been deactivated by the user.");
         return;
       }
-      // check if autoBid is enabled
-      const localState = AutoBid.getLocalState();
-      if (Popup.table == null || !localState.autoBidEnabled) return;
-      console.debug("Biet-O-Matic: regularRefreshArticleInfo() will execute now.");
-      Popup.table.DataTable.rows().every(async (index) => {
-        let row = Popup.table.DataTable.row(index);
-        let article = row.data();
-        try {
-          // skip articles with open tab
-          if (article.hasOwnProperty('tabId') && article.tabId != null) return;
-          // Note: the refresh function will use a rate limit which depends on the article end time
-          await ArticlesTable.refreshArticle(article.articleId, article.articleEndTime);
-        } catch(e) {
-          console.log("regularRefreshArticleInfo() Internal Error inside loop: " + e);
-        } finally {
-          article = null;
-          row = null;
-        }
-      });
+      ArticlesTable.refreshArticleInfo();
     } catch (e) {
       console.warn("Biet-O-Matic: regularRefreshArticleInfo() Internal Error: " + e);
     } finally {
@@ -2973,6 +2964,28 @@ class ArticlesTable {
         ArticlesTable.regularRefreshArticleInfo();
       }, 300000);
     }
+  }
+
+  static refreshArticleInfo(useRateLimit = true) {
+    // check if autoBid is enabled
+    const localState = AutoBid.getLocalState();
+    if (Popup.table == null || !localState.autoBidEnabled) return;
+    console.debug("Biet-O-Matic: refreshArticleInfo() will execute now.");
+    Popup.table.DataTable.rows().every(async (index) => {
+      let row = Popup.table.DataTable.row(index);
+      let article = row.data();
+      try {
+        // skip articles with open tab
+        if (article.hasOwnProperty('tabId') && article.tabId != null) return;
+        // Note: the refresh function can use a rate limit which depends on the article end time
+        await ArticlesTable.refreshArticle(article.articleId, article.articleEndTime, useRateLimit);
+      } catch(e) {
+        console.log("refreshArticleInfo() Internal Error: " + e);
+      } finally {
+        article = null;
+        row = null;
+      }
+    });
   }
 
   /*
@@ -3135,18 +3148,19 @@ class ArticlesTable {
               console.debug("Biet-O-Matic: Browser Event addArticleLog received from tab %s", sender.tab.id);
               const article = this.getRow("#" + request.articleId).data();
               if (article != null) {
+                // performance message is received when the article bid has been performed
                 if (request.detail.message.level === Popup.getTranslation('generic_perfornmance', 'Performance')) {
-                  // only refresh manually, if the article tab is not open
+                  // only refresh article info manually, if the article tab is not open
                   if (article.tabId == null) {
                     /*
                      * reload article info (will become active later, in one of the next calls)
                      * - if the article price went higher than the maxBid, then auction will fail and we do not need to block
                      * - if the article now has a final auction state, we do not need to block (handle successful auction too)
                      */
-                    ArticlesTable.refreshArticle(request.articleId, null, false)
+                    ArticlesTable.refreshArticle(request.articleId, article.articleEndTime, false)
                       .catch(e => {
                         console.log("Biet-O-Matic: addArticleLog - async refreshArticle %s failed: %s", request.articleId, e);
-                      });  
+                      });
                   }
                 } else {
                   // redraw status (COLUMN 6)
@@ -3694,6 +3708,8 @@ class Popup {
     await Popup.table.addArticlesFromStorage();
     await Popup.table.addArticlesFromTabs();
     Popup.checkBrowserStorage();
+    // immediately perform closed item refresh on init
+    ArticlesTable.refreshArticleInfo(false);
     await Popup.regularCheckEbayTime()
       .catch(e => {
         console.log("Biet-O-Matic: regularCheckEbayTime() failed: " + e);
@@ -4097,7 +4113,7 @@ document.addEventListener('DOMContentLoaded', function () {
         Popup.currentWindowId, Popup.lang);
     })
     .catch(e => {
-      console.log("Biet-O-Matic: Popup initialization failed: " + e);
+      console.warn("Biet-O-Matic: Popup initialization failed: " + e);
     });
 
   //EbayParser.getWatchListItems();
