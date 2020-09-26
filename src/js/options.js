@@ -16,6 +16,7 @@ function save_options() {
   let disableSleepPrevention = document.getElementById('disableSleepPrevention').checked;
   let disableArticleRefresh = document.getElementById('disableArticleRefresh').checked;
   let disableClockCheck = document.getElementById('disableClockCheck').checked;
+  let disableGroups = document.getElementById('disableGroups').checked;
   let enableCompactSaving = document.getElementById('enableCompactSaving').checked;
   let ebayPlatform = document.getElementById('ebayPlatform').value;
   let bidTime = Number.parseInt(document.getElementById('bidTime').value);
@@ -24,6 +25,7 @@ function save_options() {
     disableSleepPrevention: disableSleepPrevention,
     disableArticleRefresh: disableArticleRefresh,
     disableClockCheck: disableClockCheck,
+    disableGroups: disableGroups,
     enableCompactSaving: enableCompactSaving,
     ebayPlatform: ebayPlatform,
     bidTime: bidTime
@@ -49,6 +51,7 @@ function restore_options() {
     disableSleepPrevention: false,
     disableArticleRefresh: false,
     disableClockCheck: false,
+    disableGroups: false,
     enableCompactSaving: false,
     ebayPlatform: null,
     bidTime: 5
@@ -56,6 +59,7 @@ function restore_options() {
     document.getElementById('disableSleepPrevention').checked = items.disableSleepPrevention;
     document.getElementById('disableArticleRefresh').checked = items.disableArticleRefresh;
     document.getElementById('disableClockCheck').checked = items.disableClockCheck;
+    document.getElementById('disableGroups').checked = items.disableGroups;
     document.getElementById('enableCompactSaving').checked = items.enableCompactSaving;
     document.getElementById('ebayPlatform').value = items.ebayPlatform;
     document.getElementById('bidTime').value = Number.parseInt(items.bidTime);

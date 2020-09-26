@@ -111,6 +111,21 @@ class EbayOffer {
 
     // assign the determined info to this Article instance
     Object.assign(this, info);
+
+    this.registerEvents();
+  }
+
+  // events from popup
+  registerEvents() {
+    // event listener for messages from BE overview popup
+    browser.runtime.onMessage.addListener((request, sender) => {
+      if (request.action === "GetOfferTabInfo") {
+        console.log("Biet-O-Matic: Event.GetArticleInfo received");
+        return Promise.resolve({articleId: this.articleId});
+      } else {
+        return Promise.reject("Biet-O-Matic: Unsupported action.");
+      }
+    });
   }
 
   /*
@@ -132,7 +147,7 @@ class EbayOffer {
         document.title = EbayOffer.getTranslation('cs_bidInSecondsShort', '.Bidding in $1s', [bidTimeSeconds]);
       }
     } catch (e) {
-      console.warn("Biet-O-Matic: regularUpdatePage() Internal Error: " + e);
+      console.warn("Biet-O-Matic: regularAction() Internal Error: " + e);
     } finally {
       window.setTimeout(() => {
         this.regularAction();
