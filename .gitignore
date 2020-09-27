@@ -1,5 +1,6 @@
 .idea/
 .yarn/
+.yarnrc
 node_modules/
 build/
 build-firefox/
@@ -11,4 +12,3 @@ documentation/themes/book/static/mermaid.min.js
 /build.crx
 /build.pem
 /hugo.exe
-.yarnrc

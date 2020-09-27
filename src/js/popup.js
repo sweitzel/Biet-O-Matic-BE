@@ -318,7 +318,7 @@ class AutoBid {
    */
   static async getSyncState() {
     let info = {autoBidEnabled: false, id: null, timestamp: null};
-    let result = await Popup.storage.get('SETTINGS');
+    let result = await browser.storage.sync.get('SETTINGS');
     //console.log("XXX getSyncState() %s", JSON.stringify(result));
     if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
       const settingsInfo = result.SETTINGS;
@@ -336,7 +336,7 @@ class AutoBid {
    * - if autoBid is being disabled for this Id, then only update the syncInfo if the id is ours
    */
   static async setSyncState(autoBidEnabled) {
-    let result = await Popup.storage.get('SETTINGS');
+    let result = await browser.storage.sync.get('SETTINGS');
     let oldSettings = {};
     if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
       oldSettings = result.SETTINGS;
@@ -364,7 +364,7 @@ class AutoBid {
     }
     console.debug("AutoBid.setSyncState(%s) Setting autoBid info %s", autoBidEnabled, JSON.stringify(newSettings));
     AutoBid.cachedChange = newSettings;
-    await Popup.storage.set({'SETTINGS': newSettings});
+    await browser.storage.sync.set({'SETTINGS': newSettings});
   }
 
   /*
@@ -1092,6 +1092,14 @@ class Article {
     let ebayParser = new EbayParser(this.getUrl(), text);
     await ebayParser.init();
     const info = ebayParser.parsePage();
+    const auctionEndState = EbayParser.getAuctionEndState(info);
+    if (this.auctionEndState == null && auctionEndState.id !== EbayParser.auctionEndStates.unknown.id) {
+      info.auctionEndState = auctionEndState.id;
+      this.handleAuctionEnded({auctionEndState: auctionEndState.id})
+        .catch(e => {
+          console.log("Biet-O-Matic: getRefreshedInfo() handleAuctionEnded() failed: " + e);
+        });
+    }
     ebayParser.cleanup();
     return info;
   }
@@ -1224,6 +1232,9 @@ class Article {
         // ignore sofortkauf items (because they have to be manually purchased)
         if (!article.hasOwnProperty('articleEndTime') || article.articleEndTime == null)
           return;
+        // ignore item which is overbid
+        if (!article.canActivateAutoBid())
+          return;
         // ignore articles in the past
         // || article.articleEndTime < Date.now();
         articles[article.articleId] = {
@@ -1232,14 +1243,6 @@ class Article {
         // handover existing auction end states
         if (article.hasOwnProperty('auctionEndState')) {
           articles[article.articleId].auctionEndState = article.auctionEndState;
-        } else if (article.hasOwnProperty('articleAuctionStateText')) {
-          // determine auctionEndState from text
-          const auctionEndState = EbayParser.getAuctionEndState({auctionEndStateText: article.auctionEndStateText});
-          articles[article.articleId].auctionEndState = auctionEndState.id;
-        } else if (article.hasOwnProperty('articleAuctionState')) {
-          // determine auctionEndState from text
-          const auctionEndState = EbayParser.getAuctionEndState({auctionEndState: article.auctionEndState});
-          articles[article.articleId].auctionEndState = auctionEndState.id;
         }
       } catch(e) {
         console.log("getBidLockState() Internal Error in every: " + e);
@@ -1333,7 +1336,7 @@ class Article {
   }
 
   // same logic as activateAutoBid from contentScript
-  activateAutoBid() {
+  canActivateAutoBid() {
     // console.debug("Biet-O-Matic: activateAutoBid(%s), autoBid=%s, maxBidValue=%s (%s), minBidValue=%s (%s)",
     //   this.articleId, this.articleAutoBid, this.articleMaxBid, typeof this.articleMaxBid,
     //   this.articleMinimumBid, typeof this.articleMinimumBid);
@@ -1532,8 +1535,8 @@ class Article {
         this.addLog({
           component: Popup.getTranslation('cs_bidding', '.Bidding'),
           level: "Status",
-          message: Article.stateToText(info.auctionEndState) +
-            Popup.getTranslation('popup_autoBidDeactivatedForGroup', '.Auto-Bid for group $1 deactivated.'),
+          message: Article.stateToText(info.auctionEndState) + " " +
+            Popup.getTranslation('popup_autoBidDeactivatedForGroup', '.Auto-Bid for group $1 deactivated.', [this.articleGroup]),
         });
       } else {
         this.addLog({
@@ -2312,7 +2315,7 @@ class ArticlesTable {
       chkAutoBid.disabled = true;
     } else {
       // maxBid was entered, check if the autoBid field can be enabled
-      if (row.activateAutoBid()) {
+      if (row.canActivateAutoBid()) {
         chkAutoBid.disabled = false;
       } else {
         labelAutoBid.classList.add('ui-state-disabled');
@@ -2749,12 +2752,12 @@ class ArticlesTable {
         return;
       }
     }
-    let row = Popup.table.DataTable.row("#" + articleId);
+    const row = Popup.table.DataTable.row("#" + articleId);
     if (typeof row === 'undefined' || row.length !== 1) {
       console.log("Biet-O-Matic: refreshArticle() Unable to find row from articleId=%s (%s)", articleId, typeof articleId);
       return;
     }
-    let article = row.data();
+    const article = row.data();
     console.debug("Biet-O-Matic: refreshArticle(%s) Refreshing", articleId);
     // add class to indicate update to the user
     let cell = Popup.table.DataTable.cell("#" + articleId, 'articleDetailsControl:name');
@@ -2963,6 +2966,15 @@ class ArticlesTable {
           component: Popup.getTranslation('cs_bidding', '.Bidding'),
           level: "Info",
           message: Popup.getTranslation('cs_autobidInactiveForGroup', ".Auto-bid is inactive for group $1", article.articleGroup)
+        });
+        shouldOpenTab = false;
+      } else if (article.canActivateAutoBid() === false && article.offerTabId == null) {
+        console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, canActivateAutoBid returned false", article.articleId);
+        article.addLog({
+          component: Popup.getTranslation('cs_bidding', '.Bidding'),
+          level: "Info",
+          message: Popup.getTranslation('popup_articlePriceTooLow', ".Skip, own offer of $1 $3 is lower than minimum bid of $2 $3.",
+            [article.articleMaxBid, article.articleMinimumBid, article.articleCurrency])
         });
         shouldOpenTab = false;
       } else if (article.offerTabId != null) {

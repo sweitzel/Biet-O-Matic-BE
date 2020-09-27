@@ -68,6 +68,13 @@ class BomStorage {
       return await browser.storage.sync.set(keys);
   }
 
+  async remove(keys) {
+    if (this.storageArea === "local")
+      return await browser.storage.local.remove(keys);
+    else
+      return await browser.storage.sync.remove(keys);
+  }
+
   async removeConfig(keys) {
     return await browser.storage.sync.remove(keys);
   }

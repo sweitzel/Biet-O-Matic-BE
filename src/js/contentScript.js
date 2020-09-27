@@ -463,7 +463,7 @@ class EbayArticle {
       return ebayArticleInfo;
     }
     // determine auction state - if any yet
-    let currentState = EbayParser.getAuctionEndState(ebayArticleInfo);
+    const currentState = EbayParser.getAuctionEndState(ebayArticleInfo);
     // info from sync storage
     const articleStoredInfo = await browser.storage.sync.get(ebayArticleInfo.articleId);
 

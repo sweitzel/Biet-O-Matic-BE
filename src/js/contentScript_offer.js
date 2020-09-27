@@ -253,8 +253,8 @@ class EbayOffer {
         throw {
           component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
           level: EbayOffer.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
-          message: EbayOffer.getTranslation('cs_errorCannotFindConfirmButton',
-            'Element with name=confirmbid could not be found!')
+          message: EbayOffer.getTranslation('cs_errorCannotFindBidButton',
+            '.Bid button could not be found!')
         };
       });
 

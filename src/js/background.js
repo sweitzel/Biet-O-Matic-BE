@@ -8,17 +8,12 @@
  */
 
 import browser from "webextension-polyfill";
-import BomStorage from "./BomStorage.js";
 
 class BomBackground {
   constructor() {
     // object of popup tabs, key is the windowId, value the tab object
     this.popupTab = {};
-    // read options from sync storage (irrespective of user storage selection)
-    browser.storage.sync.get({enableLocalMode: false}).then((options) => {
-      this.storage = new BomStorage(options.enableLocalMode);
-      this.registerEvents();
-    });
+    this.registerEvents();
   }
 
   /*

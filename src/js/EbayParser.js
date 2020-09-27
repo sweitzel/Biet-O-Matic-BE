@@ -114,7 +114,7 @@ class EbayParser {
    * - maxBid
    * - minBid
    * - bidCount / bidPrice
-   * - auctioNEndState
+   * - auctionEndState
    */
   parsePageRefresh() {
     let result = {};
@@ -371,6 +371,8 @@ class EbayParser {
    */
   static getAuctionEndState(ebayArticleInfo) {
     try {
+      if (ebayArticleInfo == null || typeof ebayArticleInfo === 'undefined')
+        return EbayParser.auctionEndStates.unknown;
       // check if the given string matches the given endState
       const matches = (endState, messageToCheck) => {
         if (!EbayParser.auctionEndStates.hasOwnProperty(endState)) {
@@ -382,7 +384,8 @@ class EbayParser {
           const messages = strings[lang];
           for (const message of messages) {
             if (messageToCheck.includes(message)) {
-              console.log("Biet-O-Matic: getAuctionEndState() Status determined from lang=%s, message=%s", lang, message);
+              console.debug("Biet-O-Matic: getAuctionEndState(%s) Status determined from lang=%s, message=%s",
+                ebayArticleInfo.articleId, lang, message);
               return true;
             }
           }
@@ -596,7 +599,7 @@ EbayParser.auctionEndStates = {
     id: 2,
     human: browser.i18n.getMessage('generic_overbid'),
     strings: {
-      de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht", "Sie waren nicht der Höchstbietende bei dieser Auktion."],
+      de: ["Sie wurden überboten", "Sie wurden gerade überboten.", "Mindestpreis wurde noch nicht erreicht", "Sie waren nicht der Höchstbietende bei dieser Auktion."],
       en: ["You've been outbid", "TODO456DEF", "You didn't win this auction."]
     }
   },
