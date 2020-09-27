@@ -37,6 +37,7 @@ import '@fortawesome/fontawesome-free/css/all.css';
 //import '@fortawesome/fontawesome-free/js/regular';
 
 import EbayParser from "./EbayParser.js";
+import BomStorage from "./BomStorage.js";
 import "../css/popup.css";
 
 /*
@@ -46,7 +47,7 @@ import "../css/popup.css";
 class Group {
   // returns the groups from sync.storage
   static async getAll() {
-    let result = await browser.storage.sync.get('GROUPS');
+    let result = await Popup.storage.get('GROUPS');
     if (Object.keys(result).length === 1)
       return result.GROUPS;
     else
@@ -62,7 +63,7 @@ class Group {
     // name=null -> name=Other Auctions
     if (name == null || typeof name === 'undefined')
       name = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
-    const storedResult = await browser.storage.sync.get('GROUPS');
+    const storedResult = await Popup.storage.get('GROUPS');
     if (Object.keys(storedResult).length === 1) {
       const groupInfo = storedResult.GROUPS;
       //console.debug("Biet-O-Matic: Group.getState(%s:%s) : %s", name, typeof name, JSON.stringify(groupInfo));
@@ -112,7 +113,7 @@ class Group {
     Popup.cachedGroups[name] = groupInfo[name];
 
     // store the info back to the storage
-    await browser.storage.sync.set({GROUPS: groupInfo});
+    await Popup.storage.set({GROUPS: groupInfo});
   }
 
   static async toggleAutoBid(name) {
@@ -185,7 +186,7 @@ class Group {
   static async removeAllUnused() {
     try {
       // first iterate through all articles and determine which groups are used
-      let storedInfo = await browser.storage.sync.get(null);
+      let storedInfo = await Popup.storage.get(null);
       const usedGroups = {};
       Object.keys(storedInfo).forEach(articleId => {
         if (!/^[0-9]+$/.test(articleId)) return;
@@ -213,11 +214,11 @@ class Group {
   }
 
   static async remove(name) {
-    let result = await browser.storage.sync.get('GROUPS');
+    let result = await Popup.storage.get('GROUPS');
     if (Object.keys(result).length !== 1) return;
     if (!result.GROUPS.hasOwnProperty(name)) return;
     delete result.GROUPS[name];
-    await browser.storage.sync.set(result);
+    await Popup.storage.set(result);
   }
 
 
@@ -317,7 +318,7 @@ class AutoBid {
    */
   static async getSyncState() {
     let info = {autoBidEnabled: false, id: null, timestamp: null};
-    let result = await browser.storage.sync.get('SETTINGS');
+    let result = await Popup.storage.get('SETTINGS');
     //console.log("XXX getSyncState() %s", JSON.stringify(result));
     if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
       const settingsInfo = result.SETTINGS;
@@ -335,7 +336,7 @@ class AutoBid {
    * - if autoBid is being disabled for this Id, then only update the syncInfo if the id is ours
    */
   static async setSyncState(autoBidEnabled) {
-    let result = await browser.storage.sync.get('SETTINGS');
+    let result = await Popup.storage.get('SETTINGS');
     let oldSettings = {};
     if (Object.keys(result).length === 1 && result.hasOwnProperty('SETTINGS')) {
       oldSettings = result.SETTINGS;
@@ -363,7 +364,7 @@ class AutoBid {
     }
     console.debug("AutoBid.setSyncState(%s) Setting autoBid info %s", autoBidEnabled, JSON.stringify(newSettings));
     AutoBid.cachedChange = newSettings;
-    await browser.storage.sync.set({'SETTINGS': newSettings});
+    await Popup.storage.set({'SETTINGS': newSettings});
   }
 
   /*
@@ -464,7 +465,7 @@ class AutoBid {
       Popup.updateFavicon(info.autoBidEnabled, null, info.simulation);
       // prevent computer sleep
       // check if the regular refresh has been disabled
-      browser.storage.sync.get({disableSleepPrevention: false}).then(globalOptions => {
+      Popup.storage.getConfig({disableSleepPrevention: false}).then(globalOptions => {
         if (globalOptions.disableSleepPrevention) {
           console.info("Biet-O-Matic: Not trying to prevent sleep mode.");
         } else {
@@ -828,7 +829,7 @@ class Article {
           // all retries failed
           return Promise.reject(error);
         } else {
-          console.log("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
+          console.debug("Biet-O-Matic: getInfoFromTab(%d) Attempt %d failed: %s", tab.id, retryCount, error.message);
         }
         await wait(1000);
       }
@@ -875,7 +876,7 @@ class Article {
 
   // return the stored info for the article or null
   async getInfoFromStorage() {
-    let result = await browser.storage.sync.get(this.articleId);
+    let result = await Popup.storage.get(this.articleId);
     if (Object.keys(result).length === 1) {
       return result[this.articleId];
     } else {
@@ -885,7 +886,7 @@ class Article {
 
   // removes all article specific data in storage
   async removeInfoFromStorage() {
-    await browser.storage.sync.remove(this.articleId);
+    await Popup.storage.remove(this.articleId);
     this.articleGroup = null;
     this.articleMaxBid = null;
     this.articleAutoBid = false;
@@ -894,7 +895,7 @@ class Article {
 
   // complement with DB info
   async addInfoFromStorage() {
-    let result = await browser.storage.sync.get(this.articleId);
+    let result = await Popup.storage.get(this.articleId);
     if (Object.keys(result).length === 1) {
       let storInfo = result[this.articleId];
       let converted = Article.convertKeys(storInfo);
@@ -914,7 +915,7 @@ class Article {
   async updateInfoInStorage(info, tabId = null, onlyIfExists = false) {
     let oldStoredInfo = {};
     // get existing article information from storage - it will be merged with the new info
-    let result = await browser.storage.sync.get(this.articleId);
+    let result = await Popup.storage.get(this.articleId);
     if (Object.keys(result).length === 1) {
       oldStoredInfo = result[this.articleId];
       // update old keys in storedInfo (e.g. maxBid -> articleMaxBid, description -> articleDescription)
@@ -948,7 +949,7 @@ class Article {
     //console.log("oldInfo=%O, info=%O, newInfo=%O, merged=%O, diffText=%O", oldStoredInfo, info, newStoredInfo, mergedStoredInfo, diffText);
     if (diffText != null) {
       // store the info back to the storage
-      await browser.storage.sync.set({[this.articleId]: mergedStoredInfo});
+      await Popup.storage.set({[this.articleId]: mergedStoredInfo});
       if (tabId != null) {
         // send update to article tab
         await browser.tabs.sendMessage(tabId, {
@@ -1786,7 +1787,7 @@ class ArticlesTable {
           }
         })
         .catch(function(e) {
-          console.warn("Biet-O-Matic: addFromTabs() Failed to get Article Info from Tab " + myTab.id + ", " + e);
+          console.info(`Biet-O-Matic: addFromTabs() Failed to get ebay item info from Tab ${myTab.id}, URL=${myTab.url}, Error=${e.message}`);
           /*
            * The script injection failed, this can have multiple reasons:
            * - the contentScript threw an error because the page is not a article
@@ -1833,7 +1834,7 @@ class ArticlesTable {
 
   // add articles which are in storage
   async addArticlesFromStorage() {
-    let storedInfo = await browser.storage.sync.get(null);
+    let storedInfo = await Popup.storage.get(null);
     Object.keys(storedInfo).forEach(articleId => {
       if (!/^[0-9]+$/.test(articleId)) {
         console.debug("Biet-O-Matic: Skipping invalid stored articleId=%s", articleId);
@@ -1960,7 +1961,8 @@ class ArticlesTable {
             Popup.addUserMessage({
               message: Popup.getTranslation(
                 'popup_updateStorageFailed',
-                '.Failed to update sync storage for item $1: $2', [article.articleId, e.message]
+                '.Failed to update sync storage for item $1: $2',
+                [article.articleId, e.message]
               ),
               level: "error",
               duration: 60000
@@ -2078,7 +2080,7 @@ class ArticlesTable {
       if (Popup.lang === 'de')
         articlePlatform = 'ebay.de';
       // check for user defined platform
-      let options = await browser.storage.sync.get({ebayPlatform: null});
+      let options = await Popup.storage.getConfig({ebayPlatform: null});
       if (options.hasOwnProperty('ebayPlatform') && options.ebayPlatform != null && options.ebayPlatform !== "")
         articlePlatform = options.ebayPlatform;
       let items = await EbayParser.getWatchListItems(articlePlatform);
@@ -2108,7 +2110,7 @@ class ArticlesTable {
         addedCount++;
       }
       Popup.addUserMessage({
-        message: Popup.getTranslation('popup_addedWatchListItems', 'Added $1 items from watch list.', addedCount.toString(10)),
+        message: Popup.getTranslation('popup_addedWatchListItems', 'Added $1 items from watch list.', [addedCount.toString(10)]),
         level: "info",
         duration: 30000
       });
@@ -2167,7 +2169,7 @@ class ArticlesTable {
         });
       } else {
         Popup.addUserMessage({
-          message: Popup.getTranslation("popup_cleanupDone", '$1 items have been removed.', removedCount.toString(10)),
+          message: Popup.getTranslation("popup_cleanupDone", '$1 items have been removed.', [removedCount.toString(10)]),
           level: "info",
           duration: 15000
         });
@@ -2321,7 +2323,7 @@ class ArticlesTable {
       if ((row.articleEndTime - Date.now() > 0) && chkAutoBid.disabled) {
         inpMaxBid.classList.add('bomHighlightBorder');
         inpMaxBid.title = Popup.getTranslation('popup_enterMinAmount', '.Enter at least $1',
-          row.articleMinimumBid.toString());
+          [row.articleMinimumBid.toString()]);
       } else {
         inpMaxBid.classList.remove('bomHighlightBorder');
         inpMaxBid.title = Popup.getTranslation('popup_minIncreaseReached', ".Required increase reached");
@@ -2917,7 +2919,7 @@ class ArticlesTable {
       }
       const timeLeftSeconds = (article.articleEndTime - Date.now()) / 1000;
       let bidTime = 5;
-      let options = await browser.storage.sync.get({bidTime: null});
+      let options = await Popup.storage.getConfig({bidTime: null});
       if (options.hasOwnProperty('bidTime') && options.bidTime != null && Number.isInteger(options.bidTime)) {
         bidTime = options.bidTime;
       }
@@ -3010,7 +3012,7 @@ class ArticlesTable {
   static async regularRefreshArticleInfo() {
     try {
       // check if the regular refresh has been disabled
-      const globalOptions = await browser.storage.sync.get({disableArticleRefresh: false});
+      const globalOptions = await Popup.storage.getConfig({disableArticleRefresh: false});
       if (globalOptions.disableArticleRefresh) {
         console.log("Biet-O-Matic: Regular item refresh has been deactivated by the user.");
         return;
@@ -3395,36 +3397,34 @@ class ArticlesTable {
       // {"SETTINGS":{
       // "newValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:1166"}},
       // "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138"}}}}
-      if (area === 'sync') {
-        if (changes.hasOwnProperty('SETTINGS')) {
-          if (AutoBid.checkChangeIsRelevant(changes.SETTINGS)) {
-            console.debug("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing AutoBid.");
-            AutoBid.renderState();
-          }
+      if (changes.hasOwnProperty('SETTINGS')) {
+        if (AutoBid.checkChangeIsRelevant(changes.SETTINGS)) {
+          console.debug("Biet-O-Matic: Browser Storage Settings changed, refreshing AutoBid.");
+          AutoBid.renderState();
         }
-        // {"GROUPS":{
-        // "newValue":{"Briefmarken":{"autoBid":true},"Keine Gruppe":{"autoBid":false},"Test":{"autoBid":true},"Tischdecken":{"autoBid":true}},
-        // "oldValue":{"Briefmarken":{"autoBid":false},"Keine Gruppe":{"autoBid":false},"Test":{"autoBid":true},"Tischdecken":{"autoBid":true}}}}
-        if (changes.hasOwnProperty('GROUPS')) {
-          console.info("Biet-O-Matic: Browser Sync Storage Settings changed, refreshing Groups.");
-          Group.updateFromChanges(changes.GROUPS);
-        }
-        // check if a new article has been added, or has been updated by another instance of BE
-        Object.keys(changes).forEach(key => {
-          // {"333462193472":{
-          // "oldValue":{"articleAuctionState":"...}}}
-          // "newValue":... (not if removed)
-          if (/[0-9]+/.test(key)) {
-            if (changes[key].hasOwnProperty('newValue')) {
-              console.info("Biet-O-Matic: Browser Sync Storage Settings changed for article %s -> addOrUpdate article", key);
-              this.addOrUpdateArticle(changes[key].newValue, null, true);
-            } else {
-              console.info("Biet-O-Matic: Browser Sync Storage Settings removed for article %s. -> remove article", key);
-              this.removeArticleFromTable(key);
-            }
-          }
-        });
       }
+      // {"GROUPS":{
+      // "newValue":{"Briefmarken":{"autoBid":true},"Keine Gruppe":{"autoBid":false},"Test":{"autoBid":true},"Tischdecken":{"autoBid":true}},
+      // "oldValue":{"Briefmarken":{"autoBid":false},"Keine Gruppe":{"autoBid":false},"Test":{"autoBid":true},"Tischdecken":{"autoBid":true}}}}
+      if (changes.hasOwnProperty('GROUPS')) {
+        console.info("Biet-O-Matic: Browser Storage Settings changed, refreshing Groups.");
+        Group.updateFromChanges(changes.GROUPS);
+      }
+      // check if a new article has been added, or has been updated by another instance of BE
+      Object.keys(changes).forEach(key => {
+        // {"333462193472":{
+        // "oldValue":{"articleAuctionState":"...}}}
+        // "newValue":... (not if removed)
+        if (/[0-9]+/.test(key)) {
+          if (changes[key].hasOwnProperty('newValue')) {
+            console.info("Biet-O-Matic: Browser Storage Settings changed for article %s -> addOrUpdate article", key);
+            this.addOrUpdateArticle(changes[key].newValue, null, true);
+          } else {
+            console.info("Biet-O-Matic: Browser Storage Settings removed for article %s. -> remove article", key);
+            this.removeArticleFromTable(key);
+          }
+        }
+      });
     });
 
     /*
@@ -3660,50 +3660,48 @@ class Popup {
    */
   static checkBrowserStorage() {
     // get total elements
-    browser.storage.sync.get(null)
+    Popup.storage.get("")
       .catch(e => {
         Popup.addUserMessage({
           message: Popup.getTranslation(
             'popup_storageReadFailed',
-            '.Failed to read from browser.storage.sync area: $1',
-            [e.message]
+            '.Failed to read from $1 area: $1',
+            [Popup.storage.storageArea, e.message]
           ),
           duration: 15000
         });
       });
 
     // total size
-    if ('getBytesInUse' in browser.storage.sync) {
-      browser.storage.sync.getBytesInUse(null)
-        .then(bytesUsed => {
-          const bytesUsedPct = (bytesUsed / (100*1024))*100;
-          let level = "info"
-          // warning > 80%, error > 95%
-          if (bytesUsedPct > 95)
-            level = "error"
-          else if (bytesUsedPct > 80)
-            level = "warning"
-          Popup.addUserMessage({
-            message: Popup.getTranslation(
-              'popup_storageUsedInfo',
-              '.Memory consumption in browser.storage.sync is $1%',
-              bytesUsedPct.toFixed(2)
-            ),
-            level: level,
-            duration: 30000
-          });
-        })
-        .catch(e => {
-          Popup.addUserMessage({
-            message: Popup.getTranslation(
-              'popup_storageUsedFailed',
-              '.Failed to determine how much space is used in browser.storage.sync: $1',
-              [e.message]
-            ),
-            duration: 15000
-          });
+    Popup.storage.getBytesInUse(null)
+      .then(bytesUsed => {
+        const bytesUsedPct = (bytesUsed / (100*1024))*100;
+        let level = "info"
+        // warning > 80%, error > 95%
+        if (bytesUsedPct > 95)
+          level = "error"
+        else if (bytesUsedPct > 80)
+          level = "warning"
+        Popup.addUserMessage({
+          message: Popup.getTranslation(
+            'popup_storageUsedInfo',
+            '.Memory consumption in $1 is $2%',
+            [Popup.storage.storageArea, bytesUsedPct.toFixed(2)]
+          ),
+          level: level,
+          duration: 30000
         });
-    }
+      })
+      .catch(e => {
+        Popup.addUserMessage({
+          message: Popup.getTranslation(
+            'popup_storageUsedFailed',
+            '.Failed to determine how much space is used in $1: $2',
+            [Popup.storage.storageArea, e.message]
+          ),
+          duration: 15000
+        });
+      });
   }
 
   /*
@@ -3729,6 +3727,22 @@ class Popup {
     this.whoIAm = await Popup.detectWhoIAm();
     Popup.currentWindowId = this.whoIAm.currentWindow.id;
     Popup.tabId = await Popup.getOwnTabId();
+
+    Popup.disableGroups = false;
+    // read options from sync storage (irrespective of user storage selection)
+    const options = await browser.storage.sync.get({disableGroups: null, enableLocalMode: null});
+    if (options.hasOwnProperty('disableGroups') && options.disableGroups != null && options.disableGroups !== "") {
+      console.log("Biet-O-Matic: Popup.init() - User disabled groups.");
+      Popup.disableGroups = options.disableGroups;
+    }
+    Popup.enableLocalMode = false;
+    if (options.hasOwnProperty('enableLocalMode') && options.enableLocalMode != null && options.enableLocalMode !== "") {
+      console.log("Biet-O-Matic: Popup.init() - User enabled local storage mode.");
+      Popup.enableLocalMode = options.enableLocalMode;
+    }
+
+    Popup.storage = new BomStorage(Popup.enableLocalMode);
+
     Popup.cachedGroups = await Group.getAll();
     Popup.lang = navigator.languages ? navigator.languages[0] : navigator.language;
     // just store the first part (en-US -> en)
@@ -3738,12 +3752,7 @@ class Popup {
       Popup.locale = de;
     else
       Popup.locale = enUS;
-
-    Popup.disableGroups = false;
-    const options = await browser.storage.sync.get({disableGroups: null});
-    if (options.hasOwnProperty('disableGroups') && options.disableGroups != null && options.disableGroups !== "")
-      Popup.disableGroups = options.disableGroups;
-
+  
     this.registerEvents();
 
     await Group.removeAllUnused()
@@ -3802,7 +3811,7 @@ class Popup {
   static async regularCheckEbayTime() {
     try {
       // check if the regular refresh has been disabled
-      const globalOptions = await browser.storage.sync.get({disableClockCheck: false});
+      const globalOptions = await Popup.storage.getConfig({disableClockCheck: false});
       if (globalOptions.disableClockCheck) {
         console.log("Biet-O-Matic: Regular clock check has been deactivated by user.");
         return;

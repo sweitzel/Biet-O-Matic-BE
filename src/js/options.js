@@ -13,13 +13,14 @@ import browser from "webextension-polyfill";
 // Saves options to chrome.storage
 function save_options() {
   'use strict';
-  let disableSleepPrevention = document.getElementById('disableSleepPrevention').checked;
-  let disableArticleRefresh = document.getElementById('disableArticleRefresh').checked;
-  let disableClockCheck = document.getElementById('disableClockCheck').checked;
-  let disableGroups = document.getElementById('disableGroups').checked;
-  let enableCompactSaving = document.getElementById('enableCompactSaving').checked;
-  let ebayPlatform = document.getElementById('ebayPlatform').value;
-  let bidTime = Number.parseInt(document.getElementById('bidTime').value);
+  const disableSleepPrevention = document.getElementById('disableSleepPrevention').checked;
+  const disableArticleRefresh = document.getElementById('disableArticleRefresh').checked;
+  const disableClockCheck = document.getElementById('disableClockCheck').checked;
+  const disableGroups = document.getElementById('disableGroups').checked;
+  const enableCompactSaving = document.getElementById('enableCompactSaving').checked;
+  const enableLocalMode = document.getElementById('enableLocalMode').checked;
+  const ebayPlatform = document.getElementById('ebayPlatform').value;
+  const bidTime = Number.parseInt(document.getElementById('bidTime').value);
 
   browser.storage.sync.set({
     disableSleepPrevention: disableSleepPrevention,
@@ -27,6 +28,7 @@ function save_options() {
     disableClockCheck: disableClockCheck,
     disableGroups: disableGroups,
     enableCompactSaving: enableCompactSaving,
+    enableLocalMode: enableLocalMode,
     ebayPlatform: ebayPlatform,
     bidTime: bidTime
   })
@@ -53,6 +55,7 @@ function restore_options() {
     disableClockCheck: false,
     disableGroups: false,
     enableCompactSaving: false,
+    enableLocalMode: false,
     ebayPlatform: null,
     bidTime: 5
   }).then((items) => {
@@ -61,6 +64,7 @@ function restore_options() {
     document.getElementById('disableClockCheck').checked = items.disableClockCheck;
     document.getElementById('disableGroups').checked = items.disableGroups;
     document.getElementById('enableCompactSaving').checked = items.enableCompactSaving;
+    document.getElementById('enableLocalMode').checked = items.enableLocalMode;
     document.getElementById('ebayPlatform').value = items.ebayPlatform;
     document.getElementById('bidTime').value = Number.parseInt(items.bidTime);
   }).catch(e => {

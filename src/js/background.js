@@ -8,12 +8,17 @@
  */
 
 import browser from "webextension-polyfill";
+import BomStorage from "./BomStorage.js";
 
 class BomBackground {
   constructor() {
     // object of popup tabs, key is the windowId, value the tab object
     this.popupTab = {};
-    this.registerEvents();
+    // read options from sync storage (irrespective of user storage selection)
+    browser.storage.sync.get({enableLocalMode: false}).then((options) => {
+      this.storage = new BomStorage(options.enableLocalMode);
+      this.registerEvents();
+    });
   }
 
   /*
@@ -172,7 +177,8 @@ class BomBackground {
   }
 
   /*
-   * check if the autoBid was enabled for one of the opened browser windows
+   * Check if the autoBid was enabled for one of the opened browser windows
+   * This will be used to reload BE popup after extension update.
    */
   static async checkAutoBidEnabledForWindow(window) {
     const result = await browser.storage.sync.get('SETTINGS');

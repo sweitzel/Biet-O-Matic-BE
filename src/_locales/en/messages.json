@@ -315,18 +315,18 @@
     "message": "Show item events"
   },
   "popup_storageReadFailed": {
-    "message": "Error reading from browser.storage.sync area: $1"
+    "message": "Error reading from $1 area: $2"
   },
   "popup_storageUsedFailed": {
-    "message": "Error checking how much space is used in browser.storage.sync area: $1"
+    "message": "Error checking how much space is used in $1 area: $2"
   },
   "popup_storageUsedInfo": {
-    "message": "Memory consumption in browser.storage.sync area is $1%"
+    "message": "Memory consumption in $1 is $2%"
   },
   "popup_timeDiff1": {
     "message": "The time difference of your system to the ebay time is too large (~$1s). Please ensure your clock is precise to ensure reliable automatic bidding is possible."
   },
   "popup_updateStorageFailed": {
-    "message": "Failed to update browser storage for item $1: $2"
+    "message": "Failed to persist update for item $1: $2"
   }
 }
