@@ -1362,7 +1362,10 @@ class Article {
   perlenschnur() {
     // if bidAll is set, then we dont need to special handle articles collisions
     if (Group.getStateCached(this.articleGroup).bidAll) {
-      return this.articleEndTime;
+      return {
+        articleEndTime: this.articleEndTime,
+        adjustmentReason: null
+      };
     }
     const articles = {};
     // build an object with required information
@@ -1744,7 +1747,7 @@ class ArticlesTable {
       },
       orderMulti: false,
       rowGroup: {
-        enable: !Popup.disableGroups,
+        enable: true,
         className: 'row-group',
         dataSrc: 'articleGroup',
         emptyDataGroup: $.fn.DataTable.RowGroup.defaults.emptyDataGroup,
@@ -2383,8 +2386,10 @@ class ArticlesTable {
     }
     labelGroupAutoBid.appendChild(inputGroupAutoBid);
     labelGroupAutoBid.appendChild(spanGroupAutoBid);
+    if (Popup.disableGroups) {
+      labelGroupAutoBid.style.display = 'none';
+    }
     td.appendChild(labelGroupAutoBid);
-
     const labelGroupBidAll = document.createElement('label');
     labelGroupBidAll.id = 'lblGroupBidAll';
     labelGroupBidAll.htmlFor = 'inpGroupBidAll';
@@ -3202,21 +3207,34 @@ class ArticlesTable {
               console.debug("Biet-O-Matic: Browser Event addArticleLog received from tab %s", sender.tab.id);
               const article = this.getRow("#" + request.articleId).data();
               if (article != null) {
+                const timeLeft = article.articleEndTime - Date.now();
                 // performance message is received when the article bid has been performed
                 if (request.detail.message.level === Popup.getTranslation('generic_perfornmance', 'Performance')) {
                   // only refresh article info manually, if the article tab is not open
                   if (article.tabId == null) {
-                    /*
-                     * reload article info (will become active later, in one of the next calls)
-                     * - if the article price went higher than the maxBid, then auction will fail and we do not need to block
-                     * - if the article now has a final auction state, we do not need to block (handle successful auction too)
-                     */
+                    // refresh item info immediately (to show if bid was successful)
                     ArticlesTable.refreshArticle(request.articleId, article.articleEndTime, false)
                       .catch(e => {
                         console.log("Biet-O-Matic: addArticleLog - async refreshArticle %s failed: %s", request.articleId, e);
                       });
+                    // refresh item info again when auction has ended (to show final auction state)
+                    // TODO: refresh item as long no final status is determined (2s after auction end might not be sufficient)
+                    if (timeLeft > 0) {
+                      window.setTimeout(function(article) {
+                        ArticlesTable.refreshArticle(article.articleId, article.articleEndTime, false)
+                          .catch(e => {
+                            console.log("Biet-O-Matic: addArticleLog - async refreshArticle %s failed: %s", request.articleId, e);
+                          });
+                        article.closeOfferTab(true);
+                      }, timeLeft + 2000, article);
+                    } else {
+                      ArticlesTable.refreshArticle(article.articleId, article.articleEndTime, false)
+                        .catch(e => {
+                          console.log("Biet-O-Matic: addArticleLog - async refreshArticle %s failed: %s", request.articleId, e);
+                        });
+                    }
                   }
-                } else {
+              } else {
                   // redraw status (COLUMN 6)
                   this.updateArticleStatus(request.articleId, request.detail.message.message);
                 }
@@ -3271,10 +3289,11 @@ class ArticlesTable {
               const row = this.getRow("#" + request.articleId);
               const article = row.data();
               // {articleEndTime: <adjustedTime>, adjustmentReason}
-              if (article != null)
+              if (article != null) {
                 return Promise.resolve(article.perlenschnur());
-              else
+              } else {
                 return Promise.resolve(null);
+              }
             }
           } catch (e) {
             console.log("Biet-O-Matic: Event.ebayArticleGetAdjustedBidTime failed: %s", e);

@@ -32,6 +32,9 @@
   "cs_bidding": {
     "message": "Bietvorgang"
   },
+  "cs_biddingAbort": {
+    "message": "Bieten abgebrochen"
+  },
   "cs_biddingFailed": {
     "message": "Auktion nicht erfolgreich. Gebot wurde nicht gesendet bzw. von eBay akzeptiert (z.B. wenn ein anderer Bieter ein gleichhohes Gebot etwas eher abgab)."
   },

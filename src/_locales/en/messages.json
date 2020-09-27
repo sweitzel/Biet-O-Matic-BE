@@ -32,6 +32,9 @@
   "cs_bidding": {
     "message": "Bidding"
   },
+  "cs_biddingAbort": {
+    "message": "Bidding aborted"
+  },
   "cs_biddingFailed": {
     "message": "Auction not successful. Your bid was not received or accepted by eBay (e.g. when another bidder placed a higher bid before yours.)"
   },

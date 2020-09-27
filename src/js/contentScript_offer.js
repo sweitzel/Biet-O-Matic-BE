@@ -39,6 +39,7 @@ class EbayOffer {
     info.articleId = url.searchParams.get("item");
     info.articleMaxBid = url.searchParams.get("maxbid");
     info.articleEndTime = null;
+    // modified bid time (bid collision prevention)
     info.modifiedEndTime = null; 
     info.bidTime = 5;
 
@@ -232,6 +233,12 @@ class EbayOffer {
     }
     if (bidLockInfo.bidIsLocked) {
       console.debug("Biet-O-Matic: doBid() abort, bidding is locked");
+      // update title & button
+      document.title = EbayOffer.getTranslation('cs_biddingAbort', '.Bidding aborted'); 
+      EbayOffer.waitFor('input[name="confirmbid"]', 1000)
+        .then(confirmButton => {
+          confirmButton.value = EbayOffer.getTranslation('cs_biddingAbort', '.Bidding aborted');
+        });
       throw {
         component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
         level: EbayOffer.getTranslation('generic_cancel', '.Cancel'),
@@ -240,16 +247,16 @@ class EbayOffer {
     }
 
     // get confirm button
-    const confirmButton = await EbayOffer.waitFor('input[name="confirmbid"]', 2000)
-    .catch(() => {
-      console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
-      throw {
-        component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
-        level: EbayOffer.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
-        message: EbayOffer.getTranslation('cs_errorCannotFindConfirmButton',
-          'Element with name=confirmbid could not be found!')
-      };
-    });
+    const confirmButton = await EbayOffer.waitFor('input[name="confirmbid"]', 1000)
+      .catch(() => {
+        console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
+        throw {
+          component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayOffer.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
+          message: EbayOffer.getTranslation('cs_errorCannotFindConfirmButton',
+            'Element with name=confirmbid could not be found!')
+        };
+      });
 
     if (simulate) {
       EbayOffer.sendArticleLog(this.articleId, {
