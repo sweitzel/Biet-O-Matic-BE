@@ -250,6 +250,10 @@ tfoot input {
   content: attr(data-i18n-after);
 }
 
+label, legend {
+  user-select: none;
+}
+
 div.polaroid {
   box-shadow: 5px 5px 5px -5px rgba(0,0,0,0.1);
   border-radius: 5px;

@@ -24,6 +24,8 @@
         </div>
         <div style="position: absolute;right: 0;top: 0;">
           <button id="butCleanupItems" class="ui-button" title="Artikel aufräumen"><i class="fas fa-broom"></i></button>
+          <button id="butSaveItems" class="ui-button" title="Alle Artikel in Datei speichern"><i class="fas fa-file-export"></i></button>
+          <button id="butLoadItems" class="ui-button" title="Alle Artikel aus Datei laden"><i class="fas fa-file-import"></i></button>
           <label for="inpAddWatchItems" class="ui-button" style="display: inline-block;white-space: nowrap;"
                  title="Fügt alle Artikel aus der eBay Beobachtungsliste hinzu.">
             <input id="inpAddWatchItems" name="autoBid" type="checkbox" style="display: none"/>
@@ -80,6 +82,24 @@
         <input type="checkbox" name="cleanExpired" id="cleanExpired">
         <label for="cleanBuyItNow">Sofortkauf Artikel entfernen</label>
         <input type="checkbox" name="cleanBuyItNow" id="cleanBuyItNow">
+      </div>
+    </fieldset>
+  </form>
+</div>
+<div id="dialog-form2" title="Artikel Import">
+  <p class="validateTips">Bitte wählen sie eine Datei zum importieren aus</p>
+  <form id="importForm">
+    <fieldset name="file">
+      <legend>Datei Auswahl</legend>
+      <input type="file" id="inputFile" accept=".json" style="width: 100%">
+    </fieldset>
+    <fieldset name="settings">
+      <legend>Einstellungen</legend>
+      <div class="settings">
+        <label for="clean">Vor Import Speicher löschen</label>
+        <input type="checkbox" name="clean" id="clean">
+        <label for="restoreConfig">Aktuelle Einstellungen beibehalten</label>
+        <input type="checkbox" name="restoreConfig" id="restoreConfig" disabled>
       </div>
     </fieldset>
   </form>

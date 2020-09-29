@@ -3687,7 +3687,7 @@ class Popup {
     // total size
     Popup.storage.getBytesInUse(null)
       .then(bytesUsed => {
-        const bytesUsedPct = (bytesUsed / (100*1024))*100;
+        const bytesUsedPct = (bytesUsed / Popup.storage.quotaBytes) * 100;
         let level = "info"
         // warning > 80%, error > 95%
         if (bytesUsedPct > 95)
@@ -3773,6 +3773,7 @@ class Popup {
       });
 
     Popup.table = new ArticlesTable('#articles');
+
     Popup.cleanupDialog = $("#dialog-form").dialog({
       autoOpen: false,
       height: "auto",
@@ -3789,14 +3790,36 @@ class Popup {
         }
       ],
       close: function() {
-        Popup.cleanupForm[0].reset();
+        Popup.cleanupDialog.find("form")[0].reset();
       }
     });
-    Popup.cleanupForm = Popup.cleanupDialog.find("form").on("submit", function(event) {
-      event.preventDefault();
-      ArticlesTable.cleanupItems();
-      Popup.cleanupDialog.dialog("close");
+    
+    Popup.importDialog = $("#dialog-form2").dialog({
+      autoOpen: false,
+      height: "auto",
+      width: 400,
+      resizable: false,
+      modal: true,
+      buttons: [
+        {
+          id: "importConfirmButton",
+          disabled: true,
+          text: Popup.getTranslation('popup_import', '.Import'),
+          click: function() {
+            Popup.importData(Popup.importFileData);
+            Popup.importFileData = null;
+            $('#importConfirmButton').button("disable");
+            $(this).dialog("close");
+          }
+        }
+      ],
+      close: function() {
+        Popup.importDialog.find("form")[0].reset();
+        Popup.importFileData = null;
+        $('#importConfirmButton').button("disable");
+      }
     });
+    Popup.importFile = Popup.importDialog.find("#inputFile").on("change", Popup.importDialogFileSelected);
 
     /*
      * restore settings from session storage (autoBidEnabled, bidAllEnabled, compactView)
@@ -3933,6 +3956,82 @@ class Popup {
     $('#butCleanupItems').on('click', function () {
       Popup.cleanupDialog.dialog("open");
     });
+    $('#butSaveItems').on('click', function () {
+      Popup.storage.export()
+        .then(() => {
+          console.log("Biet-O-Matic: Export complete.");
+        })
+        .catch((e) => {
+          console.log("Biet-O-Matic: Export failed: " + e.message);
+        });
+    });
+    $('#butLoadItems').on('click', function () {
+      Popup.importDialog.dialog("open");
+    });
+  }
+
+  /* If file has been selected in importDialog
+   * try to load it, validate and then unlock the import button
+   */
+  static importDialogFileSelected(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      // validate the content
+      try {
+        const contents = e.target.result;
+        const json = JSON.parse(contents);
+        const count = Object.keys(json).length;
+        // at least one element and GROUPS key exists
+        if (count > 0 && "GROUPS" in json) {
+          // unlock the import button
+          $('#importConfirmButton').button("enable");
+          // store json object for later access
+          Popup.importFileData = json;
+        }
+      } catch(e) {
+        console.log("Biet-O-Matic: Import failed: " + e.message);
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  /*
+   * User initiated import of data
+   */
+  static importData(data) {
+    try {
+      const formData = new FormData(document.querySelector('#importForm'));
+      const enableClean = formData.get('clean');
+      const enableRestoreConfig = formData.get('restoreConfig');
+
+      // optionally clean selected storage area before importing
+      if (enableClean) {
+        Popup.storage.clear();
+      }
+
+      // import the data (must be validated externally)
+      Popup.storage.set(data);
+
+      // optionally restore current config after restore
+      if (enableRestoreConfig) {
+        console.log("XXX todo restore config")
+      }
+
+      Popup.addUserMessage({
+        message: Popup.getTranslation("popup_importDone", '.Import of $1 items has been completed.', [Object.keys(data).length]),
+        level: "info",
+        duration: 30000
+      });
+    } catch(e) {
+      Popup.addUserMessage({
+        message: Popup.getTranslation("popup_importFailed", '.Import failed: $1', [e.message]),
+        level: "error",
+        duration: 30000
+      });
+      console.log("Biet-O-Matic: cleanupItems() Internal error while data import: ", e.message);
+    }
   }
 
   /*

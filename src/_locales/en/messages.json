@@ -266,6 +266,12 @@
   "popup_cleanupNone": {
     "message": "No items have been removed."
   },
+  "popup_importDone": {
+    "message": "Import of $1 items has been completed."
+  },
+  "popup_importFailed": {
+    "message": "Import failed with error: $1"
+  },
   "popup_closeArticleTab": {
     "message": "Closes the item tab"
   },

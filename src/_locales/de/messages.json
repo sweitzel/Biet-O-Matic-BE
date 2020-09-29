@@ -266,6 +266,12 @@
   "popup_cleanupNone": {
     "message": "Es wurden keine Artikel entfernt."
   },
+  "popup_importDone": {
+    "message": "$1 Elemente wurden geladen."
+  },
+  "popup_importFailed": {
+    "message": "Import Fehler: $1"
+  },
   "popup_closeArticleTab": {
     "message": "Schließt den Artikel Tab"
   },
