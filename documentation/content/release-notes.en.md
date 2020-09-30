@@ -7,6 +7,31 @@ type: "docs"
 
 # Release Notes
 
+## Bid-O-Matic BE Version 0.5
+This version contains a rewrite of the bidding process, which should help to reduce situations where bids where not submitted reliably.
+The bidding process is now running via the "offer.ebay.com" page, instead of the eBay item page.
+
+Other changes:
+
+- The storage destination can be changed from "sync" to "local" via a newly introduced configuration parameter.
+  This "local" storage allows to store much more items with BE (theoretically over 1000, but this was not tested).
+  It does not support the syncronisation of data between your different browser sessions.
+- The support for groups can now be deactivated via a new configuration parameTer.
+  This should simplify the user interface for users which do not need groups.
+- The storage can now be imported to a file (backup) and also be imported from it again.
+
+### Bid-O-Matic BE Version 0.5.0
+{{< hint info>}}
+Released on Saturday, 03.10.2020
+{{< /hint >}}
+
+- Complete rewrite of bidding proces
+- Added export/import functionality
+- New configuration parameter to select the storage area:
+  - Default is still the "sync" storage (100kb)
+  - Alternatively the "local" storasge (5MB) can be used
+- New configuration parameter to adjust the bid time (default is five (5) Seconds before the action end)
+
 ## Bid-O-Matic BE Version 0.4
 Bid-O-Matic is now available for all larger browser platforms. 
 
