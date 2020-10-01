@@ -29,8 +29,10 @@ Released on Saturday, 03.10.2020
 - Added export/import functionality
 - New configuration parameter to select the storage area:
   - Default is still the "sync" storage (100kb)
-  - Alternatively the "local" storasge (5MB) can be used
+  - Alternatively the "local" storage (5MB) can be used
 - New configuration parameter to adjust the bid time (default is five (5) Seconds before the action end)
+- Added keyboard shortcuts for window Automaticmode (Ctrl + a) and Compact View (Ctrl + k).
+  If it doesn't work, [each browser unfortunately uses different key modifiers](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/accesskey).
 
 ## Bid-O-Matic BE Version 0.4
 Bid-O-Matic is now available for all larger browser platforms. 

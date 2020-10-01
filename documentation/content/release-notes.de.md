@@ -10,6 +10,7 @@ type: "docs"
 ## Biet-O-Matic BE Version 0.5
 Diese Version beinhaltet große Änderungen bezüglich des Bietvorgangs, wodurch gemeldete vereinzelt auftretende Bietfehler vermieden werden sollten.
 Der Bietvorgang läuft jetzt nicht mehr über die eBay Artikelseite, sondern über die von eBay bereitgestellte "offer.ebay.de" Seite.
+Hierbei wird je nach eingestelltem Bietzeitpunkt ungefähr eine Minute vor Auktionsende die "offer.ebay.de" Seite für den Artikel geöffnet.
 
 Weitere größere Änderungen:
 
@@ -19,6 +20,8 @@ Weitere größere Änderungen:
 - Die Unterstützung für Gruppen kann über einen neue Konfigurationsparameter deaktiviert werden.
   Dies vereinfacht die Benutzung für Nutzer welche keine Gruppen verwenden.
 - Die Artikel können in eine Datei exportiert werden (Backup) und aus dieser auch wieder importiert werden.
+- Der Artikel Verkäufer wird nun gespeichert und in der Übersichtstabelle in der Beschreibung angezeigt.
+  Wenn die Kompakte Anzeige aktiviert ist, wird der Verkäufer nur angezeigt wenn man mit dem Mauszeiger über der Artikelbeschreibung verweilt.
 
 ### Biet-O-Matic BE Version 0.5.0
 {{< hint info>}}
@@ -31,7 +34,10 @@ Veröffentlicht am Samstag, 03.10.2020
   - Standard ist wie bisher der "sync" Speicher (100KB, ca. 50 Artikel)
   - Alternativ der "local" Speicher (5MB, > 1000 Artikel)
 - Neuer Konfigurationsparameter zum Einstellen des Bietzeitpunktes (Standard fünf (5) Sekunden vor Ablauf der Auktion)
-  
+- Artikel Verkäufer wird gespeichert und in der Übersichtstabelle in der Spalte "Beschreibung" angezeigt.
+- Keyboard Abkürzungen für Automatikmodus (ALT + a) und Kompakte Anzeige (ALT + k) hinzugefügt (Chrome Browser)
+  Leider verwendet jeder Browser [andere Kombinationen](https://developer.mozilla.org/de/docs/Web/HTML/Globale_Attribute/accesskey).
+
 ## Biet-O-Matic BE Version 0.4
 Biet-O-Matic steht nun für alle größeren Browser zur Verfügung. 
 

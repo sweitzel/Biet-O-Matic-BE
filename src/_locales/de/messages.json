@@ -167,6 +167,9 @@
   "generic_search": {
     "message": "Suche"
   },
+  "generic_seller": {
+    "message": "Verkäufer"
+  },
   "generic_status": {
     "message": "Status"
   },

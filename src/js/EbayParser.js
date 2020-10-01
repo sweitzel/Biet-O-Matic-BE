@@ -91,7 +91,8 @@ class EbayParser {
       ['articleAuctionState', ['#msgPanel']],
       ['articleBidCount', ['#qty-test']],
       ['articleMinimumBid', ['#MaxBidId']],
-      ['articleImage', ['#icImg']]
+      ['articleImage', ['#icImg']],
+      ['articleSeller', ['#RightSummaryPanel']]
     ]);
     for (const item of parseInfoArray) {
       const info = this.parseInfoEntry(item[0], item[1]);
@@ -209,6 +210,22 @@ class EbayParser {
               // parse traditionally via timems (good) or text field (bad)
               value = EbayParser.parseEndTime(domEntry);
             }
+          } else if (key === "articleSeller") {
+            try {
+              for (let script of this.data.scripts) {
+                if (script.src === "" && script.type === "text/javascript") {
+                  const regex = /"entityId":"(.*?)",/
+                  if (regex.test(script.text)) {
+                    value = script.text.match(regex)[1];
+                    console.debug("Biet-O-Matic: articleEndTime determined from raptor js: %s", value);
+                    break;
+                  }
+                }
+              }
+            } catch(e) {
+              console.log("Biet-O-Matic: Cannot parse entityId from raptor js: " + e);
+            }
+            console.log("XXX seller=%s", value);
           } else if (key === "articleBidPrice" || key === 'articleBuyPrice') {
             /*
              * It would be easy to just take the price from the content attribute
@@ -404,7 +421,7 @@ class EbayParser {
         }
       }
     } catch (e) {
-      console.warn("Biet-O-Matic: getAuctionEndState failed: " + e);
+      console.info("Biet-O-Matic: getAuctionEndState failed: " + e);
     }
     return EbayParser.auctionEndStates.unknown;
   }

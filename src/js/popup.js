@@ -728,7 +728,7 @@ class Article {
       'articleAuctionState', 'articleAuctionStateText', 'articleBidCount', 'articleBidPrice', 'articleCurrency',
       'articleBuyPrice', 'articleDescription', 'articleEndTime',
       'articleMinimumBid', 'articlePaymentMethods', 'articleShippingCost', 'articleShippingMethods',
-      'articleState', 'articlePlatform', 'articleImage'
+      'articleState', 'articlePlatform', 'articleImage', 'articleSeller'
     ];
     elements.forEach(e => {
       if (info.hasOwnProperty(e))
@@ -964,6 +964,7 @@ class Article {
   static removeUnwantedInfo(info) {
     delete info.popup;
     delete info.tabId;
+    delete info.offerTabId;
     delete info.tabRefreshed;
     delete info.articleDetailsShown;
     delete info.perfInfo;
@@ -1093,8 +1094,11 @@ class Article {
     await ebayParser.init();
     const info = ebayParser.parsePage();
     const auctionEndState = EbayParser.getAuctionEndState(info);
+    // if we have a defined state for the action, and 
     if (this.auctionEndState == null && auctionEndState.id !== EbayParser.auctionEndStates.unknown.id) {
       info.auctionEndState = auctionEndState.id;
+      // the auctionEndState is not handled by Article.updateInfo
+      this.auctionEndState = auctionEndState.id;
       this.handleAuctionEnded({auctionEndState: auctionEndState.id})
         .catch(e => {
           console.log("Biet-O-Matic: getRefreshedInfo() handleAuctionEnded() failed: " + e);
@@ -1172,6 +1176,15 @@ class Article {
       return `https://cgi.ebay.de/ws/eBayISAPI.dll?ViewItem&item=${this.articleId}&nordt=true&orig_cvip=true&rt=nc`;
   }
 
+  getProfileUrl() {
+    if (this.articleSeller == null)
+      return "https://www.${this.articlePlatform}";
+    if (this.hasOwnProperty('articlePlatform'))
+      return `https://www.${this.articlePlatform}/usr/${this.articleSeller}`;
+    else
+      return `https://www.ebay.de/usr/${this.articleSeller}`;
+  }
+
   // return the offer link for that article
   // https://offer.ebay.de/ws/eBayISAPI.dll?MakeBid&fromPage=2047675&item=124336100157&maxbid=3,00&fb=2&bu=confirm
   getOfferUrl() {
@@ -1232,14 +1245,8 @@ class Article {
         // ignore sofortkauf items (because they have to be manually purchased)
         if (!article.hasOwnProperty('articleEndTime') || article.articleEndTime == null)
           return;
-        // ignore item which is overbid
-        if (!article.canActivateAutoBid())
-          return;
-        // ignore articles in the past
-        // || article.articleEndTime < Date.now();
-        articles[article.articleId] = {
-          articleEndTime: article.articleEndTime
-        };
+        // TODO: ignore item which is overbid
+        articles[article.articleId] = { articleEndTime: article.articleEndTime };
         // handover existing auction end states
         if (article.hasOwnProperty('auctionEndState')) {
           articles[article.articleId].auctionEndState = article.auctionEndState;
@@ -1548,10 +1555,6 @@ class Article {
     } catch (e) {
       console.log("Biet-O-Matic: Article.handleAuctionEnded(%s) failed: %s, info=%s", this.articleId, e, JSON.stringify(info));
     }
-    // close tab in 10 seconds if its still inactive (if the user activates the tab, it will stay open)
-    window.setTimeout(() => {
-      this.closeOfferTab(true);
-    }, 10000);
   }
 
   // convert state id to text
@@ -1662,7 +1665,7 @@ class ArticlesTable {
           data: 'articleDescription',
           searchable: true,
           orderable: false,
-          defaultContent: 'Unbekannt'
+          render: ArticlesTable.renderArticleDescription
         },
         {
           name: 'articleEndTime',
@@ -1964,7 +1967,7 @@ class ArticlesTable {
             Popup.addUserMessage({
               message: Popup.getTranslation(
                 'popup_updateStorageFailed',
-                '.Failed to update sync storage for item $1: $2',
+                '.Failed to update storage for item $1: $2',
                 [article.articleId, e.message]
               ),
               level: "error",
@@ -2260,6 +2263,37 @@ class ArticlesTable {
     return div.outerHTML;
   }
 
+  // render article description including seller if available
+  // Note: articleSeller was added with 0.5.0 version
+  static renderArticleDescription(data, type, row) {
+    if (type !== 'display') return data;
+    let div = document.createElement("div");
+
+    let divDescr = document.createElement("div");
+    divDescr.textContent = data;
+    div.appendChild(divDescr);
+    if (row.hasOwnProperty('articleSeller'))
+      div.title = Popup.getTranslation('generic_seller', '.Seller') + ": " + row.articleSeller;
+
+    if (OptionCompactView.compactViewEnabled === false) {
+      if (row.hasOwnProperty('articleSeller')) {
+        // link to author
+        let a = document.createElement('a');
+        a.href = row.getProfileUrl(row.articleSeller);
+        a.text = row.articleSeller;
+        a.target = '_blank';
+  
+        let span2 = document.createElement("span");
+        span2.textContent = Popup.getTranslation('generic_seller', '.Seller') + ": ";
+  
+        div.appendChild(span2);
+        div.appendChild(a);
+      }
+    }
+
+    return div.outerHTML;
+  }
+
   /*
    * datatable: render column articleMaxBid
    * - input:number for maxBid
@@ -2286,7 +2320,7 @@ class ArticlesTable {
     inpMaxBid.id = 'inpMaxBid_' + row.articleId;
     inpMaxBid.type = 'number';
     inpMaxBid.min = '0';
-    inpMaxBid.step = '0.01';
+    inpMaxBid.step = '0.5';
     inpMaxBid.defaultValue = Number.isNaN(maxBid) ? '' : maxBid.toString(10);
     inpMaxBid.style.width = "60px";
     const labelAutoBid = document.createElement('label');
