@@ -35,7 +35,7 @@ Veröffentlicht am Samstag, 03.10.2020
   - Alternativ der "local" Speicher (5MB, > 1000 Artikel)
 - Neuer Konfigurationsparameter zum Einstellen des Bietzeitpunktes (Standard fünf (5) Sekunden vor Ablauf der Auktion)
 - Artikel Verkäufer wird gespeichert und in der Übersichtstabelle in der Spalte "Beschreibung" angezeigt.
-- Keyboard Abkürzungen für Automatikmodus (ALT + a) und Kompakte Anzeige (ALT + k) hinzugefügt (Chrome Browser)
+- Keyboard Abkürzungen für Automatikmodus (ALT + a), Einstellungen (ALT + o) und Kompakte Anzeige (ALT + k) hinzugefügt (Chrome Browser)
   Leider verwendet jeder Browser [andere Kombinationen](https://developer.mozilla.org/de/docs/Web/HTML/Globale_Attribute/accesskey).
 
 ## Biet-O-Matic BE Version 0.4

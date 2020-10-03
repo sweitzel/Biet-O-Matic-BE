@@ -225,7 +225,6 @@ class EbayParser {
             } catch(e) {
               console.log("Biet-O-Matic: Cannot parse entityId from raptor js: " + e);
             }
-            console.log("XXX seller=%s", value);
           } else if (key === "articleBidPrice" || key === 'articleBuyPrice') {
             /*
              * It would be easy to just take the price from the content attribute

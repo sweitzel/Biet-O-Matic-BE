@@ -70,6 +70,25 @@ function restore_options() {
   }).catch(e => {
     console.log("Unable to load options: " + e);
   });
+
+  // display help text in div linkToDoc
+  const div = document.getElementById('linkToDoc');
+  div.innerHTML = "";
+  //<a href="/doc/en/index.html" title="Documentation" target="_blank"
+  //       class="button-zoom far fa-question-circle fa-lg fa-fw" aria-label="Documentation"></a>
+  const a = document.createElement('a');
+
+  let lang = navigator.languages ? navigator.languages[0] : navigator.language;
+  lang = lang.slice(0, 2);
+  if (lang === 'de') {
+    a.href = "/doc/de/manual.html#interne-konfigurationsparameter";
+    a.text = "Bitte folgen sie diesem Link, für eine Beschreibung der Einstellungen.";
+  } else {
+    a.href = "/doc/en/manual.html#internal-configuration-parameters";
+    a.text = "Please follow this link for a description of these options.";
+  }
+  a.target = '_blank';
+  div.appendChild(a);
 }
 
 document.addEventListener('DOMContentLoaded', restore_options);

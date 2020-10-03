@@ -163,7 +163,7 @@ Aktuell gibt es folgende Parameter (Seite aktuell nicht übersetzt):
   - Bitte denken sie daran, das BE Gebote nur automatisch abgeben kann, wenn der Computer läuft.
 - "Disable background-refresh of closed Items"
   - Wenn aktiviert, wird BE Informationen für Artikel, welche aktuell nicht in einem Tab offen sind, nicht automatisch aktualisieren.
-  - Hinweis: Dies kann hilfreich sein um Abstürze zu verhindern, wenn BE lange Zeit unbeafsichtigt laufen soll.
+  - Hinweis: Falls BE über lange Zeit unbeaufsichtigt laufen soll, kann diese Option helfen Abstürze / Hänger zu verhindern.
 - "Disable regular clock check"
   - Wenn aktiviert, führt BE keine regelmäßige Überprüfung der Uhrzeit ihres Systems gegen die eBay-Zeit durch.
 - "Disable Groups"

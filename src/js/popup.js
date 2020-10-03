@@ -1597,9 +1597,12 @@ class Article {
 class ArticlesTable {
   // selector = '#articles'
   constructor(selector) {
-    if ($(selector).length === 0)
-      throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
-    $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation('generic_noGroup', ".No Group");
+    if ($(selector).length === 0) throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
+    if (Popup.disableGroups) {
+      $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation('generic_item', ".Items");
+    } else {
+      $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation('generic_noGroup', ".Other Items");
+    }
     try {
       const state = OptionCompactView.getState();
       ArticlesTable.setCompact(state.compactViewEnabled);
@@ -1711,8 +1714,8 @@ class ArticlesTable {
           name: 'articleGroup',
           data: 'articleGroup',
           width: '80px',
-          searchable: true,
-          orderable: false, // this should ideally be false, but then the ordering is messed up
+          searchable: !Popup.disableGroups,
+          orderable: false,
           defaultContent: $.fn.DataTable.RowGroup.defaults.emptyDataGroup,
           render: ArticlesTable.renderArticleGroup,
           visible: !Popup.disableGroups
@@ -1877,7 +1880,7 @@ class ArticlesTable {
     const tr = document.createElement('tr');
     $('#articles thead th').each(function () {
       const th = document.createElement('th');
-      if (this.cellIndex === 1 || this.cellIndex === 2 || this.cellIndex === 7) {
+      if (this.cellIndex === 1 || this.cellIndex === 2 || (Popup.disableGroups === false && this.cellIndex === 7)) {
         const title = $(this).text();
         const input = document.createElement('input');
         input.id = 'colsearch';
@@ -3987,6 +3990,12 @@ class Popup {
         });
     });
 
+    $('#butConfig').on('click', function () {
+      browser.runtime.openOptionsPage()
+        .catch(e => {
+          console.log("Biet-O-Matic: Opening options page failed; ", e.message);
+        });
+    });
     $('#butCleanupItems').on('click', function () {
       Popup.cleanupDialog.dialog("open");
     });

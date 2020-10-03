@@ -17,12 +17,13 @@
       <div style="position: relative;">
         <div>
           <label for="inpAutoBid" class="ui-button" style="display: inline-block;white-space: nowrap;margin-right: 30px;"
-                 title="Define if automatic bidding is active for this browser window.">
+                 title="Define if automatic bidding is active for this browser window. (ALT + a)">
             <input id="inpAutoBid" name="autoBid" type="checkbox" accesskey="a" style="display: none"/>
             <span id="lblAutoBid" class="translate">Auto-Bid&nbsp;</span>
           </label>
         </div>
         <div style="position: absolute;right: 0;top: 0;">
+          <button id="butConfig" class="ui-button" title="Configuration (ALT + o)" accesskey="o"><i class="fas fa-tools"></i></button>
           <button id="butCleanupItems" class="ui-button" title="Cleanup Items"><i class="fas fa-broom"></i></button>
           <button id="butSaveItems" class="ui-button" title="Save all items to file"><i class="fas fa-file-export"></i></button>
           <button id="butLoadItems" class="ui-button" title="Load all items from file"><i class="fas fa-file-import"></i></button>
@@ -32,8 +33,8 @@
             <span id="lblAddWatchItems">Add Items from Watch List</span>
           </label>
           <label for="inpCompact" class="ui-button" style="display: inline-block;white-space: nowrap;"
-                 title="Switches between compact and verbose article information.">
-            <input id="inpCompact" name="autoBid" type="checkbox" accesskey="k" style="display: none"/>
+                 title="Switches between compact and verbose article information. (ALT + c)">
+            <input id="inpCompact" name="autoBid" type="checkbox" accesskey="c" style="display: none"/>
             <span id="lblCompact" class="translate">Compact View&nbsp;</span>
           </label>
         </div>

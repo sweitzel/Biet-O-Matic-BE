@@ -36,7 +36,7 @@
     "message": "Bieten abgebrochen"
   },
   "cs_biddingFailed": {
-    "message": "Auktion nicht erfolgreich. Gebot wurde nicht gesendet bzw. von eBay akzeptiert (z.B. wenn ein anderer Bieter ein gleichhohes Gebot etwas eher abgab)."
+    "message": "Auktion nicht erfolgreich. Gebot wurde nicht gesendet bzw. von eBay akzeptiert (z.B. wenn ein anderer Bieter ein höheres Gebot abgab)."
   },
   "cs_biddingOverbid": {
     "message": "Auktion nicht erfolgreich. Sie wurden überboten."
