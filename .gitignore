@@ -1,7 +1,12 @@
 .idea/
+.yarn/
+.yarnrc
 node_modules/
 build/
 build-firefox/
+documentation/themes/book/exampleSite
+documentation/themes/book/static/katex
+documentation/themes/book/static/mermaid.min.js
 **/*.log
 **/*.zip
 /build.crx

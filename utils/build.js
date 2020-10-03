@@ -11,5 +11,7 @@ webpack(
       throw err;
     if (stats.hasErrors())
       console.log("Errors: stats=%s", stats);
+    else
+      console.log("Info: stats=%s", stats);
     // Done processing
   });

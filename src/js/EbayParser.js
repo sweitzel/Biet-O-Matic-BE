@@ -91,7 +91,8 @@ class EbayParser {
       ['articleAuctionState', ['#msgPanel']],
       ['articleBidCount', ['#qty-test']],
       ['articleMinimumBid', ['#MaxBidId']],
-      ['articleImage', ['#icImg']]
+      ['articleImage', ['#icImg']],
+      ['articleSeller', ['#RightSummaryPanel']]
     ]);
     for (const item of parseInfoArray) {
       const info = this.parseInfoEntry(item[0], item[1]);
@@ -114,7 +115,7 @@ class EbayParser {
    * - maxBid
    * - minBid
    * - bidCount / bidPrice
-   * - auctioNEndState
+   * - auctionEndState
    */
   parsePageRefresh() {
     let result = {};
@@ -208,6 +209,21 @@ class EbayParser {
             if (value == null) {
               // parse traditionally via timems (good) or text field (bad)
               value = EbayParser.parseEndTime(domEntry);
+            }
+          } else if (key === "articleSeller") {
+            try {
+              for (let script of this.data.scripts) {
+                if (script.src === "" && script.type === "text/javascript") {
+                  const regex = /"entityId":"(.*?)",/
+                  if (regex.test(script.text)) {
+                    value = script.text.match(regex)[1];
+                    console.debug("Biet-O-Matic: articleEndTime determined from raptor js: %s", value);
+                    break;
+                  }
+                }
+              }
+            } catch(e) {
+              console.log("Biet-O-Matic: Cannot parse entityId from raptor js: " + e);
             }
           } else if (key === "articleBidPrice" || key === 'articleBuyPrice') {
             /*
@@ -371,6 +387,8 @@ class EbayParser {
    */
   static getAuctionEndState(ebayArticleInfo) {
     try {
+      if (ebayArticleInfo == null || typeof ebayArticleInfo === 'undefined')
+        return EbayParser.auctionEndStates.unknown;
       // check if the given string matches the given endState
       const matches = (endState, messageToCheck) => {
         if (!EbayParser.auctionEndStates.hasOwnProperty(endState)) {
@@ -382,7 +400,8 @@ class EbayParser {
           const messages = strings[lang];
           for (const message of messages) {
             if (messageToCheck.includes(message)) {
-              console.log("Biet-O-Matic: getAuctionEndState() Status determined from lang=%s, message=%s", lang, message);
+              console.debug("Biet-O-Matic: getAuctionEndState(%s) Status determined from lang=%s, message=%s",
+                ebayArticleInfo.articleId, lang, message);
               return true;
             }
           }
@@ -401,7 +420,7 @@ class EbayParser {
         }
       }
     } catch (e) {
-      console.warn("Biet-O-Matic: getAuctionEndState failed: " + e);
+      console.info("Biet-O-Matic: getAuctionEndState failed: " + e);
     }
     return EbayParser.auctionEndStates.unknown;
   }
@@ -573,7 +592,8 @@ class EbayParser {
   }
 
 }
-// auction states as communicated to the overview page
+// Auction states as communicated to the overview page
+// this is used to detect auction end state - non ideal but what are the alternatives?
 EbayParser.auctionEndStates = {
   ended: {
     id: 0,
@@ -595,7 +615,7 @@ EbayParser.auctionEndStates = {
     id: 2,
     human: browser.i18n.getMessage('generic_overbid'),
     strings: {
-      de: ["Sie wurden überboten", "Mindestpreis wurde noch nicht erreicht", "Sie waren nicht der Höchstbietende bei dieser Auktion."],
+      de: ["Sie wurden überboten", "Sie wurden gerade überboten.", "Mindestpreis wurde noch nicht erreicht", "Sie waren nicht der Höchstbietende bei dieser Auktion."],
       en: ["You've been outbid", "TODO456DEF", "You didn't win this auction."]
     }
   },

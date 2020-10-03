@@ -60,9 +60,7 @@ Spenden (Sponsoring) über GitHub ist eine relativ neue Möglichkeit, um Open So
 kalkulierbare Einnahmen, welche nötig sind um solch ein Projekt langfristig am Leben zu erhalten.
 Hier ist der {{% fontawesome github-alt %}} [GitHub Link um zu spenden](https://github.com/sponsors/sweitzel).
 
-* Nur für Technik-affine Nutzer oder Software Entwickler empfehlenswert,
-  welche sowieso schon über einen Benutzeraccount bei GitHub verfügen.
+* Nur für Technik-affine Nutzer oder Software Entwickler empfehlenswert, welche sowieso schon über einen Benutzeraccount bei GitHub verfügen.
 * GitHub ist eine Englischsprachige Plattform.
-* Spenden geht bei GitHub nur als wiederkehrende Zahlung. Es wird also monatlich der gewählte Betrag abgebucht
-  (dies kann jedoch auch monatlich widerrufen werden)
-* Als Vorteil wäre zu nennen: GitHub verdoppelt die Spenden (bis 5.000€) und erhebt keine Gebühren (bis Ende 2020).
+* Spenden geht bei GitHub nur als wiederkehrende Zahlung.
+  Es wird also monatlich der gewählte Betrag abgebucht (dies kann jedoch auch monatlich widerrufen werden)

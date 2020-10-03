@@ -1,18 +1,13 @@
-{{ $dateFormat := default "January 2, 2006" .Site.Params.BookDateFormat }}
-{{ if or .Date .Params.tags }}
-<div>
 {{ with .Date}}
-  <h5>{{ .Format $dateFormat }}</h5>
+  <h5>{{ partial "docs/date" (dict "Date" . "Format" $.Site.Params.BookDateFormat) }}</h5>
 {{ end }}
 
-{{ range $term, $_ := .Site.Taxonomies }}
-  {{ with $list := index $.Params $term }}
-    {{ range $n, $single := $list }}{{ if $n }}, {{ end -}}
-      <a href="/{{$term}}/{{$single}}/">{{ $single }}</a>
+{{ range $taxonomy, $_ := .Site.Taxonomies }}
+  {{ with $terms := $.GetTerms $taxonomy }}
+  <div>
+    {{ range $n, $term := $terms }}{{ if $n }}, {{ end }}
+      <a href="{{ $term.RelPermalink }}">{{ $term.Title }}</a>
     {{- end }}
-    <br />
+  </div>
   {{ end }}
-{{ end }}
-
-</div>
 {{ end }}

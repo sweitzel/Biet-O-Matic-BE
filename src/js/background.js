@@ -172,7 +172,8 @@ class BomBackground {
   }
 
   /*
-   * check if the autoBid was enabled for one of the opened browser windows
+   * Check if the autoBid was enabled for one of the opened browser windows
+   * This will be used to reload BE popup after extension update.
    */
   static async checkAutoBidEnabledForWindow(window) {
     const result = await browser.storage.sync.get('SETTINGS');

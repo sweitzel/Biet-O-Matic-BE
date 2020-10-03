@@ -17,22 +17,25 @@
       <div style="position: relative;">
         <div>
           <label for="inpAutoBid" class="ui-button" style="display: inline-block;white-space: nowrap;margin-right: 30px;"
-                 title="Define if automatic bidding is active for this browser window.">
-            <input id="inpAutoBid" name="autoBid" type="checkbox" style="display: none"/>
-            <span id="lblAutoBid" class="translate">Auto-Bid </span>
+                 title="Define if automatic bidding is active for this browser window. (ALT + a)">
+            <input id="inpAutoBid" name="autoBid" type="checkbox" accesskey="a" style="display: none"/>
+            <span id="lblAutoBid" class="translate">Auto-Bid&nbsp;</span>
           </label>
         </div>
         <div style="position: absolute;right: 0;top: 0;">
+          <button id="butConfig" class="ui-button" title="Configuration (ALT + o)" accesskey="o"><i class="fas fa-tools"></i></button>
           <button id="butCleanupItems" class="ui-button" title="Cleanup Items"><i class="fas fa-broom"></i></button>
+          <button id="butSaveItems" class="ui-button" title="Save all items to file"><i class="fas fa-file-export"></i></button>
+          <button id="butLoadItems" class="ui-button" title="Load all items from file"><i class="fas fa-file-import"></i></button>
           <label for="inpAddWatchItems" class="ui-button" style="display: inline-block;white-space: nowrap;"
                  title="Add all items from ebay watchlist.">
             <input id="inpAddWatchItems" name="autoBid" type="checkbox" style="display: none"/>
             <span id="lblAddWatchItems">Add Items from Watch List</span>
           </label>
           <label for="inpCompact" class="ui-button" style="display: inline-block;white-space: nowrap;"
-                 title="Switches between compact and verbose article information.">
-            <input id="inpCompact" name="autoBid" type="checkbox" style="display: none"/>
-            <span id="lblCompact" class="translate">Compact View </span>
+                 title="Switches between compact and verbose article information. (ALT + c)">
+            <input id="inpCompact" name="autoBid" type="checkbox" accesskey="c" style="display: none"/>
+            <span id="lblCompact" class="translate">Compact View&nbsp;</span>
           </label>
         </div>
       </div>
@@ -84,13 +87,31 @@
     </fieldset>
   </form>
 </div>
+<div id="dialog-form2" title="Item Import">
+  <p class="validateTips">Please select a file to import</p>
+  <form id="importForm">
+    <fieldset name="file">
+      <legend>File selection</legend>
+      <input type="file" id="inputFile" accept=".json" style="width: 100%">
+    </fieldset>
+    <fieldset name="settings">
+      <legend>Settings</legend>
+      <div class="settings">
+        <label for="clean">Clean storage before import</label>
+        <input type="checkbox" name="clean" id="clean">
+        <label for="restoreConfig">Keep current settings</label>
+        <input type="checkbox" name="restoreConfig" id="restoreConfig" disabled>
+      </div>
+    </fieldset>
+  </form>
+</div>
 <footer>
   <div class="footer">
     <div id="left">
     </div>
     <div id="center">
       <p id="bomVersion">Biet-O-Matic BE v0.0.0</p>
-      <a href="/doc/en/index.html#Sponsor" title="Sponsor" target="_blank"
+      <a href="/doc/en/index.html#sponsor" title="Sponsor" target="_blank"
          class="button-zoom fas fa-heart fa-lg fa-fw" aria-label="Sponsor"></a>
     </div>
     <div id="right">

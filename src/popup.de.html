@@ -17,22 +17,25 @@
       <div style="position: relative;">
         <div>
           <label for="inpAutoBid" class="ui-button" style="display: inline-block;white-space: nowrap;margin-right: 30px;"
-                 title="Konfiguriert den Automatikmodus für das aktuelle Browser Fenster.">
-            <input id="inpAutoBid" name="autoBid" type="checkbox" style="display: none"/>
-            <span id="lblAutoBid" class="translate">Automatikmodus </span>
+                 title="Konfiguriert den Automatikmodus für das aktuelle Browser Fenster. (ALT + a)">
+            <input id="inpAutoBid" name="autoBid" type="checkbox" accesskey="a" style="display: none"/>
+            <span id="lblAutoBid" class="translate">Automatikmodus&nbsp;</span>
           </label>
         </div>
         <div style="position: absolute;right: 0;top: 0;">
+          <button id="butConfig" class="ui-button" title="Einstellungen (ALT + o)" accesskey="o"><i class="fas fa-tools"></i></button>
           <button id="butCleanupItems" class="ui-button" title="Artikel aufräumen"><i class="fas fa-broom"></i></button>
+          <button id="butSaveItems" class="ui-button" title="Alle Artikel in Datei speichern"><i class="fas fa-file-export"></i></button>
+          <button id="butLoadItems" class="ui-button" title="Alle Artikel aus Datei laden"><i class="fas fa-file-import"></i></button>
           <label for="inpAddWatchItems" class="ui-button" style="display: inline-block;white-space: nowrap;"
                  title="Fügt alle Artikel aus der eBay Beobachtungsliste hinzu.">
             <input id="inpAddWatchItems" name="autoBid" type="checkbox" style="display: none"/>
             <span id="lblAddWatchItems">Beobachtete Artikel hinzufügen</span>
           </label>
           <label for="inpCompact" class="ui-button" style="display: inline-block;white-space: nowrap;"
-                 title="Wechselt zwischen normaler und kompakter Ansicht.">
-            <input id="inpCompact" name="autoBid" type="checkbox" style="display: none"/>
-            <span id="lblCompact" class="translate">Kompakte Ansicht </span>
+                 title="Wechselt zwischen normaler und kompakter Ansicht. (ALT + k)">
+            <input id="inpCompact" name="autoBid" type="checkbox" accesskey="k" style="display: none"/>
+            <span id="lblCompact" class="translate">Kompakte Ansicht&nbsp;</span>
           </label>
         </div>
       </div>
@@ -84,13 +87,31 @@
     </fieldset>
   </form>
 </div>
+<div id="dialog-form2" title="Artikel Import">
+  <p class="validateTips">Bitte wählen sie eine Datei zum importieren aus</p>
+  <form id="importForm">
+    <fieldset name="file">
+      <legend>Datei Auswahl</legend>
+      <input type="file" id="inputFile" accept=".json" style="width: 100%">
+    </fieldset>
+    <fieldset name="settings">
+      <legend>Einstellungen</legend>
+      <div class="settings">
+        <label for="clean">Vor Import Speicher löschen</label>
+        <input type="checkbox" name="clean" id="clean">
+        <label for="restoreConfig">Aktuelle Einstellungen beibehalten</label>
+        <input type="checkbox" name="restoreConfig" id="restoreConfig" disabled>
+      </div>
+    </fieldset>
+  </form>
+</div>
 <footer>
   <div class="footer">
     <div id="left">
     </div>
     <div id="center">
       <p id="bomVersion">Biet-O-Matic BE v0.0.0</p>
-      <a href="/doc/de/index.html#Spenden" title="Spenden" target="_blank"
+      <a href="/doc/de/index.html#spenden" title="Spenden" target="_blank"
          class="button-zoom fas fa-heart fa-lg fa-fw" aria-label="Spenden"></a>
     </div>
     <div id="right">

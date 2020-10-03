@@ -9,16 +9,16 @@ bookToc: true
 Welcome to the Biet-O-Matic Browser extension, in the following simply called "BE".
 Please use the navigation menu on the left to access the desired information.
 
-If you want, you can skip to a [Quick-Start Guide]({{< relref "/manual#quick-start" >}}) which gives important information about the basic usage of BE.
+If you like, you can skip to a [Quick-Start Guide]({{< relref "/manual#quick-start" >}}) which gives important information about the basic usage of BE.
 
 ## Origin
 First of all: Biet-O-Matic BE and the [Original B-O-M Program](https://www.bid-o-matic.org/hp/) have little in common except for the name:
 
-* Another developer
-* Completely different technology
-    * Original B-O-M is a Windows program, programmed in Visual Basic.
-    * BE is a stand-alone browser extension programmed in JavaScript.
-* BE has a reduced functional scope - it focuses on item management and automatic bidding.
+- Another developer
+- Completely different technology
+  - Original B-O-M is a Windows program, programmed in Visual Basic.
+  - BE is a stand-alone browser extension programmed in JavaScript.
+- BE has a reduced functional scope - it focuses on item management and automatic bidding.
 
 At mid/end 2019 the original B-O-M program stopped working reliably due to changes made by eBay regarding login/captcha.
 There were no reliable and sustainable efforts to address these issues in the original program. 
@@ -26,20 +26,20 @@ So - without much hesitation - this project was created to provide a free replac
 
 A short research about alternatives did not lead to satisfying results:
 
-* Not trustworthy nor professional looking "quick fix solutions"
-* Solutions which one immediately notices that it is primarily about being a source of income for the author
-* Problems in terms of data protection:
-    * Entrusting login data to a third party provider
-    * Source code not available
-* Unclear situation regarding the access, storage and evaluation of transaction data (auctions)
+- Not trustworthy nor professional looking "quick fix solutions"
+- Solutions which one immediately notices that it is primarily about being a source of income for the author
+- Problems in terms of data protection:
+  - Entrusting login data to a third party provider
+  - Source code not available
+- Unclear situation regarding the access, storage and evaluation of transaction data (auctions)
 
 ## Bid-O-Matic Forum
 If you want to ask questions about the programme - be it about a problem,
 a proposal or anything else - you can do so in the [B-O-M Forum](https://www.bid-o-matic.org/forum/index.php?c=6).
 
 Please note:
-* For inquiries please check first if this or a similar inquiry already existed
-* Please always place new requests in separate "Topics" and in the correct category 
+- For inquiries please check first if this or a similar inquiry already existed
+- Please always place new requests in separate "Topics" and in the correct category 
 
 ## Source code
 The source code of B-O-M BE is available at www.github.com/sweitzel/Biet-O-Matic-BE.
@@ -64,7 +64,6 @@ Sponsoring through GitHub is a relatively new way to fund open source projects t
 predictable income. It's more complicated for the "sponsor", but it does generate more predictable cash flow,
 which is necessary to keep such a project alive. Here is the GitHub link to donate.
 
-* Recommended only for software engineers or similar people, who already own a GitHub account.
-* Requires a registration at GitHub (which is free)
-* Donations can only be made as recurring payments. So the chosen amount will be debited monthly (but this can also be revoked monthly)
-* As a big advantage: GitHub currently doubles the donations (up to 5.000€) and does not charge any fees (until the end of 2020).
+- Recommended only for software engineers or similar people, who already own a GitHub account.
+- Requires a registration at GitHub (which is free)
+- Donations can only be made as recurring payments. So the chosen amount will be debited monthly (but this can also be revoked monthly)

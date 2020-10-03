@@ -32,6 +32,9 @@
   "cs_bidding": {
     "message": "Bidding"
   },
+  "cs_biddingAbort": {
+    "message": "Bidding aborted"
+  },
   "cs_biddingFailed": {
     "message": "Auction not successful. Your bid was not received or accepted by eBay (e.g. when another bidder placed a higher bid before yours.)"
   },
@@ -47,6 +50,12 @@
   "cs_biddingSuccess": {
     "message": "Auction was successful. Item purchased."
   },
+  "cs_bidInSeconds": {
+    "message": "Automated bid in $1s"
+  },
+  "cs_bidInSecondsShort": {
+    "message": "Bidding in $1s..."
+  },
   "cs_bomAutoBidHint": {
     "message": "Please ensure group and global auto-bid are also enabled."
   },
@@ -56,15 +65,6 @@
   "cs_errorCannotFindBidButton": {
     "message": "Can not find the bid button on the item page!"
   },
-  "cs_errorCannotFindConfirmButton": {
-    "message": "Element #confirm_body could not be found in the item page"
-  },
-  "cs_errorCannotFindModal": {
-    "message": "Element #MODAL_BODY could not be found in the item page"
-  },
-  "cs_errorCouldNotRecheckAutoBidEnableOption": {
-    "message": "Could not re-check autoBidEnabled option"
-  },
   "cs_initialisation": {
     "message": "Initialization"
   },
@@ -72,16 +72,13 @@
     "message": "Phase 1: Preparing the bidding process"
   },
   "cs_phase2": {
-    "message": "Phase 2: Submitting bid"
+    "message": "Phase 2: Waiting for bid-confirm time"
   },
   "cs_phase3": {
-    "message": "Phase 3: Waiting for bid-confirm time"
+    "message": "Phase 3: Preparing"
   },
   "cs_phase4": {
     "message": "Phase 4: Bid has been submitted"
-  },
-  "cs_phase4test": {
-    "message": "Phase 4: Test bid ended"
   },
   "cs_problemWithBidding": {
     "message": "Problem reported by ebay"
@@ -170,6 +167,9 @@
   "generic_search": {
     "message": "Search"
   },
+  "generic_seller": {
+    "message": "Seller"
+  },
   "generic_status": {
     "message": "Status"
   },
@@ -215,8 +215,14 @@
   "popup_articleRemove": {
     "message": "Removes all events and configuration for this item"
   },
-  "popup_articleTabOpenedForBidding": {
-    "message": "Item tab has been opened for bidding (tab=$1)"
+  "popup_offerTabOpenedForBidding": {
+    "message": "Offer tab has been opened for bidding (tab=$1)"
+  },
+  "popup_offerTabIsOpen": {
+    "message": "Offer tab is open (Tab=$1)"
+  },
+  "popup_articlePriceTooLow": {
+    "message": "Bidding not possible (own offer of $1 $3 is lower than minimum bid of $2 $3). You can still adjust your offer."
   },
   "popup_auctionendtime": {
     "message": "Auction End Time"
@@ -263,6 +269,12 @@
   "popup_cleanupNone": {
     "message": "No items have been removed."
   },
+  "popup_importDone": {
+    "message": "Import of $1 items has been completed."
+  },
+  "popup_importFailed": {
+    "message": "Import failed with error: $1"
+  },
   "popup_closeArticleTab": {
     "message": "Closes the item tab"
   },
@@ -306,18 +318,18 @@
     "message": "Show item events"
   },
   "popup_storageReadFailed": {
-    "message": "Error reading from browser.storage.sync area: $1"
+    "message": "Error reading from $1 area: $2"
   },
   "popup_storageUsedFailed": {
-    "message": "Error checking how much space is used in browser.storage.sync area: $1"
+    "message": "Error checking how much space is used in $1 area: $2"
   },
   "popup_storageUsedInfo": {
-    "message": "Memory consumption in browser.storage.sync area is $1%"
+    "message": "Memory consumption in $1 is $2%"
   },
   "popup_timeDiff1": {
     "message": "The time difference of your system to the ebay time is too large (~$1s). Please ensure your clock is precise to ensure reliable automatic bidding is possible."
   },
   "popup_updateStorageFailed": {
-    "message": "Failed to update browser storage for item $1: $2"
+    "message": "Failed to persist update for item $1: $2"
   }
 }

@@ -1,66 +1,46 @@
 {{ $bookSection := default "docs" .Site.Params.BookSection  }}
 {{ if eq $bookSection "*" }}
-  {{ .Scratch.Set "BookSections" .Site.Sections }}
-{{ else }}
-  {{ $bookSections := where .Site.Sections "Section" $bookSection }}
-  {{ .Scratch.Set "BookSections" $bookSections }}
+  {{ $bookSection = "/" }}{{/* Backward compatibility */}}
 {{ end }}
 
+{{ with .Site.GetPage $bookSection }}
+  {{ template "book-section-children" (dict "Section" . "CurrentPage" $) }}
+{{ end }}
 
-{{ $sections := .Scratch.Get "BookSections" }}
-{{/* If there is only one section to render then render its children, else render all sections */}}
-{{ if eq (len $sections) 1 }} 
-  {{ with index $sections 0 }}
-    {{ template "book-section-children" (dict "Section" . "CurrentPage" $) }}
-  {{ end }}
-{{ else }}
+{{ define "book-section-children" }}{{/* (dict "Section" .Section "CurrentPage" .CurrentPage) */}}
   <ul>
-  {{ range where $sections "Params.bookHidden" "!=" true }}
-    {{ template "book-section" (dict "Section" . "CurrentPage" $) }}
-  {{ end }}
-  </ul>
-{{ end }}
-
-{{ define "book-section" }}
-{{ with .Section }}
-  <li {{ if .Params.BookFlatSection }} class="book-section-flat" {{ end }}>
-    {{ if .Content }}
-      {{ template "book-page-link" (dict "Page" . "CurrentPage" $.CurrentPage) }}
-    {{ else }}
-      <span>{{ partial "docs/title" . }}</span>
-    {{ end }}
-
-    {{ template "book-section-children" (dict "Section" . "CurrentPage" $.CurrentPage) }}
-  </li>
-{{ end }}
-{{ end }}
-
-{{ define "book-section-children" }}
-{{ $ancestor := .Section.IsAncestor .CurrentPage }}
-{{ $collapsed := .Section.Params.bookCollapseSection }}
-
-{{ if or $ancestor (not $collapsed) }}
-  {{ with .Section }}
-  <ul>
-    {{ range where .Pages "Params.bookhidden" "!=" "true" }}
-      {{ if eq .Kind "section" }}
-        {{ template "book-section" (dict "Section" . "CurrentPage" $.CurrentPage) }}
-      {{ else if and (eq .Kind "page") .Content }}
+    {{ range (where .Section.Pages "Params.bookhidden" "ne" true) }}
+      {{ if .IsSection }}
+        <li {{- if .Params.BookFlatSection }} class="book-section-flat" {{ end -}}>
+          {{ template "book-page-link" (dict "Page" . "CurrentPage" $.CurrentPage) }}
+          {{ template "book-section-children" (dict "Section" . "CurrentPage" $.CurrentPage) }}
+        </li>
+      {{ else if and .IsPage .Content }}
         <li>
-        {{- template "book-page-link" (dict "Page" . "CurrentPage" $.CurrentPage) -}}
+          {{ template "book-page-link" (dict "Page" . "CurrentPage" $.CurrentPage) }}
         </li>
       {{ end }}
     {{ end }}
   </ul>
+{{ end }}
+
+{{ define "book-page-link" }}{{/* (dict "Page" .Page "CurrentPage" .CurrentPage) */}}
+  {{ $current := eq .CurrentPage .Page }}
+  {{ $ancestor := .Page.IsAncestor .CurrentPage }}
+
+  {{ if .Page.Params.bookCollapseSection }}
+    <input type="checkbox" id="section-{{ md5 .Page }}" class="toggle" {{ if or $current $ancestor }}checked{{ end }} />
+    <label for="section-{{ md5 .Page }}" class="flex justify-between">
+      <a {{ if .Page.Content }}href="{{ .Page.Permalink }}"{{ end }} class="{{ if $current }}active{{ end }}">
+        {{- partial "docs/title" .Page -}}
+      </a>
+      <span>▾</span>
+    </label>
+  {{ else if .Page.Content }}
+    <a href="{{ .Page.Permalink }}" class="{{ if $current }} active{{ end }}">
+      {{- partial "docs/title" .Page -}}
+    </a>
+  {{ else }}
+    <span>{{- partial "docs/title" .Page -}}</span>
   {{ end }}
-{{ end }}
-
-{{ end }}
-
-{{ define "book-page-link" }}
-{{ with .Page }}
-  <a href="{{ .RelPermalink }}" {{ if eq $.CurrentPage . }} class="active"{{ end }}>
-      {{ partial "docs/title" . }}
-  </a>
-{{ end }}
 {{ end }}

@@ -32,8 +32,11 @@
   "cs_bidding": {
     "message": "Bietvorgang"
   },
+  "cs_biddingAbort": {
+    "message": "Bieten abgebrochen"
+  },
   "cs_biddingFailed": {
-    "message": "Auktion nicht erfolgreich. Gebot wurde nicht gesendet bzw. von eBay akzeptiert (z.B. wenn ein anderer Bieter ein gleichhohes Gebot etwas eher abgab)."
+    "message": "Auktion nicht erfolgreich. Gebot wurde nicht gesendet bzw. von eBay akzeptiert (z.B. wenn ein anderer Bieter ein höheres Gebot abgab)."
   },
   "cs_biddingOverbid": {
     "message": "Auktion nicht erfolgreich. Sie wurden überboten."
@@ -47,6 +50,12 @@
   "cs_biddingSuccess": {
     "message": "Auktion erfolgreich. Artikel ersteigert."
   },
+  "cs_bidInSeconds": {
+    "message": "Automatisches bieten in $1s"
+  },
+  "cs_bidInSecondsShort": {
+    "message": "Biete in $1s..."
+  },
   "cs_bomAutoBidHint": {
     "message": "Bitte prüfen sie auch, ob der Automatikmodus für die Gruppe und global ebenfalls aktiv sind."
   },
@@ -56,15 +65,6 @@
   "cs_errorCannotFindBidButton": {
     "message": "Kann den Biet-Knopf nicht auf der Artikelseite finden!"
   },
-  "cs_errorCannotFindConfirmButton": {
-    "message": "Element #confirm_body konnte nicht auf der Artikelseite gefunden werden"
-  },
-  "cs_errorCannotFindModal": {
-    "message": "Element #MODAL_BODY konnte nicht auf der Artikelseite gefunden werden!"
-  },
-  "cs_errorCouldNotRecheckAutoBidEnableOption": {
-    "message": "Konnte die autoBidEnabled Option nicht erneut prüfen"
-  },
   "cs_initialisation": {
     "message": "Initialisierung"
   },
@@ -72,16 +72,13 @@
     "message": "Phase 1: Bietvorbereitung"
   },
   "cs_phase2": {
-    "message": "Phase 2: Gebotsabgabe"
+    "message": "Phase 2: Warte auf Zeitpunkt für Gebotsbestätigung"
   },
   "cs_phase3": {
-    "message": "Phase 3: Warte auf Zeitpunkt für Gebotsbestätigung"
+    "message": "Phase 3: Vorbereiten"
   },
   "cs_phase4": {
     "message": "Phase 4: Gebot wurde abgegeben"
-  },
-  "cs_phase4test": {
-    "message": "Phase 4: Test Bieten abgeschlossen"
   },
   "cs_problemWithBidding": {
     "message": "Problem von eBay gemeldet"
@@ -170,6 +167,9 @@
   "generic_search": {
     "message": "Suche"
   },
+  "generic_seller": {
+    "message": "Verkäufer"
+  },
   "generic_status": {
     "message": "Status"
   },
@@ -215,8 +215,14 @@
   "popup_articleRemove": {
     "message": "Entfernt alle Ereignisse und Einstellungen für diesen Artikel"
   },
-  "popup_articleTabOpenedForBidding": {
-    "message": "Artikel Tab wurde zum Bieten geöffnet (Tab=$1)"
+  "popup_offerTabOpenedForBidding": {
+    "message": "Angebots-Tab wurde zum Bieten geöffnet (Tab=$1)"
+  },
+  "popup_offerTabIsOpen": {
+    "message": "Angebots-Tab ist offen (Tab=$1)"
+  },
+  "popup_articlePriceTooLow": {
+    "message": "Bieten nicht möglich (eigenes Gebot von $1 $3 ist niedriger als aktuelles Mindestgebot von $2 $3). Sie können Ihr Angebot noch anpassen."
   },
   "popup_auctionendtime": {
     "message": "Auktions Endzeitpunkt"
@@ -263,6 +269,12 @@
   "popup_cleanupNone": {
     "message": "Es wurden keine Artikel entfernt."
   },
+  "popup_importDone": {
+    "message": "$1 Elemente wurden geladen."
+  },
+  "popup_importFailed": {
+    "message": "Import Fehler: $1"
+  },
   "popup_closeArticleTab": {
     "message": "Schließt den Artikel Tab"
   },
@@ -306,18 +318,18 @@
     "message": "Zeigt Artikel Ereignisprotokoll"
   },
   "popup_storageReadFailed": {
-    "message": "Fehler beim lesen vom browser.storage.sync Speicher: $1"
+    "message": "Fehler beim lesen vom $1 Speicher: $2"
   },
   "popup_storageUsedFailed": {
-    "message": "Fehler beim prüfen wieviel Speicher im 'browser.storage.sync' Bereich belegt ist: $1"
+    "message": "Fehler beim prüfen wieviel Speicher im '$1' Bereich belegt ist: $2"
   },
   "popup_storageUsedInfo": {
-    "message": "Es sind aktuell $1% des 'browser.storage.sync' Speichers belegt."
+    "message": "Es sind aktuell $2% des '$1' Speichers belegt."
   },
   "popup_timeDiff1": {
     "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (~$1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
   },
   "popup_updateStorageFailed": {
-    "message": "Fehler beim schreiben des Browser sync.storage für Artikel $1: $2"
+    "message": "Fehler beim speichern für Artikel $1: $2"
   }
 }

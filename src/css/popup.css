@@ -5,6 +5,38 @@
   border-width: 2px;
 }
 
+/* region ebay offer page */
+.sml-s {
+	/*margin: 0 100px 0 100px;*/
+	border: 3px solid #df0d0d;
+	/*font: normal 1.231em Arial;*/
+	color: #333
+}
+.sml-e {
+	border-color: #df0d0d;
+	color: #c00
+}
+.sml-i {
+	border-color: #1153da
+}
+.sml-w {
+	border-color: #fe9900
+}
+.sml-c {
+	border-color: #448600
+}
+.g-hdn {
+	height: 0;
+	line-height: 0;
+	overflow: hidden;
+	width: 0;
+	position: absolute;
+	font-size: 0;
+	z-index: -1;
+	outline: none
+}
+/* endregion */
+
 /*region ebay css */
 #s_w_pipe {
   display: none;
@@ -216,6 +248,10 @@ tfoot input {
 }
 .translate::after {
   content: attr(data-i18n-after);
+}
+
+label, legend {
+  user-select: none;
 }
 
 div.polaroid {
