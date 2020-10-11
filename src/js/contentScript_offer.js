@@ -152,7 +152,7 @@ class EbayOffer {
     } finally {
       window.setTimeout(() => {
         this.regularAction();
-      }, 1000);
+      }, 2000);
     }
   }
 
