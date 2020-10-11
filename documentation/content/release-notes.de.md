@@ -15,8 +15,8 @@ Hierbei wird je nach eingestelltem Bietzeitpunkt ungefähr eine Minute vor Aukti
 Weitere größere Änderungen:
 
 - Das Speicherziel kann über einen neuen Konfigurationsparameter zwischen "sync" (Standard) und "local" umgetellt werden
-  Der "local" Speicher ermöglicht es deutlich mehr Artikel mit BOM-BE zu verwalten (theoretisch über 1000, nicht getested!),
-  dieser unterstützt allerdings nicht die Synchronisation von BOM-BE auf mehreren Rechnern bzw. Browsern.
+  Der "local" Speicher ermöglicht es deutlich mehr Artikel mit BE zu verwalten (theoretisch über 1000, nicht getested!),
+  dieser unterstützt allerdings nicht die Synchronisation von BE auf mehreren Rechnern bzw. Browsern.
 - Die Unterstützung für Gruppen kann über einen neue Konfigurationsparameter deaktiviert werden.
   Dies vereinfacht die Benutzung für Nutzer welche keine Gruppen verwenden.
 - Die Artikel können in eine Datei exportiert werden (Backup) und aus dieser auch wieder importiert werden.

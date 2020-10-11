@@ -31,6 +31,7 @@ Released on Saturday, 03.10.2020
   - Default is still the "sync" storage (100kb)
   - Alternatively the "local" storage (5MB) can be used
 - New configuration parameter to adjust the bid time (default is five (5) Seconds before the action end)
+- Item seller is now processed and displayed in the overview table when compact mode is inactive
 - Added keyboard shortcuts for window automatic mode (ALT + a), Configuration (ALT + o) and Compact View (ALT + c).
   If it doesn't work, [each browser unfortunately uses different key modifiers](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/accesskey).
 
