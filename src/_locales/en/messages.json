@@ -129,10 +129,10 @@
     "message": "Configures the Auto-Bid mode for the group"
   },
   "generic_group_bidAllDisabled": {
-    "message": "I want one"
+    "message": "☝️ I want one"
   },
   "generic_group_bidAllEnabled": {
-    "message": "I want all"
+    "message": "🖐️ I want all"
   },
   "generic_group_bidAllHint": {
     "message": "Toggles between 'Bid until you win' and 'Bid all items from this group'"

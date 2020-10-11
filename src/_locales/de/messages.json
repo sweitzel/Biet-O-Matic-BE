@@ -129,10 +129,10 @@
     "message": "Konfiguriert den Automatikmodus für die Gruppe"
   },
   "generic_group_bidAllDisabled": {
-    "message": "Ich möchte Einen"
+    "message": "☝️ Ich möchte Einen"
   },
   "generic_group_bidAllEnabled": {
-    "message": "Ich möchte Alle"
+    "message": "🖐️ Ich möchte Alle"
   },
   "generic_group_bidAllHint": {
     "message": "Wechselt zwischen 'Einen Artikel aus der Gruppe ersteigern' und 'Alle Artikel aus der Gruppe ersteigern'"
