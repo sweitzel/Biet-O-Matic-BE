@@ -23,6 +23,13 @@ Weitere größere Änderungen:
 - Der Artikel Verkäufer wird nun gespeichert und in der Übersichtstabelle in der Beschreibung angezeigt.
   Wenn die Kompakte Anzeige aktiviert ist, wird der Verkäufer nur angezeigt wenn man mit dem Mauszeiger über der Artikelbeschreibung verweilt.
 
+### Biet-O-Matic BE Version 0.5.1
+{{< hint info>}}
+Veröffentlicht am Sonntag, 11.10.2020 
+{{< /hint >}}
+
+- Kleinere Verbesserungen für Firefox Release Vorbereitung
+
 ### Biet-O-Matic BE Version 0.5.0
 {{< hint info>}}
 Veröffentlicht am Samstag, 03.10.2020 
