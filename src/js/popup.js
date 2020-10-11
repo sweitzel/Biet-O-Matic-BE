@@ -171,12 +171,8 @@ class Group {
         console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
       });
     if (state.bidAll) {
-      $(inpGroupBidAll).siblings('i').removeClass('fa-hand-pointer');
-      $(inpGroupBidAll).siblings('i').addClass('fa-hand-paper');
       $(inpGroupBidAll).siblings('span').text(" " + Popup.getTranslation('generic_group_bidAllEnabled', ".Bid all"));
     } else {
-      $(inpGroupBidAll).siblings('i').removeClass('fa-hand-paper');
-      $(inpGroupBidAll).siblings('i').addClass('fa-hand-pointer');
       $(inpGroupBidAll).siblings('span').text(" " + Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win"));
     }
 
@@ -2443,11 +2439,6 @@ class ArticlesTable {
     inputGroupBidAll.setAttribute('name', groupName);
     inputGroupBidAll.type = 'checkbox';
     inputGroupBidAll.style.display = 'none';
-    const iGroupBidAll = document.createElement('i');
-    iGroupBidAll.id = 'iGroupBidAll';
-    iGroupBidAll.classList.add('far', 'fa-hand-pointer', 'fa-fw');
-    iGroupBidAll.style.width = '1.5em';
-    iGroupBidAll.style.fontSize = '1.3em';
     const spanGroupBidAll = document.createElement('span');
     spanGroupBidAll.id = 'spanGroupBidAll';
     if (Group.getStateCached(groupName).bidAll) {
@@ -2456,7 +2447,6 @@ class ArticlesTable {
       spanGroupBidAll.textContent = " " + Popup.getTranslation('generic_group_bidAllDisabled', ".Bid until you win");
     }
     labelGroupBidAll.appendChild(inputGroupBidAll);
-    labelGroupBidAll.appendChild(iGroupBidAll);
     labelGroupBidAll.appendChild(spanGroupBidAll);
     td.appendChild(labelGroupBidAll);
 

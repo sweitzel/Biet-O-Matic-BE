@@ -179,19 +179,19 @@ The following parameters currently exist:
   - Note that this can be useful in case you notice BE crashing due to memory issues, when BE is running unattended for long times.
 - Disable regular clock check
   - If enabled, BE will not perform regular clock check against the eBay time.
-- "Disable Groups"
+- Disable Groups
   - If enabled, the functionality of managing groups will be deactivated.
     If groups are not needed, this will simplify the user interface.
 - Enable Compact Saving
   - If enabled, BE will save the auction state as text instead of HTML.
     This will not look as nice in the table, but you can manage approximately twice as much items with BE before the storage is full.
-- "Enable local mode"
+- Enable local mode
   - If enabled, BE will store items in the "local" storage.
     By that BE can theoretically manage over 1000 items (this has never been tested).
     But this also means, that no information will be synchronized between your computers.
 - Override eBay Platform
   - This is only relevant for the watch list synchronisation.
   - By default BE uses ebay.de for german browser UI language, and ebay.com for all other languages.
-- "Bid time"
+- Bid time
   - Allows the adjustment of the bid time.
     The default setting is that five (5) seconds before the auction ends, your bid will be submitted.

@@ -63,7 +63,7 @@
     "message": "Konnte die autoBidEnabled Option nicht prüfen"
   },
   "cs_errorCannotFindBidButton": {
-    "message": "Kann den Biet-Knopf nicht auf der Artikelseite finden!"
+    "message": "Kann den Biet-Knopf nicht auf der Artikelseite finden. Zu niedriges Gebot?"
   },
   "cs_initialisation": {
     "message": "Initialisierung"
@@ -81,7 +81,7 @@
     "message": "Phase 4: Gebot wurde abgegeben"
   },
   "cs_problemWithBidding": {
-    "message": "Problem von eBay gemeldet"
+    "message": "Bietproblem"
   },
   "cs_testBidFinished": {
     "message": "Test Bietvorgang (bis zur Bestätigung) wurde $1ms bevor die Auktion endete abgeschlossen"
@@ -129,10 +129,10 @@
     "message": "Konfiguriert den Automatikmodus für die Gruppe"
   },
   "generic_group_bidAllDisabled": {
-    "message": "Ich möchte Einen"
+    "message": "☝️ Ich möchte Einen"
   },
   "generic_group_bidAllEnabled": {
-    "message": "Ich möchte Alle"
+    "message": "🖐️ Ich möchte Alle"
   },
   "generic_group_bidAllHint": {
     "message": "Wechselt zwischen 'Einen Artikel aus der Gruppe ersteigern' und 'Alle Artikel aus der Gruppe ersteigern'"

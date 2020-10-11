@@ -214,6 +214,11 @@ class BomBackground {
    */
   async windowsOnRemovedHandler(windowId) {
     try  {
+      const options = await browser.storage.sync.get({enableLocalMode: null});
+      // for local mode we can always restore the previous autoBid
+      if (options.hasOwnProperty('enableLocalMode') && options.enableLocalMode) {
+        return;
+      }
       const checkId = `${browser.runtime.id}:${windowId}`;
       // check if closed window is the global active autoBid window
       let result = await browser.storage.sync.get('SETTINGS');

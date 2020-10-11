@@ -107,10 +107,7 @@ class EbayArticle {
     buttonDiv = document.createElement('div');
     buttonDiv.id = "BomAutoBidDiv";
 
-    if (this.articlePlatform === 'ebay.com')
-      buttonDiv.style.width = '8.7rem';
-    else
-      buttonDiv.style.width = '280px';
+    buttonDiv.style.width = '100%';
     buttonDiv.style.align = 'center';
     buttonDiv.style.marginTop = '10px';
 

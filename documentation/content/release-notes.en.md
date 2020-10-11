@@ -20,9 +20,16 @@ Other changes:
   This should simplify the user interface for users which do not need groups.
 - The storage can now be imported to a file (backup) and also be imported from it again.
 
+### Bid-O-Matic BE Version 0.5.1
+{{< hint info>}}
+Released on Saturday, 2020-10-11
+{{< /hint >}}
+
+- Minor update for Firefox release preparation
+
 ### Bid-O-Matic BE Version 0.5.0
 {{< hint info>}}
-Released on Saturday, 03.10.2020
+Released on Saturday, 2020-10-03
 {{< /hint >}}
 
 - Complete rewrite of bidding proces
@@ -31,6 +38,7 @@ Released on Saturday, 03.10.2020
   - Default is still the "sync" storage (100kb)
   - Alternatively the "local" storage (5MB) can be used
 - New configuration parameter to adjust the bid time (default is five (5) Seconds before the action end)
+- Item seller is now processed and displayed in the overview table when compact mode is inactive
 - Added keyboard shortcuts for window automatic mode (ALT + a), Configuration (ALT + o) and Compact View (ALT + c).
   If it doesn't work, [each browser unfortunately uses different key modifiers](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/accesskey).
 
@@ -39,14 +47,14 @@ Bid-O-Matic is now available for all larger browser platforms.
 
 ### Bid-O-Matic BE Version 0.4.7
 {{< hint info>}}
-Published on Tuesday, 03.03.2020 
+Published on Tuesday, 2020-03-03
 {{< /hint >}}
 
 * Fix date parsing of auction end date in March (german only)
 
 ### Bid-O-Matic BE Version 0.4.6
 {{< hint info>}}
-Published on Friday, 28.02.2020 
+Published on Friday, 2020-02-28
 {{< /hint >}}
 
 * From item page, only allow activation of item auto-bid when BE already added the item.
@@ -57,7 +65,7 @@ Published on Friday, 28.02.2020
 
 ### Bid-O-Matic BE Version 0.4.5
 {{< hint info>}}
-Published on Thursday, 20.02.2020 
+Published on Thursday, 2020-02-20
 {{< /hint >}}
 
 * Change minimum Firefox version to 57.
@@ -72,7 +80,7 @@ Published on Thursday, 20.02.2020
 
 ### Bid-O-Matic BE Version 0.4.4
 {{< hint info>}}
-Published on Thursday, 13.02.2020 
+Published on Thursday, 2020-02-13
 {{< /hint >}}
 
 * Problem with item field updates fixed
@@ -87,7 +95,7 @@ Published on Thursday, 13.02.2020
 
 ### Bid-O-Matic BE Version 0.4.3
 {{< hint info>}}
-Published on Sunday, 08.02.2020 
+Published on Sunday, 2020-02-08
 {{< /hint >}}
 
 * Add support for adding items from ebay watch list.
@@ -103,7 +111,7 @@ Published on Sunday, 08.02.2020
 
 ### Bid-O-Matic BE Version 0.4.2
 {{< hint info>}}
-Published on Sunday, 02.02.2020 
+Published on Sunday, 2020-02-02
 {{< /hint >}}
 
 * Added support for detection of the time difference of the system where BE is running and the ebay server.
@@ -116,7 +124,7 @@ Published on Sunday, 02.02.2020
 
 ### Bid-O-Matic BE Version 0.4.1
 {{< hint info>}}
-Published on Friday, 31.01.2020 
+Published on Friday, 2020-01-31
 {{< /hint >}}
 
 * Fixes a problem with memory management that could cause BE to crash under certain circumstances.
@@ -146,7 +154,7 @@ Other major changes in this version:
 
 ### Bid-O-Matic BE Version 0.3.4
 {{< hint info>}}
-Published on Tuesday, 27.01.2020 
+Published on Tuesday, 2020-01-27
 {{< /hint >}}
 
 * Adds the possibility to bid on all items from a group.
