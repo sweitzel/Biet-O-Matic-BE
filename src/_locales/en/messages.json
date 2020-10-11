@@ -36,7 +36,7 @@
     "message": "Bidding aborted"
   },
   "cs_biddingFailed": {
-    "message": "Auction not successful. Your bid was not received or accepted by eBay (e.g. when another bidder placed a higher bid before yours.)"
+    "message": "Auction not successful. Your bid was not received or accepted by eBay (e.g. when another bidder placed a higher bid before yours)."
   },
   "cs_biddingOverbid": {
     "message": "Auction was not successful. You were overbid."
@@ -63,7 +63,7 @@
     "message": "Could not check autoBidEnabled option"
   },
   "cs_errorCannotFindBidButton": {
-    "message": "Can not find the bid button on the item page!"
+    "message": "Can not find the bid button on the item page. Too low bid?"
   },
   "cs_initialisation": {
     "message": "Initialization"
@@ -81,7 +81,7 @@
     "message": "Phase 4: Bid has been submitted"
   },
   "cs_problemWithBidding": {
-    "message": "Problem reported by ebay"
+    "message": "Bidding problem"
   },
   "cs_testBidFinished": {
     "message": "Test bid process (till confirmation) has been completed $1ms before the auction ended"

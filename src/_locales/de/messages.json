@@ -63,7 +63,7 @@
     "message": "Konnte die autoBidEnabled Option nicht prüfen"
   },
   "cs_errorCannotFindBidButton": {
-    "message": "Kann den Biet-Knopf nicht auf der Artikelseite finden!"
+    "message": "Kann den Biet-Knopf nicht auf der Artikelseite finden. Zu niedriges Gebot?"
   },
   "cs_initialisation": {
     "message": "Initialisierung"
@@ -81,7 +81,7 @@
     "message": "Phase 4: Gebot wurde abgegeben"
   },
   "cs_problemWithBidding": {
-    "message": "Problem von eBay gemeldet"
+    "message": "Bietproblem"
   },
   "cs_testBidFinished": {
     "message": "Test Bietvorgang (bis zur Bestätigung) wurde $1ms bevor die Auktion endete abgeschlossen"
