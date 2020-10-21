@@ -5,66 +5,51 @@ const webpack = require("webpack"),
   CleanWebpackPlugin = require("clean-webpack-plugin").CleanWebpackPlugin,
   CopyWebpackPlugin = require("copy-webpack-plugin"),
   HtmlWebpackPlugin = require("html-webpack-plugin"),
-  WriteFilePlugin = require("write-file-webpack-plugin"),
-  ZipPlugin = require('zip-webpack-plugin'),
-  ShellPlugin = require('webpack-shell-plugin');
-// load the secrets
-var alias = {};
+  WriteFilePlugin = require("write-file-webpack-plugin");
 
-var secretsPath = path.join(__dirname, ("secrets." + env.NODE_ENV + ".js"));
+const fileExtensions = ["jpg", "jpeg", "png", "gif", "eot", "otf", "svg", "ttf", "woff", "woff2"];
 
-var fileExtensions = ["jpg", "jpeg", "png", "gif", "eot", "otf", "svg", "ttf", "woff", "woff2"];
-
-if (fileSystem.existsSync(secretsPath)) {
-  alias["secrets"] = secretsPath;
-}
-
-var manifestFile = path.join(__dirname, "src", "manifest.json");
-var buildPath = path.join(__dirname, "build");
+let manifestFile = path.join(__dirname, "src", "manifest.json");
+let buildPath = path.join(__dirname, "build");
 if (env.BROWSER === 'firefox') {
   buildPath = path.join(__dirname, "build-firefox");
   manifestFile = path.join(__dirname, "src", "manifest_firefox.json");
 }
-var options = {
+const options = {
   mode: process.env.NODE_ENV || "production",
+  optimization: {
+    minimize: true,
+    runtimeChunk: false,
+    moduleIds: 'named'
+  },
   entry: {
-    contentScript: path.join(__dirname, "src", "js", "contentScript.js"),
+    contentScript: {import: path.join(__dirname, "src", "js", "contentScript.js")},
     contentScript_offer: path.join(__dirname, "src", "js", "contentScript_offer.js"),
     popup: path.join(__dirname, "src", "js", "popup.js"),
     options: path.join(__dirname, "src", "js", "options.js"),
-    background: path.join(__dirname, "src", "js", "background.js")
-  },
-  chromeExtensionBoilerplate: {
-    notHotReload: [
-      "contentScript",
-      "contentScript_offer"
-    ]
+    parser: path.join(__dirname, "src", "js", "EbayParser.js"),
+    storage: path.join(__dirname, "src", "js", "BomStorage.js")
   },
   output: {
     path: buildPath,
-    filename: "[name].bundle.js"
+    filename: '[name].bundle.js'
   },
   module: {
     rules: [
       {
         test: /\.css$/,
-        loader: "style-loader!css-loader",
-        //exclude: /node_modules/
+        use: ['style-loader', 'css-loader']
       },
       {
         test: new RegExp('.(' + fileExtensions.join('|') + ')$'),
-        loader: "file-loader?name=[name].[ext]",
-        //exclude: /node_modules/
+        use: ['file-loader?name=[name].[ext]']
       },
       {
         test: /\.html$/,
-        loader: "html-loader",
+        use: ['html-loader'],
         exclude: /node_modules/
       }
     ]
-  },
-  resolve: {
-    alias: alias
   },
   plugins: [
     // clean the build folder
@@ -117,6 +102,16 @@ var options = {
     new CopyWebpackPlugin({
       patterns: [
         {
+          from:  path.resolve(__dirname, "src", "js", "background.js"),
+          to: buildPath,
+          flatten: true
+        },
+        {
+          from:  path.resolve(__dirname, "node_modules", "webextension-polyfill", "dist", "browser-polyfill.js"),
+          to: path.resolve(buildPath, 'vendor'),
+          flatten: true
+        },
+        {
           from:  path.resolve(__dirname, "src", "icon48.png"),
           to: buildPath,
           flatten: true
@@ -132,22 +127,6 @@ var options = {
         }
       ]
     }),
-    // Run hugo command after build
-    new ShellPlugin({
-      onBuildEnd: ['hugo.bat']
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from:  path.join(__dirname, "documentation", "public"),
-          to: path.join(buildPath, "doc")
-        }  
-      ]
-    }),
-    new ZipPlugin({
-      path: path.join(__dirname),
-      filename: "bom-be_" + process.env.npm_package_version + ".zip",
-    })
   ]
 };
 
