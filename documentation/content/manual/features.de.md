@@ -124,7 +124,7 @@ Wenn BE ordentlich funktioniert, wird die Restzeit bis zur Gebotsabgabe sowohl i
 
 Der Bietvorgang läuft weitgehend eigenständig im "Offer" Browser Tab wie folgt ab:
 
-- Bei der Initialisierrung wird auf Biet-Kollisionen geprüft und der Bietzeitpunkt ggf. angepasst.
+- Bei der Initialisierung wird auf Biet-Kollisionen geprüft und der Bietzeitpunkt ggf. angepasst.
 - Es wird ein Timer gesetzt, welcher alle zwei Sekunden den Tab-Titel und den Bestätigungs Knopf Text mit einem Countdown aktualisiert.
 - Es wird ein Timer gesetzt welcher zum ermittelten Biet-Zeitpunkt die Biet-Funktion aufruft.
 - Die Biet-Funktion beinhaltet folgende Schritte:

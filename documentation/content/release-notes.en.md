@@ -15,10 +15,18 @@ Other changes:
 
 - The storage destination can be changed from "sync" to "local" via a newly introduced configuration parameter.
   This "local" storage allows to store much more items with BE (theoretically over 1000, but this was not tested).
-  It does not support the syncronisation of data between your different browser sessions.
-- The support for groups can now be deactivated via a new configuration parameTer.
+  It does not support the synchronization of data between your different browser sessions.
+- The support for groups can now be deactivated via a new configuration parameter.
   This should simplify the user interface for users which do not need groups.
 - The storage can now be imported to a file (backup) and also be imported from it again.
+
+### Bid-O-Matic BE Version 0.5.2
+{{< hint info>}}
+Released on Saturday, 2020-10-24
+{{< /hint >}}
+
+- Fix issue that the item page did not display correct settings when local mode was enabled.
+- Improved the build process
 
 ### Bid-O-Matic BE Version 0.5.1
 {{< hint info>}}

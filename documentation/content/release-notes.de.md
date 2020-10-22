@@ -14,14 +14,22 @@ Hierbei wird je nach eingestelltem Bietzeitpunkt ungefähr eine Minute vor Aukti
 
 Weitere größere Änderungen:
 
-- Das Speicherziel kann über einen neuen Konfigurationsparameter zwischen "sync" (Standard) und "local" umgetellt werden
-  Der "local" Speicher ermöglicht es deutlich mehr Artikel mit BE zu verwalten (theoretisch über 1000, nicht getested!),
+- Das Speicherziel kann über einen neuen Konfigurationsparameter zwischen "sync" (Standard) und "local" umgestellt werden
+  Der "local" Speicher ermöglicht es deutlich mehr Artikel mit BE zu verwalten (theoretisch über 1000, nicht getestet!),
   dieser unterstützt allerdings nicht die Synchronisation von BE auf mehreren Rechnern bzw. Browsern.
 - Die Unterstützung für Gruppen kann über einen neue Konfigurationsparameter deaktiviert werden.
   Dies vereinfacht die Benutzung für Nutzer welche keine Gruppen verwenden.
 - Die Artikel können in eine Datei exportiert werden (Backup) und aus dieser auch wieder importiert werden.
 - Der Artikel Verkäufer wird nun gespeichert und in der Übersichtstabelle in der Beschreibung angezeigt.
   Wenn die Kompakte Anzeige aktiviert ist, wird der Verkäufer nur angezeigt wenn man mit dem Mauszeiger über der Artikelbeschreibung verweilt.
+
+### Biet-O-Matic BE Version 0.5.2
+{{< hint info>}}
+Veröffentlicht am Samstag, 24.10.2020 
+{{< /hint >}}
+
+- Problem mit falschen bzw. fehlenden Einstellungen auf der Artikelseite behoben, wenn der 'local' Modus aktiviert wurde.
+- Verbesserung im Build-Prozess der Erweiterung
 
 ### Biet-O-Matic BE Version 0.5.1
 {{< hint info>}}
