@@ -10,7 +10,8 @@ fi
 
 if [ ! -e "/src/package.json" ]
 then
-  echo "ERROR: Please mount bom-be source to docker container as /src"
+  echo "ERROR: Please mount Biet-O-Matic BE source folder to docker container under /src"
+  echo "Example: docker run --rm -it -v $(pwd):/src --env BROWSER=chrome bom-be_builder:latest"
   exit 1
 fi
 
@@ -28,8 +29,8 @@ then
   rm -rf "${BUILD_DIR}"
 fi
 
-#echo ">> Initialize node modules (yarn) <<"
-#/bin/yarn install
+echo ">> Initialize node modules (yarn) <<"
+/bin/yarn install
 
 echo ">> Generate JS/HTML bundles (yarn/webpack) <<"
 /bin/yarn build

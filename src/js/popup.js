@@ -811,7 +811,7 @@ class Article {
     }
     console.debug("Biet-O-Matic: Injecting contentScript on tab %d = %s", tab.id, tab.url);
     // inject content script, it will only inject itself if not already loaded
-    await browser.tabs.executeScript(tab.id, {file: 'contentScript.bundle.js', runAt: 'document_end'})
+    await browser.tabs.executeScript(tab.id, {file: '/contentScript.bundle.js', runAt: 'document_end'})
       .catch(e => {
         throw new Error(`getInfoFromTab(${tab.id}) executeScript failed: ${e.message}`);
       });

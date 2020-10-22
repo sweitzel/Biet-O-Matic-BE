@@ -7,8 +7,6 @@
  * Apache License Version 2.0, January 2004, http://www.apache.org/licenses/
  */
 
-import browser from "webextension-polyfill";
-
 class BomBackground {
   constructor() {
     // object of popup tabs, key is the windowId, value the tab object
