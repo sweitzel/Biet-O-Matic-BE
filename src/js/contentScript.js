@@ -12,6 +12,7 @@
 
 import browser from "webextension-polyfill";
 import EbayParser from "./EbayParser.js";
+import BomStorage from "./BomStorage.js";
 import "../css/contentScript.css";
 
 class EbayArticle {
@@ -144,13 +145,17 @@ class EbayArticle {
     bidButton.parentNode.insertBefore(buttonDiv, bidButton.nextSibling);
 
     // complement with info from sync storage
-    browser.storage.sync.get(this.articleId).then((result) => {
-      if (Object.keys(result).length === 1) {
-        let storInfo = result[this.articleId];
-        console.debug("Biet-O-Matic: extendPage() Found info for Article %s in storage: %O", this.articleId, result);
-        this.updateMaxBidInfo(storInfo);
-      }
-    });
+    window.bomStorage.get(this.articleId)
+      .then((result) => {
+        if (Object.keys(result).length === 1) {
+          let storInfo = result[this.articleId];
+          console.debug("Biet-O-Matic: extendPage() Found info for Article %s in storage: %O", this.articleId, result);
+          this.updateMaxBidInfo(storInfo);
+        }
+      })
+      .catch(e => {
+        console.log("Biet-O-Matic: extendPage(), storage.get failed: " + e);
+      });
     this.activateAutoBidButton();
   }
 
@@ -451,6 +456,14 @@ class EbayArticle {
    * - reload when a modal was closed  -> resume bidding
    */
   static async handleReload() {
+    // initialize BomStorage object to access item info properly
+    const options = await browser.storage.sync.get({enableLocalMode: null});
+    let enableLocalMode = false;
+    if (options.hasOwnProperty('enableLocalMode') && options.enableLocalMode != null && options.enableLocalMode !== "") {
+      enableLocalMode = options.enableLocalMode;
+    }
+    window.bomStorage = new BomStorage(enableLocalMode);
+
     let ebayParser = new EbayParser();
     const ebayArticleInfo = ebayParser.parsePageRefresh();
     ebayParser.data = null;
@@ -462,7 +475,7 @@ class EbayArticle {
     // determine auction state - if any yet
     const currentState = EbayParser.getAuctionEndState(ebayArticleInfo);
     // info from sync storage
-    const articleStoredInfo = await browser.storage.sync.get(ebayArticleInfo.articleId);
+    const articleStoredInfo = await window.bomStorage.get(ebayArticleInfo.articleId);
 
     /*
      * Retrieve stored article info from popup
