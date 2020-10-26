@@ -36,7 +36,12 @@ echo ">> Generate JS/HTML bundles (yarn/webpack) <<"
 /bin/yarn build
 
 echo ">> Generate documentation (hugo) <<"
-/bin/hugo --source documentation --environment=production --destination ${BUILD_DIR}/doc
+if git status >/dev/null 2>&1
+then
+  /bin/hugo --source documentation --environment=production --destination ${BUILD_DIR}/doc
+else
+  /bin/hugo --source documentation --environment=production --enableGitInfo=false --destination ${BUILD_DIR}/doc
+fi
 rm ${BUILD_DIR}/doc/manifest.json
 
 echo ">> Generate zip bundle <<"

@@ -21,7 +21,7 @@ import 'jquery-ui-dist/jquery-ui.js';
 import 'datatables.net-jqui/css/dataTables.jqueryui.css';
 import 'datatables.net-buttons-jqui/css/buttons.jqueryui.css';
 import 'datatables.net-responsive-jqui/css/responsive.jqueryui.css';
-import 'datatables.net-rowgroup-jqui/css/rowgroup.jqueryui.css';
+import 'datatables.net-rowgroup-jqui/css/rowGroup.jqueryui.css';
 import 'datatables.net-jqui';
 import 'datatables.net-buttons-jqui';
 import 'datatables.net-responsive-jqui';

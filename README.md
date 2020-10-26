@@ -73,7 +73,7 @@ Please refer to the Browser instruction how to do that. End users should only in
 
 The release can be created with a provided docker container:
 
-- Checkout the code to a local folder
+- Extract or Checkout the code to a local folder
 - Change to the folder
 - Trigger build via Docker (mount the soure into the container `/src` directory):
 
