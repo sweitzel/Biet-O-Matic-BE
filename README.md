@@ -75,7 +75,7 @@ The release can be created with a provided docker container:
 
 - Extract or Checkout the code to a local folder
 - Change to the folder
-- Trigger build via Docker (mount the soure into the container `/src` directory):
+- Trigger build via Docker (mount the source into the container `/src` directory):
 
 ```bash
 # Build docker image
