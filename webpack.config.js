@@ -102,27 +102,23 @@ const options = {
     new CopyWebpackPlugin({
       patterns: [
         {
-          from:  path.resolve(__dirname, "src", "js", "background.js"),
+          from: path.resolve(__dirname, "src", "js", "background.js"),
           to: buildPath,
-          flatten: true
         },
         {
-          from:  path.resolve(__dirname, "node_modules", "webextension-polyfill", "dist", "browser-polyfill.js"),
+          from: path.resolve(__dirname, "node_modules", "webextension-polyfill", "dist", "browser-polyfill.js"),
           to: path.resolve(buildPath, 'vendor'),
-          flatten: true
         },
         {
-          from:  path.resolve(__dirname, "src", "icon48.png"),
+          from: path.resolve(__dirname, "src", "icon48.png"),
           to: buildPath,
-          flatten: true
         },
         {
-          from:  path.resolve(__dirname, "src", "icon128.png"),
+          from: path.resolve(__dirname, "src", "icon128.png"),
           to: buildPath,
-          flatten: true
         },
         {
-          from:  path.resolve(__dirname, "src", "_locales"),
+          from: path.resolve(__dirname, "src", "_locales"),
           to: path.join(buildPath, "_locales")  
         }
       ]
