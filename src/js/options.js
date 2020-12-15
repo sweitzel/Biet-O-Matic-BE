@@ -57,7 +57,7 @@ function restore_options() {
     enableCompactSaving: false,
     enableLocalMode: false,
     ebayPlatform: null,
-    bidTime: 5
+    bidTime: 10
   }).then((items) => {
     document.getElementById('disableSleepPrevention').checked = items.disableSleepPrevention;
     document.getElementById('disableArticleRefresh').checked = items.disableArticleRefresh;

@@ -47,7 +47,7 @@ body {
 }
 
 .tgl:disabled + .tgl-btn {
-  background: #99adb0;
+  background: #99adb0 !important;
 }
 
 .tgl-skewed + .tgl-btn {

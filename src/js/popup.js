@@ -2303,7 +2303,7 @@ class ArticlesTable {
         Popup.addUserMessage({
           message: Popup.getTranslation("popup_cleanupNone", ".No items have been removed."),
           level: "info",
-          duration: 10000,
+          duration: 10_000,
         });
       } else {
         Popup.addUserMessage({
@@ -2442,12 +2442,8 @@ class ArticlesTable {
     if (!row.hasOwnProperty("articleBidPrice") && data == null)
       return Popup.getTranslation("generic_buyNow", ".Buy It Now");
     let autoBid = false;
-    let closedArticle = false;
     if (row.hasOwnProperty("articleAutoBid")) {
       autoBid = row.articleAutoBid;
-    } else if (row.hasOwnProperty("autoBid")) {
-      autoBid = row.autoBid;
-      closedArticle = true;
     }
     let maxBid = 0;
     if (data != null) maxBid = data;
@@ -2456,7 +2452,7 @@ class ArticlesTable {
     inpMaxBid.id = "inpMaxBid_" + row.articleId;
     inpMaxBid.type = "number";
     inpMaxBid.min = "0";
-    inpMaxBid.step = "0.5";
+    inpMaxBid.step = "0.50";
     inpMaxBid.defaultValue = Number.isNaN(maxBid) ? "" : maxBid.toString(10);
     inpMaxBid.style.width = "60px";
     const labelAutoBid = document.createElement("label");
@@ -2479,37 +2475,31 @@ class ArticlesTable {
     }
     labelAutoBid.appendChild(spanAutoBid);
 
-    if (closedArticle === true) {
+    // maxBid was entered, check if the autoBid field can be enabled
+    if (row.canActivateAutoBid()) {
+      chkAutoBid.disabled = false;
+    } else {
+      labelAutoBid.classList.add("ui-state-disabled");
+      chkAutoBid.disabled = true;
+    }
+    // set tooltip for button to minBidValue
+    // if the maxBid is < minimum bidding price or current Price, add highlight color
+    if (row.articleEndTime - Date.now() > 0 && chkAutoBid.disabled) {
+      inpMaxBid.classList.add("bomHighlightBorder");
+      inpMaxBid.title = Popup.getTranslation("popup_enterMinAmount", ".Enter at least $1", [
+        row.articleMinimumBid.toString(),
+      ]);
+    } else {
+      inpMaxBid.classList.remove("bomHighlightBorder");
+      inpMaxBid.title = Popup.getTranslation("popup_minIncreaseReached", ".Required increase reached");
+    }
+
+    // disable maxBid/autoBid if article ended
+    if (row.articleEndTime - Date.now() <= 0) {
+      //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
       labelAutoBid.classList.add("ui-state-disabled");
       inpMaxBid.disabled = true;
       chkAutoBid.disabled = true;
-    } else {
-      // maxBid was entered, check if the autoBid field can be enabled
-      if (row.canActivateAutoBid()) {
-        chkAutoBid.disabled = false;
-      } else {
-        labelAutoBid.classList.add("ui-state-disabled");
-        chkAutoBid.disabled = true;
-      }
-      // set tooltip for button to minBidValue
-      // if the maxBid is < minimum bidding price or current Price, add highlight color
-      if (row.articleEndTime - Date.now() > 0 && chkAutoBid.disabled) {
-        inpMaxBid.classList.add("bomHighlightBorder");
-        inpMaxBid.title = Popup.getTranslation("popup_enterMinAmount", ".Enter at least $1", [
-          row.articleMinimumBid.toString(),
-        ]);
-      } else {
-        inpMaxBid.classList.remove("bomHighlightBorder");
-        inpMaxBid.title = Popup.getTranslation("popup_minIncreaseReached", ".Required increase reached");
-      }
-
-      // disable maxBid/autoBid if article ended
-      if (row.articleEndTime - Date.now() <= 0) {
-        //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
-        labelAutoBid.classList.add("ui-state-disabled");
-        inpMaxBid.disabled = true;
-        chkAutoBid.disabled = true;
-      }
     }
 
     divArticleMaxBid.appendChild(inpMaxBid);
@@ -3448,7 +3438,7 @@ class ArticlesTable {
                           ArticlesTable.refreshArticle(article.articleId, article.articleEndTime, false).catch((e) => {
                             console.log(
                               "Biet-O-Matic: addArticleLog - async refreshArticle %s failed: %s",
-                              request.articleId,
+                              article.articleId,
                               e
                             );
                           });
@@ -3747,12 +3737,6 @@ class ArticlesTable {
           // check if maxBid > buyPrice (sofortkauf), then adjust it to the buyprice - 1 cent
           if (article.hasOwnProperty("articleBuyPrice") && info.articleMaxBid >= article.articleBuyPrice) {
             info.articleMaxBid = Math.round((article.articleBuyPrice - 0.01) * 100) / 100;
-          } else if (
-            article.hasOwnProperty("articleMinimumBid") &&
-            info.articleMaxBid > 0 &&
-            info.articleMaxBid < article.articleMinimumBid
-          ) {
-            info.articleMaxBid = article.articleMinimumBid;
           }
         } else if (e.target.id.startsWith("chkAutoBid_")) {
           // autoBid checkbox was clicked
@@ -4096,7 +4080,7 @@ class Popup {
             [(diff / 1000).toFixed(2).toString()]
           ),
           level: "warning",
-          duration: 60000,
+          duration: 60_000,
         });
       }
     } catch (e) {
@@ -4105,7 +4089,7 @@ class Popup {
       // reexecute this function at random (180..600s) interval
       window.setTimeout(function () {
         Popup.regularCheckEbayTime();
-      }, Math.floor(Math.random() * (600 - 180 + 1) + 180) * 1000);
+      }, Math.trunc(Math.random() * (600 - 180 + 1) + 180) * 1000);
     }
   }
 
@@ -4187,7 +4171,7 @@ class Popup {
         .then(function () {
           window.setTimeout(function () {
             $("#inpAddWatchItems").parent().removeClass("ui-state-disabled");
-          }, 10000);
+          }, 10_000);
         })
         .catch((e) => {
           console.log("Biet-O-Matic: addWatchListItems() failed: " + e);

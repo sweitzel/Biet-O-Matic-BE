@@ -239,9 +239,10 @@ class EbayArticle {
     // maxBid < minBid or maxBid < bidPrice , then disable autoBid
     if (maxBidValue < minBidValue || maxBidValue < this.articleBidPrice) {
       console.log("Biet-O-Matic: activateAutoBidButton() Disabled autoBid because bid lower than required price.");
+      bomAutoBid.disabled = true;
+    } else {
       bomAutoBid.disabled = false;
     }
-    bomAutoBid.disabled = false;
 
     // show autoBid hint if autoBid enabled
     if (bomAutoBid.checked) {
@@ -342,22 +343,6 @@ class EbayArticle {
           if (Number.isNaN(maxBidInputValue)) maxBidInputValue = 0;
           this.articleMaxBid = maxBidInputValue;
           if (bomAutoBidNew.checked) {
-            // if maxBid is lower than required, adjust it to minimum
-            const maxBidInputNew = document.getElementById("MaxBidId");
-            if (this.hasOwnProperty("articleMinimumBid") && maxBidInputValue < this.articleMinimumBid) {
-              console.log(
-                "Biet-O-Matic: monitorChanges() updated maxBid %s to %s (minimum bid price)",
-                maxBidInputValue,
-                this.articleMinimumBid
-              );
-              maxBidInputValue = Number.parseFloat(this.articleMinimumBid.toString());
-              maxBidInputNew.value = maxBidInputValue.toLocaleString("de-DE", {
-                useGrouping: false,
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              });
-              this.articleMaxBid = maxBidInputValue;
-            }
             // show autoBid hint if autoBid enabled
             bomAutoBidHint.style.display = "inline";
           } else {
