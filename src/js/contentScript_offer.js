@@ -133,26 +133,44 @@ class EbayOffer {
    * Every 1 second:
    * - update countdown until bid
    */
-  regularAction() {
+  regularAction(expectedExecutionTime) {
+    const timerInterval = 1_000;
+    const executionTime = Date.now();
+    let keepRunning = true;
     try {
+      // check timer precision. Main concern are late timers (more than 1s).
+      const deviation = executionTime - expectedExecutionTime;
+      if (deviation > 1100) {
+        console.info("Biet-O-Matic: regularAction() setTimeout deviation = %s ms late", deviation);
+      } else if (deviation < -100) {
+        console.info("Biet-O-Matic: regularAction() setTimeout deviation = %s ms early", deviation);
+      }
+
       const confirmButton = document.getElementsByName('confirmbid');
-      if (confirmButton == null || typeof confirmButton === 'undefined') {
-        console.log("Biet-O-Matic: Abort regularAction(), no confirm button found.");
+      if (confirmButton == null || typeof confirmButton === 'undefined' || confirmButton.length === 0) {
+        console.debug("Biet-O-Matic: Abort regularAction(), no confirm button found.");
         return;
       }
+
       // update countdown
-      const timeLeftInSeconds = Math.floor((this.modifiedEndTime - Date.now()) / 1000);
+      const timeLeftInSeconds = Math.floor((this.modifiedEndTime - executionTime) / 1000);
       const bidTimeSeconds = timeLeftInSeconds - this.bidTime;
       if (bidTimeSeconds > 0) {
         confirmButton[0].value = EbayOffer.getTranslation('cs_bidInSeconds', '.Automatic bidding in $1s', [bidTimeSeconds]);
         document.title = EbayOffer.getTranslation('cs_bidInSecondsShort', '.Bidding in $1s', [bidTimeSeconds]);
+      } else {
+        keepRunning = false;
       }
     } catch (e) {
       console.warn("Biet-O-Matic: regularAction() Internal Error: " + e);
     } finally {
-      window.setTimeout(() => {
-        this.regularAction();
-      }, 2000);
+      if (keepRunning) {
+        window.setTimeout((expectedExecutionTime) => {
+          this.regularAction(expectedExecutionTime);
+        }, timerInterval, Date.now() + timerInterval);  
+      } else {
+        console.log("Biet-O-Matic: Abort regularAction(), auction ended.");
+      }
     }
   }
 
@@ -331,7 +349,7 @@ class EbayOffer {
     });
     // calculate timeleft until auction end
     let timeLeft = this.articleEndTime - this.perfInfo[this.perfInfo.length - 1].date;
-    result += `timeLeft = ${timeLeft}ms (${this.articleEndTime} - ${this.perfInfo[this.perfInfo.length - 2].date})`;
+    result += `timeLeft = ${timeLeft}ms (${this.articleEndTime} - ${this.perfInfo[this.perfInfo.length - 1].date})`;
     EbayOffer.sendArticleLog(this.articleId, {
       component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
       level: EbayOffer.getTranslation('generic_perfornmance', '.Performance'),
