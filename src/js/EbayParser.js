@@ -217,7 +217,7 @@ class EbayParser {
                   const regex = /"entityId":"(.*?)",/
                   if (regex.test(script.text)) {
                     value = script.text.match(regex)[1];
-                    console.debug("Biet-O-Matic: articleEndTime determined from raptor js: %s", value);
+                    console.debug("Biet-O-Matic: articleSeller determined from raptor js: %s", value);
                     break;
                   }
                 }
