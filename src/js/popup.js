@@ -1549,14 +1549,14 @@ class Article {
       active: false,
       openerTabId: Popup.tabId,
     });
-    //this.tabId = tab.id;
+    const timeLeftSeconds = (this.articleEndTime - Date.now()) / 1000;
     this.addLog({
       component: Popup.getTranslation("cs_bidding", ".Bidding"),
       level: "Info",
       message: Popup.getTranslation(
         "popup_offerTabOpenedForBidding",
-        ".Item tab opened for bidding (tab $1)",
-        tab.id.toString()
+        ".Item tab opened for bidding $1 seconds before auction ends (tab $2)",
+        [ timeLeftSeconds, tab.id.toString() ]
       ),
     });
     return tab.id;
@@ -1658,9 +1658,7 @@ class Article {
           message:
             Article.stateToText(info.auctionEndState) +
             " " +
-            Popup.getTranslation("popup_autoBidDeactivatedForGroup", ".Auto-Bid for group $1 deactivated.", [
-              this.articleGroup,
-            ]),
+            Popup.getTranslation("popup_autoBidDeactivatedForGroup", ".Auto-Bid for group $1 deactivated.", [ is.articleGroup ]),
         });
       } else {
         this.addLog({
@@ -2293,7 +2291,7 @@ class ArticlesTable {
           }
         }
         // auction more than a minute in past?
-        if (cleanExpired && article.hasOwnProperty("articleEndTime") && article.articleEndTime + 60000 < Date.now()) {
+        if (cleanExpired && article.hasOwnProperty("articleEndTime") && article.articleEndTime + 60_000 < Date.now()) {
           if (group === "" || group === articleGroup) {
             Popup.table.removeArticle(row);
             //row.remove().draw(false);
@@ -2313,7 +2311,7 @@ class ArticlesTable {
             removedCount.toString(10),
           ]),
           level: "info",
-          duration: 15000,
+          duration: 15_000,
         });
       }
     } catch (e) {
@@ -2784,14 +2782,14 @@ class ArticlesTable {
           // ended
           span.classList.add("auctionEnded");
           span.title = Popup.getTranslation("popup_articleAuctionEnded", ".Article Auction already ended");
-        } else if (data - Date.now() < 60000) {
+        } else if (data - Date.now() < 60_000) {
           // ends within 1 minute
           span.classList.add("auctionEndsVerySoon");
           span.title = Popup.getTranslation(
             "popup_articleAuctionEndsVerySoon",
             ".Article Auction ends in less then a minute."
           );
-        } else if (data - Date.now() < 600000) {
+        } else if (data - Date.now() < 600_000) {
           // ends within 10 minutes
           span.classList.add("auctionEndsSoon");
           span.title = Popup.getTranslation("popup_articleAuctionEndsSoon", ".Article Auction ends soon.");
@@ -2900,10 +2898,10 @@ class ArticlesTable {
        * - ends within 1hour: every 5 minutes
        * - ends within 5 minutes: every minute
        */
-      let rateLimitMs = 300000;
-      if (timeLeft > 43200 * 1000 || timeLeft < -7200 * 1000) {
+      let rateLimitMs = 300_000;
+      if (timeLeft > 43_200 * 1_000 || timeLeft < -7_200 * 1_000) {
         // > 12 hours -> refresh every hour
-        rateLimitMs = 60 * 60 * 1000;
+        rateLimitMs = 60 * 60 * 1_000;
       }
       if (Popup.checkRateLimit("refreshArticle", articleId, rateLimitMs)) {
         //console.debug("Biet-O-Matic: refreshArticle(%s) Skip refreshing (ratelimit=%ds)", articleId, rateLimitMs / 1000);
@@ -3066,26 +3064,13 @@ class ArticlesTable {
    * The function will schedule itself to be executed every 30s
    */
   async regularOpenArticlesForBidding() {
-    const timerInterval = 30_000;
     window.setInterval(() => {
       try {
-        const executionTime = Date.now();
-        if (Popup.otherInfo.hasOwnProperty("regularOpenArticlesForBiddingLastExecution")) {
-          const deviation = executionTime - (Popup.otherInfo.regularOpenArticlesForBiddingLastExecution + timerInterval);
-          if (deviation > 1100) {
-            console.warn("Biet-O-Matic: regularOpenArticlesForBidding() setInterval deviation = %s ms late", deviation);
-          } else if (deviation < -100) {
-            console.warn("Biet-O-Matic: regularOpenArticlesForBidding() setInterval deviation = %s ms early", deviation);
-          } else {
-            console.debug("Biet-O-Matic: regularOpenArticlesForBidding() setInterval deviation = %s ms (info)", deviation);
-          }
-        }
-        Popup.otherInfo.regularOpenArticlesForBiddingLastExecution = executionTime;
         this.DataTable.rows().every(ArticlesTable.openArticleForBidding);
       } catch (e) {
         console.warn("Biet-O-Matic: openArticleTabsForBidding() Internal Error: " + e);
       }
-    }, timerInterval);
+    }, 30_000);
   }
 
   static async openArticleForBidding(index) {
@@ -3105,7 +3090,7 @@ class ArticlesTable {
         bidTime = options.bidTime;
       }
       // skip if articleEndTime is in the past or the bidding process is not yet due
-      if (timeLeftSeconds < 0 || timeLeftSeconds > (60 + bidTime)) {
+      if (timeLeftSeconds < 0 || timeLeftSeconds > 60 + bidTime) {
         //console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, not ending within 60s: %ss",
         //  article.articleId, timeLeftSeconds);
         return;
@@ -3218,26 +3203,24 @@ class ArticlesTable {
   }
 
   /*
-   * Refresh article information
-   * - skip if article tab is open (article will update itself)
-   * - skip if autoBid is off for this window
+   * Refresh article information (i.e. price) for closed articles
    */
   static async regularRefreshArticleInfo() {
-    try {
+    window.setInterval(() => {
       // check if the regular refresh has been disabled
-      const globalOptions = await Popup.storage.getConfig({ disableArticleRefresh: false });
-      if (globalOptions.disableArticleRefresh) {
-        console.log("Biet-O-Matic: Regular item refresh has been deactivated by the user.");
-        return;
-      }
-      ArticlesTable.refreshArticleInfo();
-    } catch (e) {
-      console.warn("Biet-O-Matic: regularRefreshArticleInfo() Internal Error: " + e);
-    } finally {
-      window.setTimeout(function () {
-        ArticlesTable.regularRefreshArticleInfo();
-      }, 300000);
-    }
+      Popup.storage
+        .getConfig({ disableArticleRefresh: false })
+        .then((globalOptions) => {
+          if (globalOptions.disableArticleRefresh) {
+            console.log("Biet-O-Matic: Regular item refresh has been deactivated by the user.");
+          } else {
+            ArticlesTable.refreshArticleInfo();
+          }
+        })
+        .catch((e) => {
+          console.warn("Biet-O-Matic: regularRefreshArticleInfo() Internal Error: " + e);
+        });
+    }, 300_000);
   }
 
   static refreshArticleInfo(useRateLimit = true) {
@@ -3446,7 +3429,7 @@ class ArticlesTable {
               if (article != null) {
                 const timeLeft = article.articleEndTime - Date.now();
                 // performance message is received when the article bid has been performed
-                if (request.detail.message.level === Popup.getTranslation("generic_perfornmance", "Performance")) {
+                if (request.detail.message.level === Popup.getTranslation("generic_performance", ".Performance")) {
                   // only refresh article info manually, if the article tab is not open
                   if (article.tabId == null) {
                     // refresh item info immediately (to show if bid was successful)

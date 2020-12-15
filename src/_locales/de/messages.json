@@ -152,7 +152,7 @@
   "generic_overbid": {
     "message": "überboten"
   },
-  "generic_perfornmance": {
+  "generic_performance": {
     "message": "Leistung"
   },
   "generic_picture": {
@@ -201,7 +201,7 @@
     "message": "Es wurden $1 Artikel aus der Beobachtungsliste hinzugefügt."
   },
   "popup_adjustedBidtime": {
-    "message": "Bietzeitpunkt wurde um $1s angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
+    "message": "Bietzeitpunkt wurde um $1 Sekunden angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
   },
   "popup_articleAuctionEnded": {
     "message": "Artikel Auktion ist bereits beendet"
@@ -216,7 +216,7 @@
     "message": "Entfernt alle Ereignisse und Einstellungen für diesen Artikel"
   },
   "popup_offerTabOpenedForBidding": {
-    "message": "Angebots-Tab wurde zum Bieten geöffnet (Tab=$1)"
+    "message": "Angebots-Tab wurde $1 Sekunden vor Auktionsende zum Bieten geöffnet (Tab=$2)"
   },
   "popup_offerTabIsOpen": {
     "message": "Angebots-Tab ist offen (Tab=$1)"

@@ -100,7 +100,7 @@ class EbayOffer {
     if (ebayArticleGetAdjustedBidTimeResult == null || !ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('articleEndTime')) {
       throw new Error("Unable to get ebayArticleGetAdjustedBidTime result - item probably unknown to popup!");
     } else {
-      if (ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('adjustmentReason')) {
+      if (ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('adjustmentReason') && ebayArticleGetAdjustedBidTimeResult.adjustmentReason != null) {
         info.modifiedEndTime = ebayArticleGetAdjustedBidTimeResult.articleEndTime;
         EbayOffer.sendArticleLog(info.articleId, {
           component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
@@ -352,7 +352,7 @@ class EbayOffer {
     result += `timeLeft = ${timeLeft}ms (${this.articleEndTime} - ${this.perfInfo[this.perfInfo.length - 1].date})`;
     EbayOffer.sendArticleLog(this.articleId, {
       component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
-      level: EbayOffer.getTranslation('generic_perfornmance', '.Performance'),
+      level: EbayOffer.getTranslation('generic_performance', '.Performance'),
       message: result
     });
   }

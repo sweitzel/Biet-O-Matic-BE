@@ -152,7 +152,7 @@
   "generic_overbid": {
     "message": "overbid"
   },
-  "generic_perfornmance": {
+  "generic_performance": {
     "message": "Performance"
   },
   "generic_picture": {
@@ -201,7 +201,7 @@
     "message": "Added $1 items from watchlist."
   },
   "popup_adjustedBidtime": {
-    "message": "Adjusted bid-time by $1s due to risk of colliding with item $2"
+    "message": "Adjusted bid-time by $1 seconds due to risk of colliding with item $2"
   },
   "popup_articleAuctionEnded": {
     "message": "Item auction has already ended"
@@ -216,7 +216,7 @@
     "message": "Removes all events and configuration for this item"
   },
   "popup_offerTabOpenedForBidding": {
-    "message": "Offer tab has been opened for bidding (tab=$1)"
+    "message": "Offer tab has been opened for bidding $1 seconds before auction ends (tab=$2)"
   },
   "popup_offerTabIsOpen": {
     "message": "Offer tab is open (Tab=$1)"
