@@ -237,7 +237,7 @@ class EbayArticle {
     );
 
     // maxBid < minBid or maxBid < bidPrice , then disable autoBid
-    if (maxBidValue < minBidValue || maxBidValue < this.articleBidPrice) {
+    if (typeof maxBidValue === "undefined" || maxBidValue < minBidValue || maxBidValue < this.articleBidPrice) {
       console.log("Biet-O-Matic: activateAutoBidButton() Disabled autoBid because bid lower than required price.");
       bomAutoBid.disabled = true;
     } else {

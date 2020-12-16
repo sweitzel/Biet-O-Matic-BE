@@ -1549,7 +1549,7 @@ class Article {
       active: false,
       openerTabId: Popup.tabId,
     });
-    const timeLeftSeconds = (this.articleEndTime - Date.now()) / 1000;
+    const timeLeftSeconds = Math.round((this.articleEndTime - Date.now()) / 1000);
     this.addLog({
       component: Popup.getTranslation("cs_bidding", ".Bidding"),
       level: "Info",
@@ -2453,7 +2453,7 @@ class ArticlesTable {
     inpMaxBid.type = "number";
     inpMaxBid.min = "0";
     inpMaxBid.step = "0.50";
-    inpMaxBid.defaultValue = Number.isNaN(maxBid) ? "" : maxBid.toString(10);
+    inpMaxBid.defaultValue = Number.isNaN(maxBid) ? "" : maxBid.toFixed(2);
     inpMaxBid.style.width = "60px";
     const labelAutoBid = document.createElement("label");
     const chkAutoBid = document.createElement("input");
