@@ -9,24 +9,54 @@
 
 import browser from "webextension-polyfill";
 
+const quotaBytes = {
+  "sync": 102_400,
+  "local": 5_242_880
+};
+
 class BomStorage {
+
   constructor(useLocalStorage = false) {
-    // sync storage: 100kb minus some buffer 
-    this.quotaBytes = 100 * 1024 - 1024;
+    this.quotaBytes = quotaBytes.sync;
     this.storageArea = "sync";
     if (useLocalStorage) {
-      // local storage: 5MB minus some buffer
-      this.quotaBytes = 5 * 1024 * 1024 - 1024;
+      this.quotaBytes = quotaBytes.local;
       this.storageArea = "local"
     }
     console.log(`Biet-O-Matic: Storage initialized with type: ${this.storageArea}, quota ${this.quotaBytes} bytes.`);
   }
 
+  /*
+   * show storage.local usage only when local mode is active
+   * sync is always used
+   */
+  async updateDomMeters() {
+    if (this.storageArea === "local") {
+      this.updateDomMeter("local");
+    } else {
+      const localMeterDiv = document.getElementById("localMeterDiv");
+      localMeterDiv.style.display = "none";
+    }
+    this.updateDomMeter("sync");
+}
+
+async updateDomMeter(area) {
+  const meterDiv = document.getElementById(area + "MeterDiv");
+  const meter = document.getElementById(area + "Meter");
+  const bytesUsed = await this.getBytesInUse(area);
+  const bytesUsedPct = ((bytesUsed / quotaBytes[area]) * 100).toFixed(2)
+  meter.value = bytesUsedPct;
+  meter.textContent = bytesUsedPct + "%";
+  meterDiv.setAttribute("title", bytesUsedPct + "%");
+  meterDiv.style.display = "block";
+}
+
   // Note: getBytesInUse is not supported for Firefox storage.local
   // https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/storage/StorageArea/getBytesInUse
-  async getBytesInUse() {
+  async getBytesInUse(area = "") {
+    if (area === "") area = this.storageArea
     let bytesInUse = 0;
-    if (this.storageArea === "local") {
+    if (area === "local") {
       if ('getBytesInUse' in browser.storage.local) {
         bytesInUse = browser.storage.local.getBytesInUse();
       } else {
@@ -38,7 +68,7 @@ class BomStorage {
         ).length;  
       }
     } else {
-      if ('getBytesInUse' in browser.storage.local) {
+      if ('getBytesInUse' in browser.storage.sync) {
         bytesInUse = await browser.storage.sync.getBytesInUse();
       } else {
         const syncData = await browser.storage.sync.get();

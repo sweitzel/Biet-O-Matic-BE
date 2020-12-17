@@ -3642,6 +3642,7 @@ class ArticlesTable {
     // listen for changes to browser storage area (settings, article info)
     browser.storage.onChanged.addListener((changes, area) => {
       //console.debug("Biet-O-Matic: Event.StorageChanged(%s) changed: %s", area, JSON.stringify(changes));
+
       // {"SETTINGS":{
       // "newValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:1166"}},
       // "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138"}}}}
@@ -3672,6 +3673,11 @@ class ArticlesTable {
             this.removeArticleFromTable(key);
           }
         }
+      });
+
+      Popup.storage.updateDomMeter(area)
+      .catch((e) => {
+        console.log("Biet-O-Matic: storage.onChanged.updateDomMeter() failed: " + e);
       });
     });
 
@@ -3894,7 +3900,6 @@ class Popup {
 
   /*
    * Check Storage permission granted and update the HTML with relevant internal information
-   * - also add listener for storageClearAll button and clear complete storage on request.
    */
   static checkBrowserStorage() {
     // get total elements
@@ -3904,37 +3909,14 @@ class Popup {
           Popup.storage.storageArea,
           e.message,
         ]),
-        duration: 15000,
+        duration: 15_000,
       });
     });
 
-    // total size
-    Popup.storage
-      .getBytesInUse(null)
-      .then((bytesUsed) => {
-        const bytesUsedPct = (bytesUsed / Popup.storage.quotaBytes) * 100;
-        let level = "info";
-        // warning > 80%, error > 95%
-        if (bytesUsedPct > 95) level = "error";
-        else if (bytesUsedPct > 80) level = "warning";
-        Popup.addUserMessage({
-          message: Popup.getTranslation("popup_storageUsedInfo", ".Memory consumption in $1 is $2%", [
-            Popup.storage.storageArea,
-            bytesUsedPct.toFixed(2),
-          ]),
-          level: level,
-          duration: 30000,
-        });
-      })
+    // create meter widgets in popup page
+    Popup.storage.updateDomMeters()
       .catch((e) => {
-        Popup.addUserMessage({
-          message: Popup.getTranslation(
-            "popup_storageUsedFailed",
-            ".Failed to determine how much space is used in $1: $2",
-            [Popup.storage.storageArea, e.message]
-          ),
-          duration: 15000,
-        });
+        console.warn("Biet-O-Matic: checkBrowserStorage() failed: " + e);
       });
   }
 

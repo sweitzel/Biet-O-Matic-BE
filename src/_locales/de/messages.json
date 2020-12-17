@@ -318,7 +318,7 @@
     "message": "Zeigt Artikel Ereignisprotokoll"
   },
   "popup_storageReadFailed": {
-    "message": "Fehler beim lesen vom $1 Speicher: $2"
+    "message": "Schwerwiegender Fehler beim lesen vom $1 Speicher: $2."
   },
   "popup_storageUsedFailed": {
     "message": "Fehler beim prüfen wieviel Speicher im '$1' Bereich belegt ist: $2"
