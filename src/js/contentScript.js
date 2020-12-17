@@ -181,7 +181,7 @@ class EbayArticle {
         try {
           if (typeof storageInfo.articleMaxBid === "string")
             storageInfo.articleMaxBid = Number.parseFloat(storageInfo.articleMaxBid.toString());
-          maxBidInput.value = storageInfo.articleMaxBid.toLocaleString("de-DE", {
+          maxBidInput.value = storageInfo.articleMaxBid.toLocaleString(undefined, {
             useGrouping: false,
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
@@ -293,7 +293,7 @@ class EbayArticle {
             );
             // set to 1 cent less, to prevent unfriendly redirection by eBay
             maxBidInputValue = Number.parseFloat(this.articleBuyPrice.toString()) - 0.01;
-            maxBidInputNew.value = maxBidInputValue.toLocaleString("de-DE", {
+            maxBidInputNew.value = maxBidInputValue.toLocaleString(undefined, {
               useGrouping: false,
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
@@ -301,7 +301,7 @@ class EbayArticle {
             this.articleMaxBid = maxBidInputValue;
           } else {
             if (!Number.isNaN(maxBidInputValue)) {
-              maxBidInputNew.value = maxBidInputValue.toLocaleString("de-DE", {
+              maxBidInputNew.value = maxBidInputValue.toLocaleString(undefined, {
                 useGrouping: false,
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,

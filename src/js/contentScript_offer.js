@@ -153,13 +153,15 @@ class EbayOffer {
       }
 
       // update countdown
-      const timeLeftInSeconds = Math.floor((this.modifiedEndTime - executionTime) / 1000);
+      const timeLeftInSeconds = Math.round((this.modifiedEndTime - executionTime) / 1000);
       const bidTimeSeconds = timeLeftInSeconds - this.bidTime;
       if (bidTimeSeconds > 0) {
         confirmButton[0].value = EbayOffer.getTranslation('cs_bidInSeconds', '.Automatic bidding in $1s', [bidTimeSeconds]);
         document.title = EbayOffer.getTranslation('cs_bidInSecondsShort', '.Bidding in $1s', [bidTimeSeconds]);
       } else {
         keepRunning = false;
+        confirmButton[0].value = EbayOffer.getTranslation('cs_bidding', '.Bidding');
+        document.title = EbayOffer.getTranslation('cs_bidding', '.Bidding');
       }
     } catch (e) {
       console.warn("Biet-O-Matic: regularAction() Internal Error: " + e);
@@ -169,7 +171,7 @@ class EbayOffer {
           this.regularAction(expectedExecutionTime);
         }, timerInterval, Date.now() + timerInterval);  
       } else {
-        console.log("Biet-O-Matic: Abort regularAction(), auction ended.");
+        console.log("Biet-O-Matic: Abort regularAction(), auction bid time reached.");
       }
     }
   }
