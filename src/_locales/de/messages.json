@@ -38,6 +38,9 @@
   "cs_biddingFailed": {
     "message": "Auktion nicht erfolgreich. Gebot wurde nicht gesendet bzw. von eBay akzeptiert (z.B. wenn ein anderer Bieter ein höheres Gebot abgab)."
   },
+  "cs_biddingLate": {
+    "message": "Der Wecker, welcher den Bietvorgang bestätigt, hat sich um $1 ms verspätet!"
+  },
   "cs_biddingOverbid": {
     "message": "Auktion nicht erfolgreich. Sie wurden überboten."
   },
@@ -269,6 +272,9 @@
   "popup_cleanupNone": {
     "message": "Es wurden keine Artikel entfernt."
   },
+  "popup_import": {
+    "message": "Importieren"
+  },
   "popup_importDone": {
     "message": "$1 Elemente wurden geladen."
   },
@@ -330,6 +336,6 @@
     "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (~$1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
   },
   "popup_updateStorageFailed": {
-    "message": "Fehler beim speichern für Artikel $1: $2"
+    "message": "Fehler beim Speichern für Artikel $1: $2"
   }
 }

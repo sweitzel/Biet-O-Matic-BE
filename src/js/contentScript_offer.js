@@ -130,30 +130,20 @@ class EbayOffer {
   }
 
   /*
-   * Every 1 second:
+   * Every 5 seconds:
    * - update countdown until bid
    */
-  regularAction(expectedExecutionTime) {
-    const timerInterval = 1_000;
-    const executionTime = Date.now();
+  regularAction() {
+    const timerInterval = 5_000;
     let keepRunning = true;
     try {
-      // check timer precision. Main concern are late timers (more than 1s).
-      const deviation = executionTime - expectedExecutionTime;
-      if (deviation > 1100) {
-        console.info("Biet-O-Matic: regularAction() setTimeout deviation = %s ms late", deviation);
-      } else if (deviation < -100) {
-        console.info("Biet-O-Matic: regularAction() setTimeout deviation = %s ms early", deviation);
-      }
-
       const confirmButton = document.getElementsByName('confirmbid');
       if (confirmButton == null || typeof confirmButton === 'undefined' || confirmButton.length === 0) {
         console.debug("Biet-O-Matic: Abort regularAction(), no confirm button found.");
         return;
       }
-
       // update countdown
-      const timeLeftInSeconds = Math.round((this.modifiedEndTime - executionTime) / 1000);
+      const timeLeftInSeconds = Math.round((this.modifiedEndTime - Date.now()) / 1000);
       const bidTimeSeconds = timeLeftInSeconds - this.bidTime;
       if (bidTimeSeconds > 0) {
         confirmButton[0].value = EbayOffer.getTranslation('cs_bidInSeconds', '.Automatic bidding in $1s', [bidTimeSeconds]);
@@ -167,9 +157,9 @@ class EbayOffer {
       console.warn("Biet-O-Matic: regularAction() Internal Error: " + e);
     } finally {
       if (keepRunning) {
-        window.setTimeout((expectedExecutionTime) => {
-          this.regularAction(expectedExecutionTime);
-        }, timerInterval, Date.now() + timerInterval);  
+        window.setTimeout(() => {
+          this.regularAction();
+        }, timerInterval);  
       } else {
         console.log("Biet-O-Matic: Abort regularAction(), auction bid time reached.");
       }
@@ -180,20 +170,35 @@ class EbayOffer {
   scheduleConfirmAction() {
     this.storePerfInfo(EbayOffer.getTranslation('cs_phase2', '.Waiting for bid'));
     const timeToBid = this.modifiedEndTime - Date.now() - (this.bidTime * 1000)
-    window.setTimeout(() => {
-      this.confirmBid()
+    window.setTimeout((expectedExecutionTime) => {
+      this.confirmBid(expectedExecutionTime)
         .catch(e => {
           console.warn("Biet-O-Matic: confirmBid() aborted: " + e.message);
           EbayOffer.sendArticleLog(this.articleId, e);
         });
-    }, timeToBid);
+    }, timeToBid, Date.now() + timeToBid);
   }
 
   // confirm the bid after performing pre-checks
   // - this function will be called at the bidTime
   // - we have to check if the autoBid is still active (single purchase group)
-  async confirmBid() {
+  async confirmBid(expectedExecutionTime) {
     this.storePerfInfo(EbayOffer.getTranslation('cs_phase3', '.Preparing'));
+
+    // check timer precision. Main concern are late timers (more than 1s).
+    try {
+      const deviation = Date.now() - expectedExecutionTime;
+      if (deviation > 1100) {
+        console.info("Biet-O-Matic: confirmBid() setTimeout deviation = %s ms late", deviation);
+        EbayOffer.sendArticleLog(this.articleId, {
+          component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+          level: "Warn",
+          message: EbayOffer.getTranslation("cs_biddingLate", ".The confirm timer has been late $1 ms.", [deviation])
+        });
+      }
+    } catch (e) {
+      console.warn("Biet-O-Matic: confirmBid() internal error: " + e);
+    }
 
     // check window/group autoBid status
     let autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
@@ -266,17 +271,17 @@ class EbayOffer {
       };
     }
 
-    // get confirm button
-    const confirmButton = await EbayOffer.waitFor('input[name="confirmbid"]', 1000)
-      .catch(() => {
-        console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
-        throw {
-          component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
-          level: EbayOffer.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
-          message: EbayOffer.getTranslation('cs_errorCannotFindBidButton',
-            '.Bid button could not be found!')
-        };
-      });
+    // get confirm button   
+    const confirmButton = document.getElementsByName('confirmbid');
+    if (confirmButton == null || typeof confirmButton === 'undefined' || confirmButton.length === 0) {
+      console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
+      throw {
+        component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+        level: EbayOffer.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
+        message: EbayOffer.getTranslation('cs_errorCannotFindBidButton',
+          '.Bid button could not be found!')
+      };
+    }
 
     if (simulate) {
       EbayOffer.sendArticleLog(this.articleId, {
