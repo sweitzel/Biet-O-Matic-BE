@@ -4,10 +4,10 @@ bookToc: true
 weight: 2
 type: "docs"
 ---
-
 # Versions Übersicht
 
 ## Biet-O-Matic BE Version 0.5
+
 Diese Version beinhaltet große Änderungen bezüglich des Bietvorgangs, wodurch gemeldete vereinzelt auftretende Bietfehler vermieden werden sollten.
 Der Bietvorgang läuft jetzt nicht mehr über die eBay Artikelseite, sondern über die von eBay bereitgestellte "offer.ebay.de" Seite.
 Hierbei wird je nach eingestelltem Bietzeitpunkt ungefähr eine Minute vor Auktionsende die "offer.ebay.de" Seite für den Artikel geöffnet.
@@ -23,24 +23,40 @@ Weitere größere Änderungen:
 - Der Artikel Verkäufer wird nun gespeichert und in der Übersichtstabelle in der Beschreibung angezeigt.
   Wenn die Kompakte Anzeige aktiviert ist, wird der Verkäufer nur angezeigt wenn man mit dem Mauszeiger über der Artikelbeschreibung verweilt.
 
-### Biet-O-Matic BE Version 0.5.2
+### Biet-O-Matic BE Version 0.5.3
+
 {{< hint info>}}
-Veröffentlicht am Samstag, 24.10.2020 
+Veröffentlicht am Samstag, 19.12.2020
+{{< /hint >}}
+
+- Permanente Anzeige des verwendeten Browser Speichers in der Fußzeile der Übersichtsseite hinzugefügt.
+- Voreingestellter Bietzeitpunkt von 5s auf 10s geändert, um Probleme mit zu späten Geboten zu verringern.
+- Automatische Eingabe bzw. Anpassung des Maximalgebots an den Minimalpreis wurde entfernt.
+  Das Artikel-Maximalgebot kann, bzw. muss jetzt frei vom Nutzer eingegeben werden.
+- Falsche Darstellung im Zusammenhang mit internationalen Zahlenformaten auf der Artikel-Seite behoben.
+- Verbesserungen im Ereignis Protokoll des Artikel-Bietvorgangs, um Probleme besser analysieren zu können.
+
+### Biet-O-Matic BE Version 0.5.2
+
+{{< hint info>}}
+Veröffentlicht am Samstag, 24.10.2020
 {{< /hint >}}
 
 - Problem mit falschen bzw. fehlenden Einstellungen auf der Artikelseite behoben, wenn der 'local' Modus aktiviert wurde.
 - Verbesserung im Build-Prozess der Erweiterung
 
 ### Biet-O-Matic BE Version 0.5.1
+
 {{< hint info>}}
-Veröffentlicht am Sonntag, 11.10.2020 
+Veröffentlicht am Sonntag, 11.10.2020
 {{< /hint >}}
 
 - Kleinere Verbesserungen für Firefox Release Vorbereitung
 
 ### Biet-O-Matic BE Version 0.5.0
+
 {{< hint info>}}
-Veröffentlicht am Samstag, 03.10.2020 
+Veröffentlicht am Samstag, 03.10.2020
 {{< /hint >}}
 
 - Bietvorgang komplett neu geschrieben
@@ -54,29 +70,33 @@ Veröffentlicht am Samstag, 03.10.2020
   Leider verwendet jeder Browser [andere Kombinationen](https://developer.mozilla.org/de/docs/Web/HTML/Globale_Attribute/accesskey).
 
 ## Biet-O-Matic BE Version 0.4
-Biet-O-Matic steht nun für alle größeren Browser zur Verfügung. 
+
+Biet-O-Matic steht nun für alle größeren Browser zur Verfügung.
 
 ### Biet-O-Matic BE Version 0.4.7
+
 {{< hint info>}}
-Veröffentlicht am Dienstag, 03.03.2020 
+Veröffentlicht am Dienstag, 03.03.2020
 {{< /hint >}}
 
 - Problem beim parsen von Auktions End-Datum im Monat März behoben (nur Deutsch).
 
 ### Biet-O-Matic BE Version 0.4.6
+
 {{< hint info>}}
-Veröffentlicht am Freitag, 28.02.2020 
+Veröffentlicht am Freitag, 28.02.2020
 {{< /hint >}}
 
 - Von der Artikelseite aus wird die Aktivierung des Artikel-Automatikmodus nur zugelassen, wenn BE den Artikel bereits hinzugefügt hat.
   Dies konnte u.U. zum Verlust der Einstellung und damit zu Problemen beim Bieten führen.
 - Von der Artikelseite aus können Sie nun die Aktivierung des Artikel-Automatikmodus veranlassen, ohne das Höchstgebot zu definieren.
-  Der Preis wird an den zu diesem Zeitpunkt minimal akzeptablen Angebotspreis angepasst. 
+  Der Preis wird an den zu diesem Zeitpunkt minimal akzeptablen Angebotspreis angepasst.
 - Gruppenauswahl verbessert, indem der Filter beim fokussieren zurückgesetzt wird. Dies ermöglicht die Auswahl aller Gruppen.
 
 ### Biet-O-Matic BE Version 0.4.5
+
 {{< hint info>}}
-Veröffentlicht am Donnerstag, 20.02.2020 
+Veröffentlicht am Donnerstag, 20.02.2020
 {{< /hint >}}
 
 - Minimale Firefox-Version auf 57 angehoben.
@@ -86,13 +106,14 @@ Veröffentlicht am Donnerstag, 20.02.2020
 - Anzeige von Fehlermeldung hinzugefügt, sollte ein Speichervorgang fehlschlagen (z.B. Quota Fehler).
 - Option für die Aktivierung der kompakteren Speicherung der Artikel-Informationen hinzugefügt.
   - Durch diese Option können ca. doppelt soviele Artikel mit BE verwaltet werden.
-  - siehe [Interne Konfigurationsparameter]({{< ref "/manual#interne-konfigurationsparameter" >}}) 
+  - siehe [Interne Konfigurationsparameter]({{< ref "/manual#interne-konfigurationsparameter" >}})
 - Anzeige des freien Speichers beim Laden der BE Übersichtsseite hinzugefügt.
   - \> 80% gelb, \> 95% rot
 
 ### Biet-O-Matic BE Version 0.4.4
+
 {{< hint info>}}
-Veröffentlicht am Donnerstag, 13.02.2020 
+Veröffentlicht am Donnerstag, 13.02.2020
 {{< /hint >}}
 
 - Problem bei der Artikel-Feldaktualisierung behoben.
@@ -106,8 +127,9 @@ Veröffentlicht am Donnerstag, 13.02.2020
   - Aktualisierung erfolgt nun sequentiell anstatt parallel, um Leistungsprobleme zu vermeiden.
 
 ### Biet-O-Matic BE Version 0.4.3
+
 {{< hint info>}}
-Veröffentlicht am Sonntag, 08.02.2020 
+Veröffentlicht am Sonntag, 08.02.2020
 {{< /hint >}}
 
 - Funktionalität für hinzufügen von Artikeln aus der eBay Beobachtungsliste hinzugefügt
@@ -123,8 +145,9 @@ Veröffentlicht am Sonntag, 08.02.2020
 - Es wurde ein Problem bei der Aktivierung des BE Übersichtsseite behoben. Die Aktivierung konnte manchmal fehlschlagen.
 
 ### Biet-O-Matic BE Version 0.4.2
+
 {{< hint info>}}
-Erschienen am Sonntag, 02.02.2020 
+Erschienen am Sonntag, 02.02.2020
 {{< /hint >}}
 
 - Unterstützung zur Ermittlung des Zeitunterschiedes zwischen dem System auf dem BE läuft und dem eBay Server hinzugefügt.
@@ -136,6 +159,7 @@ Erschienen am Sonntag, 02.02.2020
   - Gruppen werden nur einmal in der BE Übersichtsseite verwaltet.
 
 ### Biet-O-Matic BE Version 0.4.1
+
 {{< hint info>}}
 Erschienen am Freitag, 31.01.2020
 {{< /hint >}}
@@ -145,14 +169,16 @@ Erschienen am Freitag, 31.01.2020
   wenn diese zwischen 10s..60s auseinander endeten.
 
 ## Biet-O-Matic BE Version 0.3
+
 Diese Version von BE ist die erste, welche mehrsprachig ist. Es wird, nun neben Deutsch, auch eine Englischsprachige
-Benutzung ermöglicht. Ausserdem wurde ebay.com Unterstützung getestet und sollte nun problemlos funktionieren. 
+Benutzung ermöglicht. Ausserdem wurde ebay.com Unterstützung getestet und sollte nun problemlos funktionieren.
 
 Weitere größere Änderungen in dieser Version:
+
 - Für geschlossene Artikel (kein Tab offen) wird im Hintergrund jede Minute eine Datenaktualisierung durchgeführt.
   - Die Aktualisierungsvorgang wird visualisiert (drehendes '+')
   - Eine Aktualisierung findet nur statt, wenn für das aktuelle Fenster der Automatikmodus aktiv ist.
-- Änderungen an Artikelinformationen werden in der Tabelle farblich (gelb) hervorgehoben. 
+- Änderungen an Artikelinformationen werden in der Tabelle farblich (gelb) hervorgehoben.
 - Artikel Bilder werden jetzt auf der Übersichtsseite angezeigt
 - Option für kompakte Anzeige hinzugefügt, dies blendet Bilder aus und macht die Tabellenzeilen etwas schmaler.
 - Unterstützung für Englisch hinzugefügt.
@@ -167,29 +193,32 @@ Weitere größere Änderungen in dieser Version:
 - Wenn der Browser es unterstützt, wird BE verhindern, dass der Computer in den Schlafmodus wechselt. Aber nur wenn die Biet-Automatik aktiv ist.
 
 ### Biet-O-Matic BE Version 0.3.4
+
 {{< hint info>}}
-Erschienen am Dienstag, 27.01.2020 
+Erschienen am Dienstag, 27.01.2020
 {{< /hint >}}
 
 - Fügt die Möglichkeit hinzu, alle Artikel aus einer Gruppe zu ersteigern.
-  Der Standard bleibt weiterhin das pro Gruppe ein Artikel ersteigert wird. 
+  Der Standard bleibt weiterhin das pro Gruppe ein Artikel ersteigert wird.
 - Ändert den Voreinstellung für Gruppen Automatikmodus auf "Aktiv"
 - Behebt flackern des Gruppen Automatikmodus
-- Behebt ein Problem beim Öffnen der BE übersichtsseite, welches dazu führte, 
-  dass mehrere Übersichtsseiten zur gleichen Zeit offen sein konnten. 
- 
+- Behebt ein Problem beim Öffnen der BE übersichtsseite, welches dazu führte,
+  dass mehrere Übersichtsseiten zur gleichen Zeit offen sein konnten.
+
 ### Biet-O-Matic BE Version 0.3.3
+
 {{< hint info>}}
-Erschienen am Dienstag, 21.01.2020 
+Erschienen am Dienstag, 21.01.2020
 {{< /hint >}}
 
 - Behebt Problem beim öffnen der BE Übersichtsseite. Diese konnte u.U. mehrfach geöffnet werden.
 - Behebt Problem mit flackern des Knopfes für den Gruppen Automatikmodus
-- Dokumentation aktualisert, Schnellstart Anleitung hinzugefügt 
+- Dokumentation aktualisert, Schnellstart Anleitung hinzugefügt
 
 ### Biet-O-Matic BE Version 0.3.2
+
 {{< hint info>}}
-Erschienen am Sonntag, 19.01.2020 
+Erschienen am Sonntag, 19.01.2020
 {{< /hint >}}
 
 - Erste stabile 0.3 Version (für die wichtigsten Änderungen, siehe oben)
@@ -201,6 +230,7 @@ Erschienen am Sonntag, 19.01.2020
   - Problem behoben wenn ein Artikel Tab geschlossen wurde, und dann wieder hergestellt.
 
 ## Biet-O-Matic BE Version 0.2
+
 Dieser Versionszweig hat mit der vorhergehenden Version nicht mehr viel gemeinsam. Sowohl der Quellcode, als auch die
 Nutzung der BE wurde erneuert.
 
@@ -208,11 +238,11 @@ Hervozuheben sind besonders folgende Änderungen:
 
 - Unterstüztung von Biet-Gruppen:  
   - Artikel können jetzt in Gruppen untergliedert werden. Hierzu wurde einen neue Spalte in die Artikel Tabelle der
-    BE Übersichtsseite hinzugefügt. Hier kann jetzt ein beliebiger Name eingegeben werden um Ordnung in die 
+    BE Übersichtsseite hinzugefügt. Hier kann jetzt ein beliebiger Name eingegeben werden um Ordnung in die
     verschiedenen Artikel zu bringen.
-  - Jede Gruppe verfügt über einen eigenen "Automatikmodus"-Schalter. Dieser muss zusätzlich zum Artikel- und 
+  - Jede Gruppe verfügt über einen eigenen "Automatikmodus"-Schalter. Dieser muss zusätzlich zum Artikel- und
     Fensterschalter aktiv sein, damit BE für Artikel aus der Gruppe automatisch bietet.
-  - Der Gruppen Schalter lässt sich durch Maus-Klick auf die Gruppenzeile an- oder ausschalten. 
+  - Der Gruppen Schalter lässt sich durch Maus-Klick auf die Gruppenzeile an- oder ausschalten.
 - Tab Verwaltung:
   - Tabs können jetzt über ein neues Symbol in der Übersichtsseite vom Benutzer geschlossen und wieder geöffnet werden.
   - BE öffnet Artikel Tabs automatisch 60 Sekunden vor Auktionsende, falls die Automatik-Funktion für diesen Artikel
@@ -235,12 +265,15 @@ Hervozuheben sind besonders folgende Änderungen:
     integriert. Aktuell ist dies durch die GitHub-Plattform möglich, wo verschiedene Spendenhöhen möglich sind.
 
 ### Biet-O-Matic BE Version 0.2.2
+
 {{< hint info>}}
-Erschienen am Montag, 06.01.2020 
-{{< /hint >}} 
+Erschienen am Montag, 06.01.2020
+{{< /hint >}}
+
 - Erste stabile 0.2 Version
 
 ## Biet-O-Matic BE Version 0.1
+
 Hierbei handelt es sich um die ersten Prototyp Versionen, welche im Dezember 2019 erschienen sind. Diese Versionen
 wurden nur einem eingeschränkten Nutzerkreis zur Verfügung gestellt um erste Meinungen und Testerfahrungen einzusammeln
 und für die erste stabile Version aufzubereiten.
