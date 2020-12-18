@@ -380,7 +380,7 @@ class AutoBid {
 
   /*
    * Determine autoBid state
-   * - prefers generally the local state
+   * - generally prefers the local state
    * - if the sync state is enabled for a different window (Id) then disable autoBid
    * - if sync state for this window is present, but local state is not set, then use sync state (extension update)
    * Note: this function is called by renderState, which will be called regularly to check for remote state updates
@@ -395,10 +395,13 @@ class AutoBid {
     Object.assign(info, localInfo);
 
     // if sync state is for different id , then disable autoBid (sync state is only added if active)
-    // Note: if syncInfo.id == localInfo.id , then the browser probably restarted and assigned new windowId, in that
-    //   case do not disable autoBid
-    if (syncInfo.hasOwnProperty("id") && localInfo.hasOwnProperty("id") && syncInfo.id === localInfo.id) {
-      // syncinfo is intended for this window, just update with new Id
+    // Note: if syncInfo.id == localInfo.id , then the browser probably restarted and assigned new windowId,
+    //       in that case do not disable autoBid
+    const localInfoMatchesSyncInfo = syncInfo.hasOwnProperty("id") && localInfo.hasOwnProperty("id") && syncInfo.id === localInfo.id;
+    const syncIdNotEqualMyId = syncInfo.hasOwnProperty("id") && syncInfo.id != null && syncInfo.id !== myId;
+
+    if (localInfoMatchesSyncInfo) {
+      // syncInfo is intended for this window, just update with (potentially) new Id
       console.log(
         "Biet-O-Matic: Updating localInfo id. (myId=%s, syncId=%s, localOldInfo=%s)",
         myId,
@@ -406,7 +409,8 @@ class AutoBid {
         localInfo.id
       );
       Popup.updateSetting({});
-    } else if (syncInfo.hasOwnProperty("id") && syncInfo.id != null && syncInfo.id !== myId) {
+      AutoBid.deadManSwitchFunc();
+    } else if (syncIdNotEqualMyId) {
       console.log(
         "Biet-O-Matic: Disabling autoBid because its enabled remotely. (myId=%s, syncId=%s, localOldInfo=%s)",
         myId,
@@ -419,10 +423,11 @@ class AutoBid {
         Popup.updateSetting({ autoBidEnabled: false });
       }
     } else if (Object.keys(localInfo).length === 0) {
-      Object.assign(info, syncInfo);
       // initially set localState after extension update
+      Object.assign(info, syncInfo);
       Popup.updateSetting(info);
-    }
+    }        
+
     return info;
   }
 
@@ -588,22 +593,26 @@ class AutoBid {
    */
   static deadManSwitch() {
     window.setInterval(() => {
-      try {
-        let localState = AutoBid.getLocalState();
-        if (!localState.simulation && localState.autoBidEnabled) {
-          console.debug("Biet-O-Matic: AutoBid.deadManSwitch() called");
-          AutoBid.setSyncState(localState.autoBidEnabled).catch((e) => {
-            console.warn("Biet-O-Matic: AutoBid.setSyncState() failed: " + e);
-          });
-        }
-        localState = null;
-        AutoBid.removeDeadAutoBid().catch((e) => {
-          console.warn("Biet-O-Matic: deadManSwitch() removeDeadAutoBid failed: " + e);
-        });
-      } catch (e) {
-        console.warn("Biet-O-Matic: deadManSwitch() internal error: " + e);
-      }
+      AutoBid.deadManSwitchFunc();
     }, 60_000);
+  }
+
+  static deadManSwitchFunc() {
+    try {
+      let localState = AutoBid.getLocalState();
+      if (!localState.simulation && localState.autoBidEnabled) {
+        console.debug("Biet-O-Matic: AutoBid.deadManSwitch() called");
+        AutoBid.setSyncState(localState.autoBidEnabled).catch((e) => {
+          console.warn("Biet-O-Matic: AutoBid.setSyncState() failed: " + e);
+        });
+      }
+      localState = null;
+      AutoBid.removeDeadAutoBid().catch((e) => {
+        console.warn("Biet-O-Matic: deadManSwitch() removeDeadAutoBid failed: " + e);
+      });
+    } catch (e) {
+      console.warn("Biet-O-Matic: deadManSwitch() internal error: " + e);
+    }
   }
 
   // remove autoBid if the timestamp update was longer than 5 minutes ago
@@ -4272,9 +4281,9 @@ class Popup {
   }
 
   /*
-   * update setting in session storage:
+   * update setting in window session storage:
    * autoBidEnabled - Automatic Bidding enabled
-   * simulation     - Perfom simulated bidding (do all , but not confirm the bid)
+   * simulation     - Perfom simulated bidding (do all steps, except confirm the bid)
    */
   static updateSetting(info) {
     console.debug("Biet-O-Matic: Popup.updateSetting() info=%s", JSON.stringify(info));
