@@ -290,7 +290,7 @@ class EbayOffer {
         message: "Bid not sent (test mode active)",
       });
     } else {
-      confirmButton.click();
+      confirmButton[0].click();
     }
     this.storePerfInfo(EbayOffer.getTranslation('cs_phase4', '.Bid submitted'));
 
