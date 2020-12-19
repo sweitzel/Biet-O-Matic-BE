@@ -15,47 +15,51 @@ Falls sie schnellstmöglich einsteigen wollen, können sie direkt zum [Schnellst
 
 Vorab: Biet-O-Matic BE und das [Original B-O-M Programm](https://www.bid-o-matic.org/hp/) haben bis auf den Namen, wenig gemeinsam:
 
-- anderer Autor
-- komplett andere Technologie
+- Anderer Autor
+- Komplett andere Technologie
   - original B-O-M ist ein Windows Programm, in Visual Basic programmiert.
-  - B-O-M BE ist eine Browser Erweiterung, in JavaScript programmiert 
+  - B-O-M BE ist eine Browser Erweiterung, in JavaScript programmiert.
 - B-O-M BE hat einen geringeren Funktionsumpfang - es fokussiert sich auf Artikel Verwaltung und automatisches Bieten.
 
 Da das Original B-O-M Programm Ende 2019 durch von eBay bezüglich Login/Captcha durchgeführten Änderungen nicht mehr
-ordentlich funktionierte wurde dieses Projekt ins Leben gerufen, um eine frei zugängliche Ersatzmöglichkeit zu bieten.
+ordentlich funktionierte, wurde dieses Projekt kurzerhand ins Leben gerufen um eine frei zugängliche Ersatzmöglichkeit zu bieten.
 
 Eine kurze Recherche über Alternativen führte zu keinen zufriedenstellenden Resultaten:
 
-- nicht professionel wirkende "Schnellschuss-Lösungen"
+- Nicht professionel wirkende "Schnellschuss-Lösungen"
 - Lösungen denen man sofort anmerkt das es primär um eine Geldeinnahmequelle für den Autor geht
 - Probleme in Punkto Datenschutz:
   - Login Daten einem Fremdanbieter anvertrauen
   - QuellCode nicht einsehbar 
   - Unklare Lage bezüglich Auswertung der Transaktionsdaten (Auktionen)
 
+## Quell-Code
+
+Der Quell-Code von B-O-M BE ist auf www.github.com/sweitzel/Biet-O-Matic-BE erhältlich.
+Technisch versierte Anwender bzw. Programmierer können Änderungen am QuellCode direkt über "Pull Requests" anzufragen oder über "Issues" anfragen.
+Auch lassen sich auf GitHub konkrete Probleme (Bugs) melden - falls Möglich bitte in Englisch.
+
+Der Quell-Code steht unter der [Apache 2.0 Lizenz](https://github.com/sweitzel/Biet-O-Matic-BE/blob/master/LICENSE).
+
 ## Biet-O-Matic Forum
 
-Falls sie Fragen zum Programm stellen wollen - sei es zu einem Problem, Vorschlag oder sonstigem - kann dies
-im [B-O-M Forum](https://www.bid-o-matic.org/forum/index.php?c=6) erfolgen.
+Falls sie Fragen zum Programm stellen wollen - sei es zu einem Problem, Vorschlag oder sonstigem -
+kann dies auch im [B-O-M Forum](https://www.bid-o-matic.org/forum/index.php?c=6) erfolgen.
 
 Bitte beachten Sie:
 
 - Für Anfragen bitte erst kurz prüfen, ob es bereits diese oder eine ähnliche Anfrage gab
 - Neue Anfragen bitte immer in separate "Topics" und in der richtigen Kategorie stellen
-
-## Quell-Code
-
-Der Quell-Code von B-O-M BE ist auf www.github.com/sweitzel/Biet-O-Matic-BE erhältlich.
-Es ist auch möglich über die bekannten Möglichkeiten Änderungen am QuellCode über "Pull Requests" direkt anzufragen.
-Auch lassen sich auf GitHub Probleme melden, was vermutlich zu einer besseren Ordnung und Übersichtlichkeit
-führt (Ein Forum ist ja kein Problem/Ticket Management System)
-
-Der Quell-Code steht unter der [Apache 2.0 Lizenz](https://github.com/sweitzel/Biet-O-Matic-BE/blob/master/LICENSE).
+- Bitte zu einem Problem auch genügend Hintergrundinformationen mitliefern.
+  - Was ist passiert, lässt sich eingrenzen was dazu führt?
+  - Relevante Einstellungen bzw. Abläufe?
+  - Relevante System Informationen?
 
 ## Spenden
 
-B-O-M BE entstand als Freizeit Projekt und in relativ kurzer Zeit. Um jedoch längerfristig die ordnungsgemäße Funktion
-bzw. auch die Umsetzung neuer Funktionen zu ermöglichen, wird die "Spenden-Funktion" als Möglichkeit der Finanzierung angeboten.
+B-O-M BE entstand als Freizeit Projekt und in relativ kurzer Zeit.
+Um jedoch längerfristig die ordnungsgemäße Funktion bzw. auch die Umsetzung neuer Funktionen zu ermöglichen,
+wird die "Spenden-Funktion" als Möglichkeit der Finanzierung angeboten.
 Ebenfalls kann eine Spende auch als kleine Aufmerksamkeit oder ein Dankeschön betrachtet werden, über die ich mich natürlich sehr freue.
 
 ### Paypal

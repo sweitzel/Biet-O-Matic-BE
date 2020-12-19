@@ -18,13 +18,13 @@ Falls Gruppen nicht benötigt werden, kann die Gruppen-Funktion auch über "Disa
 
 > In der Standardeinstellung "☝️ Ich möchte Einen" wird pro Gruppe immer nur ein Artikel ersteigert, danach wird die Gruppen-Automatik deaktiviert.  
 > Alternativ werden über die "🖐️ Ich möchte Alle" Gruppen-Einstellung alle Artikel der Gruppe versucht zu ersteigern.
- 
+
 {{< image src="/features_be_gruppe.de.png" alt="Gruppen" >}}
 
 - Artikel können jederzeit Gruppen zugewiesen werden.
 - Jede Gruppe hat einen Schalter für den Gruppen-Automatikmodus welcher standardmäßig aktiviert ist.
-    - Der Gruppen-Automatikmodus kann über Maus-Klick auf die Gruppen Zeile in der Übersichtstabelle aktiviert, bzw. deaktiviert werden.
-    - Der Status wird sowohl über Farbe, als auch Text angezeigt (z.B. rote Farbe, Text "Automatikmodus inaktiv").
+  - Der Gruppen-Automatikmodus kann über Maus-Klick auf die Gruppen Zeile in der Übersichtstabelle aktiviert, bzw. deaktiviert werden.
+  - Der Status wird sowohl über Farbe, als auch Text angezeigt (z.B. rote Farbe, Text "Automatikmodus inaktiv").
 - Gruppen werden im synchronisierten Speicherbereich aufbewahrt.
   Sie stehen somit auch in anderen Fenstern und sogar anderen Rechnern zur Verfügung.
 
@@ -109,7 +109,7 @@ Maus markieren (ganz nach unten rollen damit alle Einträge erwischt werden) und
 
 Falls gewünscht, kann zum ausprobieren ohne Risiko auch der Simulationsmodus aktiviert werden.
 Hierzu drücken Sie einfach die "Umschalt-Taste" während sie den globalen Automatikmodus aktivieren.
-Der Testmodus ist aktiv, wenn das BE Symbol ein kleines 'T' anzeigt. 
+Der Testmodus ist aktiv, wenn das BE Symbol ein kleines 'T' anzeigt.
 Der einzige Unterschied zum Normalen bieten ist, das das Gebot kurz vor Ablauf der Auktion nicht bestätigt wird.
 
 Die Simulation führt allerdings nicht zur Deaktivierung der Biet-Automatik, da kein "gekaufter" Status simuliert wird.
@@ -117,7 +117,7 @@ Die Simulation führt allerdings nicht zur Deaktivierung der Biet-Automatik, da 
 ## Bietvorgang
 
 BE wird auf einen Artikel automatisch bieten, wenn sowohl der Automatikmodus für den Artikel,
-die Gruppe in der sich der Artikel befindet, sowie der Globale Automatikmodus aktiv geschalten sind. 
+die Gruppe in der sich der Artikel befindet, sowie der Globale Automatikmodus aktiv geschalten sind.
 
 Ungefähr eine Minute vor Auktionsende, öffnet BE die "offer.ebay.de" Seite für den Artikel in einem neuen Browser-Tab.
 Wenn BE ordentlich funktioniert, wird die Restzeit bis zur Gebotsabgabe sowohl im Tab-Titel, als auch auf der "Offer"-Seite selber angezeigt.
@@ -125,11 +125,11 @@ Wenn BE ordentlich funktioniert, wird die Restzeit bis zur Gebotsabgabe sowohl i
 Der Bietvorgang läuft weitgehend eigenständig im "Offer" Browser Tab wie folgt ab:
 
 - Bei der Initialisierung wird auf Biet-Kollisionen geprüft und der Bietzeitpunkt ggf. angepasst.
-- Es wird ein Timer gesetzt, welcher alle zwei Sekunden den Tab-Titel und den Bestätigungs Knopf Text mit einem Countdown aktualisiert.
-- Es wird ein Timer gesetzt welcher zum ermittelten Biet-Zeitpunkt die Biet-Funktion aufruft.
+- Es wird ein Timer gesetzt, welcher alle fünf Sekunden den Tab-Titel und den Bestätigungs Knopf Text mit einem Countdown aktualisiert.
+- Es wird ein Timer gesetzt, welcher zum ermittelten Biet-Zeitpunkt die Biet-Funktion aufruft.
 - Die Biet-Funktion beinhaltet folgende Schritte:
   - Prüfung ob alle drei Biet-Automatiken aktiviert sind und Biet-Sperre inaktiv (Kommunikation mit BE-Übersichtsseite).
-  - Zugriff auf Bestätigungs-Knopf, wenn dieser nicht vorhanden beende mit Fehler.
+  - Zugriff auf Bestätigungs-Knopf, wenn dieser nicht vorhanden, beende mit Fehler.
     Ursache kann beispielsweise Kommunikationproblem mit eBay sein, oder auch einfach wenn Sie überboten wurden.
 
 {{< hint info >}}
@@ -137,9 +137,17 @@ Hinweis: Stellen sie sicher, dass ihr Rechner nicht in den Ruhezustand / Standby
 BE kann den Rechner nicht wecken und somit dann auch nicht automatisch bieten.
 {{< /hint >}}
 
+{{< hint warning >}}
+Achtung: Falls sie in Erwägung ziehen den voreingestellten Bietzeitpunkt (10s) zu verringern, beachten sie bitte folgendes Risiko:
+Technisch bedingt kann im Web-Browser nicht garantiert werden, dass eine Aktion zu einem bestimmten Zeitpunkt ausgeführt wird.
+Damit nun also BE ihr Maximalgebot kurz vor Ablauf der Auktion bestätigen kann, wird ein Wecker (Timer) gestellt, welcher die Funktion zum bestimmten Zeitpunkt ausführen soll.
+Durch eine hohe Systemauslastung zu dem Zeitpunkt, oder Browser Stromsparmaßnahmen kann der Wecker aus deutlich später auslösen - was im schlimmsten Fall zu verpassten Auktionen führen kann.
+Im Artikel-Ereignisprotokoll würde das dementsprechend als Warnung protokolliert werden und ist dadurch nachvollziehbar.
+{{< /hint >}}
+
 ### Vermeidung von Doppelkäufen (Auktions-Kollosion)
 
-> Dieser Abschnitt trifft nur zu, wenn die Gruppen-Option "☝️ Ich möchte Einen" aktiv ist. 
+> Dieser Abschnitt trifft nur zu, wenn die Gruppen-Option "☝️ Ich möchte Einen" aktiv ist.
 
 Standardmäßig soll aus jeder Gruppe nur ein Artikel ersteigert werden.
 Dies wird dadurch gewährleistet, dass wenn ein Artikel ein erfolgreichen Auktionsstatus zurückmeldet, die Gruppen Bietautomatik deaktiviert wird.
@@ -148,18 +156,19 @@ Dies ist allerdings problematisch, wenn mehrere Artikel Auktionen zu einem ähnl
 Um zu verhindern, das mehrere Artikel einer Gruppe ersteigert werden, wird folgende Programmlogik angewendet:
 
 - Der Bietzeitpunkt, d.h. Bestätigung des Gebots wird angepasst, so daß immer mindestens 10 Sekunden zwischen zwei Auktionen liegen.
-- Es wird eine Bietsperre verhängt, wenn eine Auktion welche innerhalb 10s vor der eigenen Auktion endete noch keinen abgeschloßenen Auktionsstatus hat. 
+- Es wird eine Bietsperre verhängt, wenn eine Auktion welche innerhalb 10s vor der eigenen Auktion endete noch keinen abgeschloßenen Auktionsstatus hat.
   
-{{{< hint info >}}
+{{< hint info >}}
 Die beschriebene Programmlogik kann somit zu erfolglosen Auktionen führen:
 Wenn zwei Auktionen innerhalb des gleichen 10 Sekunden Fensters enden,
 wird für den zweiten Artikel u.U kein Gebot abgegeben werden,
-selbst wenn die erste Auktion nicht erfolgreich war. 
-{{{< /hint >}}
+selbst wenn die erste Auktion nicht erfolgreich war.
+{{< /hint >}}
 
 ## eBay Artikel Seite
+
 Beim Ladevorgang der eBay Artikelseite, erweitert BE diese durch einen Knopf, welcher den Automatikmodus für diesen Artikel aktivieren kann.
-Im Hintergrund wird auch das Maximalgebot Eingabefeld überwacht, und dieser Wert gegebenenfalls geprüft und gespeichert. 
+Im Hintergrund wird auch das Maximalgebot Eingabefeld überwacht, und dieser Wert gegebenenfalls geprüft und gespeichert.
 
 {{< image src="/features_be_artikelseite.de.gif" alt="Artikelseite" >}}
 
@@ -167,6 +176,6 @@ Im Hintergrund wird auch das Maximalgebot Eingabefeld überwacht, und dieser Wer
 - Bei Eingabe eines Wertes welcher niedriger als der Minimalerhöhungspreis ist, wird die Eingabe automatisch auf den niedrigsten möglichen wert reduziert.
 - Bei Eingabe eines Wertes welcher höher als der Sofortkauf Preis liegt, wird die Eingabe automatisch auf den Sofortkaufpreis, **minus 1 Cent*- reduziert.
 - Der Knopf für den Automatikmodus auf der Artikelseite bezieht sich nur auf den Artikel.
-  Zusätzlich muss auch die Gruppenautomatik und auch der globale Automatikmodus aktiv sein, ansonsten wird der Artikel nicht automatisch ersteigert. 
+  Zusätzlich muss auch die Gruppenautomatik und auch der globale Automatikmodus aktiv sein, ansonsten wird der Artikel nicht automatisch ersteigert.
 
-[^1]: Die Erhöhungsschritte können auch bei eBay nachgeschaut werden: https://www.ebay.de/help/buying/bidding/automatisches-bietsystem-bei-ebay-maximalgebot?id=4014 
+[^1]: Die Erhöhungsschritte können auch bei eBay nachgeschaut werden: https://www.ebay.de/help/buying/bidding/automatisches-bietsystem-bei-ebay-maximalgebot?id=4014

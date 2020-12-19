@@ -11,7 +11,9 @@ type: "docs"
 
 Nachdem Biet-O-Matic BE (im folgenden nur BE genannt) zum Browser hinzugefügt wurde, ist es auch direkt ohne weitere Konfiguration einsatzbereit.
 Es muss nur sichergestellt sein, das sie bereits an der eBay Plattform angemeldet sind.
-Die Anmeldung bei eBay wird nicht durch BE durchgeführt.
+Die Anmeldung bei eBay wird nicht durch BE durchgeführt - sondern ganz normal auf der eBay Webseite.
+
+Erste Schritte:
 
 - Öffnen Sie BE, in dem sie das BE Symbol (Auktionshammer auf gelbem Hintergrund) aktivieren.
   - Das Symbol befindet sich überlicherweise sichtbar in der Browser Menüleiste, in der sich auch die Addresseingabe befindet.
@@ -20,8 +22,8 @@ Die Anmeldung bei eBay wird nicht durch BE durchgeführt.
   - bzw. ein weißes 'B' auf grünem Hintergrund, wenn der Biet-Automatikmodus für das Fenster aktiviert ist.
   - Hinweis: Die Übersichtsseite muss geöffnet bleiben, damit das automatische Bieten funktioniert.
 - Öffnen sie einen eBay Artikel in einem neuen Browser Tab
-  - Sie können direkt auf der Artikelseite ein Maximalgebot definieren. Hierdurch bleibt der Artikel auch gespeichert
-    und in der Übersichtstabelle erhalten, selbst wenn der Artikel Tab geschlossen wird.
+  - Sie können direkt auf der Artikelseite ein Maximalgebot definieren.
+    Hierdurch bleibt der Artikel auch gespeichert und in der Übersichtstabelle erhalten, selbst wenn der Artikel Tab geschlossen wird.
   - Alternativ können sie die Parameter für den Artikel auch auf der BE Übersichtsseite festegen:
     - Artikel Gruppe: Verschiebt den Artikel in eine von ihnen festgelegte Gruppe.
     - Artikel Maximalgebot: Definiert das Maximalgebot, welches für den Artikel kurz vor Ende der Auktion durch BE abgegeben wird.
@@ -38,12 +40,12 @@ Die Grupppenautomatik ist standardmäßig *aktiv*.
 
 {{< hint info >}}
 Sollte die Gruppen-Funktionalität nicht benötigt werden,
-kann diese über einen Konfigurations-Parameter ([siehe hier](#interne-konfigurationsparameter)) komplett deaktiviert werden.
+kann diese über einen Konfigurations-Parameter ([siehe hier](#interne-konfigurationsparameter)) auch komplett deaktiviert werden.
 {{< /hint >}}
 
 ### Fenster Automatikmodus
 
-Der globale, oder auch Fenster-Automatikmodus legt übergeordnet fest, ob BE Artikel überhaupt automatisch ersteigern soll.
+Der globale Automatikmodus (auch Fenster-Automatikmodus genannt), legt übergeordnet fest, ob BE Artikel überhaupt automatisch ersteigern soll.
 Dies ist quasi ein "Not-Aus" Schalter, durch den sicher gestellt werden kann, das nicht unbeabsichtigt auf Auktionen geboten wird.
 
 > Es kann immer nur ein Fenster den Automatikmodus aktivieren.
@@ -107,24 +109,23 @@ Die Benutzer von Bildschirmschonern, das Ausschalten des Monitors oder auch das 
 BE's Biet-Prozess kann funktioniert unabhängig davon - solange sichergestellt ist das der Rechner weiterläuft.
 {{< /hint >}}
 
-### Verhindern das der Browser BE einfriert
+### Verhindern das der Browser BE bzw. eBay Tabs einfriert
 
 Sowohl Microsoft Edge, Chrome und Firefox haben Mechanismen zum Stromsparen integriert.
 Dies kann dazu führen, dass Browser Tabs eingefroren (Tab Freezing) oder entladen (Tab Discarding) werden.
 
 Die Auswirkung davon sind verspätete oder verpasste "Timer" (Wecker), was zu verpasste eBay Auktionen führen kann.
-Sollte dies auftreten, gibt es im entsprechenden Artikel-Bietlog eine Fehlermeldung.
+Sollte dies auftreten, gibt es im entsprechenden Artikel-Ereignisprotokoll eine Fehlermeldung.
 
 Je nach Browser sind als Beispiel folgende Einstellungen relevant:
 
 Edge:
 
 - Falls im Edge Browser der Tab Schlafmodus aktiviert ist, sollte die URL der BE blockiert werden,
-  so dass diese keinesfalls schlafen geschickt wird.
-- [edge://settings/system](Never put these sites to sleep)
-
-Chrome:
-Firefox:
+  so dass diese keinesfalls schlafen geschickt wird:
+  - z.B. `extension://lkfgflfogkgnindbkfgdocekofgilbjm/popup.en.html` -> `lkfgflfogkgnindbkfgdocekofgilbjm`
+  - [edge://settings/system](Diese Websites nie in den Standbymodus versetzen)
+  - Falls es dort keine entsprechende Funktion gibt, ist der Tab Schlafmodus auf ihrem System [nicht aktiv](edge://flags/#edge-sleeping-tabs).
 
 ## Erweiterungs Verwaltung
 

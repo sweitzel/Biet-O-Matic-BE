@@ -21,7 +21,7 @@ Weitere größere Änderungen:
   Dies vereinfacht die Benutzung für Nutzer welche keine Gruppen verwenden.
 - Die Artikel können in eine Datei exportiert werden (Backup) und aus dieser auch wieder importiert werden.
 - Der Artikel Verkäufer wird nun gespeichert und in der Übersichtstabelle in der Beschreibung angezeigt.
-  Wenn die Kompakte Anzeige aktiviert ist, wird der Verkäufer nur angezeigt wenn man mit dem Mauszeiger über der Artikelbeschreibung verweilt.
+  Wenn die kompakte Anzeige aktiviert ist, wird der Verkäufer nur angezeigt, wenn man mit dem Mauszeiger über der Artikelbeschreibung verweilt.
 
 ### Biet-O-Matic BE Version 0.5.3
 
