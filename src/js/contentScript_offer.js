@@ -44,10 +44,10 @@ class EbayOffer {
     info.bidTime = 5;
 
     if (info.articleId == null) {
-      // check if this is offer status page, which appears after submitting an offer
+      // check if this is a offer status page, which appears after submitting an offer
       // this is detected by checking for div with id="st"
       const status = await EbayOffer.waitFor('div.st', 500);
-      // item is not present in URL anymore, need to parse the HTMl
+      // item is not present in URL anymore, need to parse the HTML
       //   <input type="hidden" value="333716243884" name="item">
       const item = await EbayOffer.waitFor('input[name="item"]', 500);
       // send status to extension popup
@@ -62,7 +62,7 @@ class EbayOffer {
       }).catch((e) => {
         console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: " + e);
       });
-      return Promise.reject("Parsing page information failed: articleId null");
+      throw new Error("Parsing page information failed: articleId null");
     }
 
     // Request article info from popup
@@ -71,7 +71,7 @@ class EbayOffer {
       articleId: info.articleId
     });
     if (typeof result == 'undefined') {
-      return Promise.reject(`Init offer page failed: Popup didnt have any info for article ${info.articleId}`);
+      throw new Error(`Init offer page failed: Popup did not have any info for article ${info.articleId}`);
     }
     info.articleEndTime = result.data.articleEndTime;
 
@@ -434,7 +434,16 @@ class EbayOffer {
         console.warn("Biet-O-Matic: Internal Error while post-initializing: " + e);
       }
     })
-    .catch(e => {
-      console.error("Biet-O-Matic: EbayOffer Init failed: " + e);
+    .catch((e) => {
+      console.error("Biet-O-Matic: EbayOffer Init failed: %O (%s)", e, typeof e);
+      const url = new URL(window.location.href);
+      const articleId = url.searchParams.get("item");
+      if (articleId != null) {
+        EbayOffer.sendArticleLog(articleId, {
+          component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayOffer.getTranslation('generic_internalError', '.Internal Error'),
+          message: e.message,
+        });  
+      }
     });
 })();

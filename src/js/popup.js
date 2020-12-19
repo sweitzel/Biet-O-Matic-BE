@@ -3076,6 +3076,7 @@ class ArticlesTable {
     let row = Popup.table.DataTable.row(index);
     let article = row.data();
     try {
+      // redraw certain row elements regularly
       await Popup.redrawTableRow(article.articleId);
       if (!article.hasOwnProperty("articleEndTime")) {
         console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, no endTime", article.articleId);
@@ -3089,7 +3090,7 @@ class ArticlesTable {
         bidTime = options.bidTime;
       }
       // skip if articleEndTime is in the past or the bidding process is not yet due
-      if (timeLeftSeconds < 0 || timeLeftSeconds > 60 + bidTime) {
+      if (timeLeftSeconds < 0 || timeLeftSeconds > (60 + bidTime)) {
         //console.debug("Biet-O-Matic: openArticleTabsForBidding() Skip article %s, not ending within 60s: %ss",
         //  article.articleId, timeLeftSeconds);
         return;
@@ -3727,7 +3728,20 @@ class ArticlesTable {
       if (e.target.id.startsWith("inpGroup_")) {
         $(e.target).val("");
       }
+      // remember the focused input
+      // if (e.target.id.startsWith("inpMaxBid_")) {
+      //   this.lastFocusedInput = e.target.id;
+      // }
     });
+
+    // handle redraw: restore focus in last input
+    // this.DataTable.on('draw.dt', (e) => {
+    //   if (this.hasOwnProperty('lastFocusedInput')) {
+    //     Group.waitFor(`#${this.lastFocusedInput}`, 200).then(lastFocusedInput => {
+    //       lastFocusedInput.focus();
+    //     });
+    //   }
+    // });
 
     // group/maxBid/autoBid inputs
     this.DataTable.on("change", "tr input", (e) => {
@@ -4304,7 +4318,7 @@ class Popup {
    */
   static async redrawTable(useRateLimit = true) {
     if (Popup.table == null || typeof Popup.table.DataTable === "undefined") return;
-    if (useRateLimit && Popup.checkRateLimit("redrawTable", "articles", 30000)) return;
+    if (useRateLimit && Popup.checkRateLimit("redrawTable", "articles", 30_000)) return;
     // first check if window is active
     let window = await browser.windows.getCurrent();
     if (window.active === false) return;
@@ -4316,7 +4330,7 @@ class Popup {
   }
 
   static async redrawTableRow(rowId, useRateLimit = true) {
-    if (typeof rowId === "undefined" || (useRateLimit && Popup.checkRateLimit("redrawTableRow", rowId, 30000))) return;
+    if (typeof rowId === "undefined" || (useRateLimit && Popup.checkRateLimit("redrawTableRow", rowId, 30_000))) return;
     // first check if window is active
     let window = await browser.windows.getCurrent();
     if (window.active === false) return;
@@ -4325,12 +4339,13 @@ class Popup {
     if (tab.active === false) return;
     let row = Popup.table.DataTable.row("#" + rowId);
     if (row !== "undefined" && row.length === 1) {
+      //console.debug("Biet-O-Matic: redrawTableRow(row=%s) redrawing table row now.", rowId);
       row.invalidate("data").draw(false);
     }
   }
 
   static async redrawTableCell(rowId, cellId) {
-    if (Popup.checkRateLimit("redrawTableCell", `${rowId}:${cellId}`, 30000)) return;
+    if (Popup.checkRateLimit("redrawTableCell", `${rowId}:${cellId}`, 30_000)) return;
     // first check if window is active
     let window = await browser.windows.getCurrent();
     if (window.active === false) return;
@@ -4339,6 +4354,7 @@ class Popup {
     if (tab.active === false) return;
     let cell = Popup.table.DataTable.cell("#" + rowId, cellId);
     if (cell !== "undefined" && cell.length === 1) {
+      //console.debug("Biet-O-Matic: redrawTableCell(row=%s,cell=%s) redrawing table cell now.", rowId, cellId);
       cell.invalidate("data").draw(false);
     }
   }
