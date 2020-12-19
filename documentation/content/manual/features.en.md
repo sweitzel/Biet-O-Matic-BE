@@ -15,7 +15,7 @@ Groups can be used to organize different items by topics.
 This should not only increase the readability, but it also allows you to bid automatically for different items simultaneously with BE.
 If desired, the Groups feature can also be turned off with a [Internal configuration parameter]({{< ref "/manual#internal-configuration-parameters" >}}))
 
-> By default, only one item per group will be auctioned, after that the group automatic will be deactivated ("☝️ I want one" group option ctive).  
+> By default, only one item per group will be auctioned, after that the group automatic will be deactivated ("☝️ I want one" group option active).  
 > Alternatively you can enable the "🖐️ I want all" group option.
 > With that option all items of a group would be auctioned off.
  
@@ -42,6 +42,7 @@ BE can manage approximately 70 items in the table before the 'sync' storage prov
 If the save operation fails, an error will be printed visible in the top region of the overview page.
 
 You have several options to resolve this issue:
+
 - Clean no-longer needed items (manually or using the cleanup function)
 - You can "Enable local mode" [Internal configuration parameter]({{< ref "/manual#internal-configuration-parameters" >}}))
 - Alternatively, you can "Enable Compact Saving" [Internal configuration parameter]({{< ref "/manual#internal-configuration-parameters" >}})
@@ -110,7 +111,7 @@ The simulation will not lead to deactivation of the auto-bid, as no purchased en
 ## Bidding Procedure
 
 BE will bid on an item automatically if both the automatic mode for the item, the group in which the article is located
-and the global automatic mode are active. 
+and the global automatic mode are active.
 
 If the article is not open, one minute before the auction ends BE opens the article in a new browser tab.
 If the tab is already open, BE will reload the tab one minute before the auction ends.
@@ -140,7 +141,7 @@ However, this is problematic if multiple item auctions end at a similar time.
 To prevent multiple items in a group from bidding, the following program logic is used:
 
 - The bidding time, i.e. confirmation of the bid, is adjusted so that there are always at least 10 seconds between two auctions.
-- A bid-lock is imposed if an auction which has finished within 10s of the current auction has an still undetermined auction status. 
+- A bid-lock is imposed if an auction which has finished within 10s of the current auction has an still undetermined auction status.
   
 {{< hint info >}}
 The described program logic can lead to unsuccessful auctions because no bid was submitted in case two auctions end in the same 10 second time window.
@@ -149,16 +150,16 @@ The described program logic can lead to unsuccessful auctions because no bid was
 ## eBay Item Page
 
 When loading the eBay item page, BE enhances it with a button that enables the auto-bid mode for this item.
-The maximum bid input field is also monitored in the background, and this value is checked and saved if necessary. 
+The maximum bid input field is also monitored in the background, and this value is checked and saved if necessary.
 
 {{< image src="/features_be_artikelseite.de.gif" alt="Item Page" >}}
 
-- A change of the maximum bid or the auto-bid inputs are forwarded to the overview page
+- A change of the maximum bid or the auto-bid inputs are forwarded to the overview page.
 - When entering a value which is lower than the minimum increase price, the entry is automatically adjusted to the lowest possible value.
-- If you enter a value that is higher than the buy-it-now price, the entry is automatically 
+- If you enter a value that is higher than the buy-it-now price, the entry is automatically
   adjusted to the buy-now price, **minus 1 cent**.
 - The button for the automatic mode on the article page refers only to the article.
   In addition, you also have to enable the group auto-bid and the global auto-bid mode.
-  Otherwise the article is not automatically auctioned. 
+  Otherwise the article is not automatically auctioned.
 
 [^1]: The increment steps can also be looked up on eBay: https://www.ebay.com/help/buying/bidding/automatic-bidding?id=4014 

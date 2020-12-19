@@ -32,6 +32,7 @@ Die Anmeldung bei eBay wird nicht durch BE durchgeführt.
 Ausserdem müssen der Gruppen-Automatikmodus, und der Automatikmodus für das Fenster aktiv sein:
 
 ### Gruppen Automatikmodus
+
 Der Benutzer kann pro Artikelgruppe festlegen, ob Artikel aus dieser Gruppe automatisch ersteigert werden sollen.
 Die Grupppenautomatik ist standardmäßig *aktiv*.
 
@@ -41,6 +42,7 @@ kann diese über einen Konfigurations-Parameter ([siehe hier](#interne-konfigura
 {{< /hint >}}
 
 ### Fenster Automatikmodus
+
 Der globale, oder auch Fenster-Automatikmodus legt übergeordnet fest, ob BE Artikel überhaupt automatisch ersteigern soll.
 Dies ist quasi ein "Not-Aus" Schalter, durch den sicher gestellt werden kann, das nicht unbeabsichtigt auf Auktionen geboten wird.
 
@@ -55,6 +57,7 @@ Für mehr Informationen schauen sie sich bitte auch die Funktions-Dokumentation 
 ## Voraussetzungen
 
 ### Unterstützte eBay Plattformen
+
 {{< hint info >}}
 Es werden nur die Platformen ebay.de und ebay.com unterstützt.
 Wenn der Browser auf Deutsch eingestellt ist, wird automatisch ebay.de als Plattform verwendet.
@@ -67,6 +70,7 @@ Sie können über ebay.com nationale und internationale Einkäufe tätigen.
 Da BE keine Anmeldung an eBay ausführt, stellen sie sicher, das sie sich einmal per Hand auf einer eBay Seite angemeldet haben.
 
 ### Genaue System Uhr
+
 BE verwendet die Systemuhr, um Aufgaben zu gewissen Zeitpunkte auszuführen.
 Besonders wichtig ist es natürlich, das das Maximal Gebot bei eBay eingeht,
 bevor die Auktion endet - und auf der anderen Seite auch nicht zu früh abgegeben wird - damit nicht andere Bieter noch eine Gebot-Schlacht auslösen.
@@ -80,15 +84,16 @@ Es wird jedoch eine Warnung ausgegeben, sollte die Systemzeit mehr als eine Seku
 
 Möglichkeiten zur Zeitkorrektur:
 
-- Registry Einstellung ändern: 
-- Windows Tool: http://www.timesynctool.com/
+- Registry Einstellung ändern damit der Zeit-Sync öfter passiert.
+- Windows Tool: [https://www.timesynctool.com/](https://www.timesynctool.com/)
 
 {{< hint info >}}
 Sollte die Computer Uhr nachgehen, beispielsweise um "-2.00s", dann führt dies mit hoher Wahrscheinlichkeit dazu,
-dass das von BE abgegebene Gebot zu spät abgegeben wird und nicht registriert wird. 
+dass das von BE abgegebene Gebot zu spät abgegeben wird und nicht registriert wird.
 {{< /hint >}}
 
 ### Verhinderung des Computer-Schlafmodus
+
 Wenn BE automatisch auf Auktionen bieten soll, ist es wichtig, dass der Computer, der das Gebot abgeben soll aktiv ist.
 Einige Computer gehen automatisch in den Schlafmodus, wenn sie "inaktiv" sind.
 Bitte überprüfen Sie Ihre Computer Einstellungen.
@@ -102,30 +107,54 @@ Die Benutzer von Bildschirmschonern, das Ausschalten des Monitors oder auch das 
 BE's Biet-Prozess kann funktioniert unabhängig davon - solange sichergestellt ist das der Rechner weiterläuft.
 {{< /hint >}}
 
-## Erweiterungs Verwaltung 
+### Verhindern das der Browser BE einfriert
+
+Sowohl Microsoft Edge, Chrome und Firefox haben Mechanismen zum Stromsparen integriert.
+Dies kann dazu führen, dass Browser Tabs eingefroren (Tab Freezing) oder entladen (Tab Discarding) werden.
+
+Die Auswirkung davon sind verspätete oder verpasste "Timer" (Wecker), was zu verpasste eBay Auktionen führen kann.
+Sollte dies auftreten, gibt es im entsprechenden Artikel-Bietlog eine Fehlermeldung.
+
+Je nach Browser sind als Beispiel folgende Einstellungen relevant:
+
+Edge:
+
+- Falls im Edge Browser der Tab Schlafmodus aktiviert ist, sollte die URL der BE blockiert werden,
+  so dass diese keinesfalls schlafen geschickt wird.
+- [edge://settings/system](Never put these sites to sleep)
+
+Chrome:
+Firefox:
+
+## Erweiterungs Verwaltung
 
 ### Installation
+
 Die Installation der BE erfolgt über den Browser Erweiterungs Store.
 Hierbei ist nichts spezielles zu beachten.
 
 ### Update
+
 Das Update der BE erfolgt automatisch über den Browser.
-Ein Browserneustart ist zum aktivieren des Updates *nicht- erforderlich. 
+Ein Browserneustart ist zum aktivieren des Updates *nicht- erforderlich.
 
 > Wenn vor dem Update der globale Automatikmodus in einem Fenster aktiv war, wird nach dem Update BE wieder automatisch
 > gestartet, damit weiter automatisch geboten wird.
 
 ### Deinstallation
+
 Die Deinstallation der BE erolgt über den Browser.
 Standardmäßig speichert BE im "sync" Speicher, dieser wird bei der Deinstallation der BE nicht immer automatisch gelöscht.
 Sollte der optionale "local" Speicher verwendet werden, wird dieser bei der deinstallation gelöscht.
 
 ## Bedienung
+
 Siehe Abschnitt [Funktionen]({{< ref "/manual/features" >}})
 
 ## Gespeicherte Daten
 
 ### Artikel Informationen
+
 - Sobald sie ein Maximal-Gebot oder eine Gruppe für einen Artikel festlegen, wird dieser gespeichert.
 - In der BE Standard-Konfiguration werden Artikel im Speicherbereich `browser.storage.sync` ("sync" Speicher) gesichert.
   Dieser ist auf eine Größe von 100KB festgelegt, wodurch ca. 50-60 Artikel insgesamt gespeichert werden können.
@@ -134,7 +163,8 @@ Siehe Abschnitt [Funktionen]({{< ref "/manual/features" >}})
 - Alternativ kann auch der `browser.storage.local` ("local" Speicher) verwendet werden (siehe [hier](#interne-konfigurationsparameter)).
   Dieser ist auf eine Größe von 5MB festgelegt, wodurch theoretisch über 1000 Artikel gespeichert werden können.
 
-### Ereignisprotokolle 
+### Ereignisprotokolle
+
 - Ereignis-Protokolle werden im `window.localStorage` gesichert sobald relevante Ereignisse eintreffen.
 - Artikel Biet-Ereignisprotokolle enthalten Informationen über den Artikel und helfen dem Nutzer, aber auch dem Hersteller dabei Probleme zu prüfen.
 - Artikel Informations Ereignisse werden erstellt, sobald sich Informationen bezüglich eines Artikels geändert haben.
@@ -145,6 +175,7 @@ Sämtliche Ereignis-Protokolle werden nur lokal gespeichert und nicht exportiert
 {{< /hint >}}
 
 ## Datenexport / Import
+
 - Die gespeicherten Artikel können über die eingebaute Export Funktion in eine Datei gespeichert werden.
 - Die Daten können auch aus diesen Dateien wieder importiert werden.
   Hierbei werden bereits vorhandende Informationen überschrieben.

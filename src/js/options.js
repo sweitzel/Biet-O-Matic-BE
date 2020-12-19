@@ -21,7 +21,7 @@ function save_options() {
   const enableLocalMode = document.getElementById('enableLocalMode').checked;
   const ebayPlatform = document.getElementById('ebayPlatform').value;
   const bidTime = Number.parseInt(document.getElementById('bidTime').value);
-
+  
   browser.storage.sync.set({
     disableSleepPrevention: disableSleepPrevention,
     disableArticleRefresh: disableArticleRefresh,
@@ -38,7 +38,7 @@ function save_options() {
       status.textContent = 'Options saved.';
       setTimeout(function () {
         status.textContent = '';
-      }, 1000);
+      }, 2000);
     })
     .catch(e => {
       console.log("Unable to save: " + e);
@@ -57,7 +57,7 @@ function restore_options() {
     enableCompactSaving: false,
     enableLocalMode: false,
     ebayPlatform: null,
-    bidTime: 5
+    bidTime: 10
   }).then((items) => {
     document.getElementById('disableSleepPrevention').checked = items.disableSleepPrevention;
     document.getElementById('disableArticleRefresh').checked = items.disableArticleRefresh;
@@ -82,7 +82,7 @@ function restore_options() {
   lang = lang.slice(0, 2);
   if (lang === 'de') {
     a.href = "/doc/de/manual.html#interne-konfigurationsparameter";
-    a.text = "Bitte folgen sie diesem Link, für eine Beschreibung der Einstellungen.";
+    a.text = "Für eine Beschreibung der Einstellungen folgen Sie bitte diesem Link.";
   } else {
     a.href = "/doc/en/manual.html#internal-configuration-parameters";
     a.text = "Please follow this link for a description of these options.";

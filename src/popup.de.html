@@ -66,7 +66,8 @@
     <datalist id="groups"></datalist>
   </fieldset>
 </div>
-<div id="dialog-form" title="Artikel aufräumen">
+
+<div id="dialog-form" title="Artikel aufräumen" style="display: none;">
   <p class="validateTips">Bitte wählen sie aus, welche Artikel aufgeräumt werden sollen</p>
   <form id="cleanupForm">
     <fieldset name="group">
@@ -87,7 +88,7 @@
     </fieldset>
   </form>
 </div>
-<div id="dialog-form2" title="Artikel Import">
+<div id="dialog-form2" title="Artikel Import" style="display: none;">
   <p class="validateTips">Bitte wählen sie eine Datei zum importieren aus</p>
   <form id="importForm">
     <fieldset name="file">
@@ -108,6 +109,16 @@
 <footer>
   <div class="footer">
     <div id="left">
+      <div style="margin-top: -0.9em;">
+        <div id="localMeterDiv" style="display: none;">
+          <label for="localMeter" style="display: inline-block;width: 8em;">Lokaler Speicher:</label>
+          <meter id="localMeter" name="localMeter" value="0" low="80" high="90" max="100" style="margin-right: 5px;">0%</meter>
+        </div>  
+        <div id="syncMeterDiv" style="display: none;">
+          <label for="syncMeter" style="display: inline-block;width: 8em;">Sync Speicher:</label>
+          <meter id="syncMeter" name="syncMeter" value="0" low="80" high="90" max="100" style="margin-right: 5px;">0%</meter>
+        </div>  
+      </div>
     </div>
     <div id="center">
       <a id="bomVersion" href="/doc/de/release-notes.html" title="Version" target="_blank" aria-label="Version">Biet-O-Matic BE v0.0.0</a>

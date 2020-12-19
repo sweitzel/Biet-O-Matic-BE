@@ -38,6 +38,9 @@
   "cs_biddingFailed": {
     "message": "Auktion nicht erfolgreich. Gebot wurde nicht gesendet bzw. von eBay akzeptiert (z.B. wenn ein anderer Bieter ein höheres Gebot abgab)."
   },
+  "cs_biddingLate": {
+    "message": "Der Wecker, welcher den Bietvorgang bestätigt, hat sich um $1 ms verspätet!"
+  },
   "cs_biddingOverbid": {
     "message": "Auktion nicht erfolgreich. Sie wurden überboten."
   },
@@ -152,7 +155,7 @@
   "generic_overbid": {
     "message": "überboten"
   },
-  "generic_perfornmance": {
+  "generic_performance": {
     "message": "Leistung"
   },
   "generic_picture": {
@@ -201,7 +204,7 @@
     "message": "Es wurden $1 Artikel aus der Beobachtungsliste hinzugefügt."
   },
   "popup_adjustedBidtime": {
-    "message": "Bietzeitpunkt wurde um $1s angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
+    "message": "Bietzeitpunkt wurde um $1 Sekunden angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
   },
   "popup_articleAuctionEnded": {
     "message": "Artikel Auktion ist bereits beendet"
@@ -216,7 +219,7 @@
     "message": "Entfernt alle Ereignisse und Einstellungen für diesen Artikel"
   },
   "popup_offerTabOpenedForBidding": {
-    "message": "Angebots-Tab wurde zum Bieten geöffnet (Tab=$1)"
+    "message": "Angebots-Tab wurde $1 Sekunden vor Auktionsende zum Bieten geöffnet (Tab=$2)"
   },
   "popup_offerTabIsOpen": {
     "message": "Angebots-Tab ist offen (Tab=$1)"
@@ -269,6 +272,9 @@
   "popup_cleanupNone": {
     "message": "Es wurden keine Artikel entfernt."
   },
+  "popup_import": {
+    "message": "Importieren"
+  },
   "popup_importDone": {
     "message": "$1 Elemente wurden geladen."
   },
@@ -318,7 +324,7 @@
     "message": "Zeigt Artikel Ereignisprotokoll"
   },
   "popup_storageReadFailed": {
-    "message": "Fehler beim lesen vom $1 Speicher: $2"
+    "message": "Schwerwiegender Fehler beim lesen vom $1 Speicher: $2."
   },
   "popup_storageUsedFailed": {
     "message": "Fehler beim prüfen wieviel Speicher im '$1' Bereich belegt ist: $2"
@@ -330,6 +336,6 @@
     "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (~$1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
   },
   "popup_updateStorageFailed": {
-    "message": "Fehler beim speichern für Artikel $1: $2"
+    "message": "Fehler beim Speichern für Artikel $1: $2"
   }
 }

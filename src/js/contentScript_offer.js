@@ -44,10 +44,10 @@ class EbayOffer {
     info.bidTime = 5;
 
     if (info.articleId == null) {
-      // check if this is offer status page, which appears after submitting an offer
+      // check if this is a offer status page, which appears after submitting an offer
       // this is detected by checking for div with id="st"
       const status = await EbayOffer.waitFor('div.st', 500);
-      // item is not present in URL anymore, need to parse the HTMl
+      // item is not present in URL anymore, need to parse the HTML
       //   <input type="hidden" value="333716243884" name="item">
       const item = await EbayOffer.waitFor('input[name="item"]', 500);
       // send status to extension popup
@@ -62,7 +62,7 @@ class EbayOffer {
       }).catch((e) => {
         console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: " + e);
       });
-      return Promise.reject("Parsing page information failed: articleId null");
+      throw new Error("Parsing page information failed: articleId null");
     }
 
     // Request article info from popup
@@ -71,7 +71,7 @@ class EbayOffer {
       articleId: info.articleId
     });
     if (typeof result == 'undefined') {
-      return Promise.reject(`Init offer page failed: Popup didnt have any info for article ${info.articleId}`);
+      throw new Error(`Init offer page failed: Popup did not have any info for article ${info.articleId}`);
     }
     info.articleEndTime = result.data.articleEndTime;
 
@@ -100,7 +100,7 @@ class EbayOffer {
     if (ebayArticleGetAdjustedBidTimeResult == null || !ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('articleEndTime')) {
       throw new Error("Unable to get ebayArticleGetAdjustedBidTime result - item probably unknown to popup!");
     } else {
-      if (ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('adjustmentReason')) {
+      if (ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('adjustmentReason') && ebayArticleGetAdjustedBidTimeResult.adjustmentReason != null) {
         info.modifiedEndTime = ebayArticleGetAdjustedBidTimeResult.articleEndTime;
         EbayOffer.sendArticleLog(info.articleId, {
           component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
@@ -130,29 +130,39 @@ class EbayOffer {
   }
 
   /*
-   * Every 1 second:
+   * Every 5 seconds:
    * - update countdown until bid
    */
   regularAction() {
+    const timerInterval = 5_000;
+    let keepRunning = true;
     try {
       const confirmButton = document.getElementsByName('confirmbid');
-      if (confirmButton == null || typeof confirmButton === 'undefined') {
-        console.log("Biet-O-Matic: Abort regularAction(), no confirm button found.");
+      if (confirmButton == null || typeof confirmButton === 'undefined' || confirmButton.length === 0) {
+        console.debug("Biet-O-Matic: Abort regularAction(), no confirm button found.");
         return;
       }
       // update countdown
-      const timeLeftInSeconds = Math.floor((this.modifiedEndTime - Date.now()) / 1000);
+      const timeLeftInSeconds = Math.round((this.modifiedEndTime - Date.now()) / 1000);
       const bidTimeSeconds = timeLeftInSeconds - this.bidTime;
       if (bidTimeSeconds > 0) {
         confirmButton[0].value = EbayOffer.getTranslation('cs_bidInSeconds', '.Automatic bidding in $1s', [bidTimeSeconds]);
         document.title = EbayOffer.getTranslation('cs_bidInSecondsShort', '.Bidding in $1s', [bidTimeSeconds]);
+      } else {
+        keepRunning = false;
+        confirmButton[0].value = EbayOffer.getTranslation('cs_bidding', '.Bidding');
+        document.title = EbayOffer.getTranslation('cs_bidding', '.Bidding');
       }
     } catch (e) {
       console.warn("Biet-O-Matic: regularAction() Internal Error: " + e);
     } finally {
-      window.setTimeout(() => {
-        this.regularAction();
-      }, 2000);
+      if (keepRunning) {
+        window.setTimeout(() => {
+          this.regularAction();
+        }, timerInterval);  
+      } else {
+        console.log("Biet-O-Matic: Abort regularAction(), auction bid time reached.");
+      }
     }
   }
 
@@ -160,20 +170,35 @@ class EbayOffer {
   scheduleConfirmAction() {
     this.storePerfInfo(EbayOffer.getTranslation('cs_phase2', '.Waiting for bid'));
     const timeToBid = this.modifiedEndTime - Date.now() - (this.bidTime * 1000)
-    window.setTimeout(() => {
-      this.confirmBid()
+    window.setTimeout((expectedExecutionTime) => {
+      this.confirmBid(expectedExecutionTime)
         .catch(e => {
           console.warn("Biet-O-Matic: confirmBid() aborted: " + e.message);
           EbayOffer.sendArticleLog(this.articleId, e);
         });
-    }, timeToBid);
+    }, timeToBid, Date.now() + timeToBid);
   }
 
   // confirm the bid after performing pre-checks
   // - this function will be called at the bidTime
   // - we have to check if the autoBid is still active (single purchase group)
-  async confirmBid() {
+  async confirmBid(expectedExecutionTime) {
     this.storePerfInfo(EbayOffer.getTranslation('cs_phase3', '.Preparing'));
+
+    // check timer precision. Main concern are late timers (more than 1s).
+    try {
+      const deviation = Date.now() - expectedExecutionTime;
+      if (deviation > 1100) {
+        console.info("Biet-O-Matic: confirmBid() setTimeout deviation = %s ms late", deviation);
+        EbayOffer.sendArticleLog(this.articleId, {
+          component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+          level: "Warn",
+          message: EbayOffer.getTranslation("cs_biddingLate", ".The confirm timer has been late $1 ms.", [deviation])
+        });
+      }
+    } catch (e) {
+      console.warn("Biet-O-Matic: confirmBid() internal error: " + e);
+    }
 
     // check window/group autoBid status
     let autoBidInfo = await browser.runtime.sendMessage({action: 'getAutoBidState', articleId: this.articleId});
@@ -246,17 +271,17 @@ class EbayOffer {
       };
     }
 
-    // get confirm button
-    const confirmButton = await EbayOffer.waitFor('input[name="confirmbid"]', 1000)
-      .catch(() => {
-        console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
-        throw {
-          component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
-          level: EbayOffer.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
-          message: EbayOffer.getTranslation('cs_errorCannotFindBidButton',
-            '.Bid button could not be found!')
-        };
-      });
+    // get confirm button   
+    const confirmButton = document.getElementsByName('confirmbid');
+    if (confirmButton == null || typeof confirmButton === 'undefined' || confirmButton.length === 0) {
+      console.log("Biet-O-Matic: Bidding failed: Confirm Button missing!");
+      throw {
+        component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+        level: EbayOffer.getTranslation('cs_problemWithBidding', '.Problem submitting the bid'),
+        message: EbayOffer.getTranslation('cs_errorCannotFindBidButton',
+          '.Bid button could not be found!')
+      };
+    }
 
     if (simulate) {
       EbayOffer.sendArticleLog(this.articleId, {
@@ -331,10 +356,10 @@ class EbayOffer {
     });
     // calculate timeleft until auction end
     let timeLeft = this.articleEndTime - this.perfInfo[this.perfInfo.length - 1].date;
-    result += `timeLeft = ${timeLeft}ms (${this.articleEndTime} - ${this.perfInfo[this.perfInfo.length - 2].date})`;
+    result += `timeLeft = ${timeLeft}ms (${this.articleEndTime} - ${this.perfInfo[this.perfInfo.length - 1].date})`;
     EbayOffer.sendArticleLog(this.articleId, {
       component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
-      level: EbayOffer.getTranslation('generic_perfornmance', '.Performance'),
+      level: EbayOffer.getTranslation('generic_performance', '.Performance'),
       message: result
     });
   }
@@ -409,7 +434,16 @@ class EbayOffer {
         console.warn("Biet-O-Matic: Internal Error while post-initializing: " + e);
       }
     })
-    .catch(e => {
-      console.error("Biet-O-Matic: EbayOffer Init failed: " + e);
+    .catch((e) => {
+      console.error("Biet-O-Matic: EbayOffer Init failed: %O (%s)", e, typeof e);
+      const url = new URL(window.location.href);
+      const articleId = url.searchParams.get("item");
+      if (articleId != null) {
+        EbayOffer.sendArticleLog(articleId, {
+          component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+          level: EbayOffer.getTranslation('generic_internalError', '.Internal Error'),
+          message: e.message,
+        });  
+      }
     });
 })();

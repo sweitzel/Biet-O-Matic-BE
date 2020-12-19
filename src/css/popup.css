@@ -1,39 +1,39 @@
 /* highlight via border */
 .bomHighlightBorder {
   /*text-shadow: 2px -2px 3px #FF0000;*/
-  border-color: #FF0000;
+  border-color: #ff0000;
   border-width: 2px;
 }
 
 /* region ebay offer page */
 .sml-s {
-	/*margin: 0 100px 0 100px;*/
-	border: 3px solid #df0d0d;
-	/*font: normal 1.231em Arial;*/
-	color: #333
+  /*margin: 0 100px 0 100px;*/
+  border: 3px solid #df0d0d;
+  /*font: normal 1.231em Arial;*/
+  color: #333;
 }
 .sml-e {
-	border-color: #df0d0d;
-	color: #c00
+  border-color: #df0d0d;
+  color: #c00;
 }
 .sml-i {
-	border-color: #1153da
+  border-color: #1153da;
 }
 .sml-w {
-	border-color: #fe9900
+  border-color: #fe9900;
 }
 .sml-c {
-	border-color: #448600
+  border-color: #448600;
 }
 .g-hdn {
-	height: 0;
-	line-height: 0;
-	overflow: hidden;
-	width: 0;
-	position: absolute;
-	font-size: 0;
-	z-index: -1;
-	outline: none
+  height: 0;
+  line-height: 0;
+  overflow: hidden;
+  width: 0;
+  position: absolute;
+  font-size: 0;
+  z-index: -1;
+  outline: none;
 }
 /* endregion */
 
@@ -117,15 +117,17 @@ tfoot input {
 }
 
 /* buttons */
-.warning-hover:hover{color:#ff5722!important}
+.warning-hover:hover {
+  color: #ff5722 !important;
+}
 .button-zoom {
   opacity: 0.9;
   cursor: pointer;
 }
 .button-zoom:hover {
-  transition :transform 0.2s ease-in-out;
+  transition: transform 0.2s ease-in-out;
   transform: scale3d(1.2, 1.2, 1.2);
-  opacity: 1.0 !important;
+  opacity: 1 !important;
 }
 
 #mainContent {
@@ -140,23 +142,23 @@ tfoot input {
   color: #000;
 }
 .footer #left {
-  width:33%;
-  float:left;
+  width: 33%;
+  float: left;
   text-align: left;
   margin-left: 1em;
   margin-block-start: 1em;
   margin-block-end: 1em;
 }
 .footer #right {
-  overflow:hidden !important;
+  overflow: hidden !important;
   text-align: right;
   margin-block-start: 1em;
   margin-block-end: 1em;
 }
 .footer #center {
-  float:left;
-  width:33%;
-  text-align:center;
+  float: left;
+  width: 33%;
+  text-align: center;
 }
 .footer a {
   text-decoration: none;
@@ -250,12 +252,13 @@ tfoot input {
   content: attr(data-i18n-after);
 }
 
-label, legend {
+label,
+legend {
   user-select: none;
 }
 
 div.polaroid {
-  box-shadow: 5px 5px 5px -5px rgba(0,0,0,0.1);
+  box-shadow: 5px 5px 5px -5px rgba(0, 0, 0, 0.1);
   border-radius: 5px;
   text-align: center;
   overflow: hidden;
@@ -271,17 +274,24 @@ div.container {
   opacity: 0.8;
 }
 
-
 @-o-keyframes fadeIt {
-  0%   { background-color: #FFFFFF; }
-  100% { background-color: #eefd00; }
+  0% {
+    background-color: #ffffff;
+  }
+  100% {
+    background-color: #eefd00;
+  }
 }
 @keyframes fadeIt {
-  0%   { background-color: #FFFFFF; }
-  100% { background-color: #eefd00; }
+  0% {
+    background-color: #ffffff;
+  }
+  100% {
+    background-color: #eefd00;
+  }
 }
-.updated{
-  background-image:none !important;
+.updated {
+  background-image: none !important;
   -o-animation: fadeIt 5s ease-in-out;
   animation: fadeIt 5s ease-in-out;
   animation-fill-mode: forwards;

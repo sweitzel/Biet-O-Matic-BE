@@ -3,7 +3,7 @@ title: "Privcy"
 bookFlatSection: false
 bookToc: false
 type: docs
-weight: 101
+weight: 102
 ---
 
 # Privacy
