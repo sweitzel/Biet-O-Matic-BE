@@ -8,6 +8,7 @@
  */
 
 import browser from "webextension-polyfill";
+import { parse, getUnixTime } from "date-fns";
 import $ from "jquery";
 
 class EbayParser {
@@ -531,38 +532,27 @@ class EbayParser {
    * - a negative value means the system time is behind ebay time
    */
   static async getEbayTimeDifference() {
-    // first determine response time via HEAD method
-    const started = Date.now()
-    let responseHead = await fetch('https://viv.ebay.com/favicon.ico',
-      {method: "GET", mode: "no-cors"});
-    const delay = Date.now() - started;
-
-    let responseGet = await fetch('https://viv.ebay.com/ws/eBayISAPI.dll?EbayTime');
-    if (!responseGet.ok)
-      throw new Error(`Failed to fetch ebay time(2): HTTP ${responseGet.status} - ${responseGet.statusText}`);
-    // date header "date: Sat, 01 Feb 2020 22:51:17 GMT"
+    let responseGet = await fetch('https://viv.ebay.com/ws/eBayISAPI.dll?EbayTime', {method: "GET", mode: "no-cors", cache: "no-cache"});
+    const receivedTime = Date.now();
+    if (!responseGet.ok) {
+      throw new Error(`Failed to fetch ebay time: HTTP ${responseGet.status} - ${responseGet.statusText}`);
+    }
     const htmlString = await responseGet.text();
     let doc = document.implementation.createHTMLDocument("eBay Time");
     doc.documentElement.innerHTML = htmlString;
-    // e.g. "Saturday, February 01, 2020 14:37:36 PST"
-    //let e = $(doc).find('p.currTime');
-    //if (typeof e == 'undefined' || e.length !== 1) {
-    //  return null;
-    //}
-    //let ebayTime = e.get(0).textContent;
-    // get time from the img tag instead of the obvious Date string because parsing is awful.
-    let images = $(doc).find('img');
+    // e.g. "Sunday, December 20, 2020 02:56:02 PST"
+    const currTime = doc.querySelector("p.currTime");
+    if (currTime == null) {
+      console.log("Biet-O-Matic: getEbayTimeDifference() Could not determine time from eBay (output changed?).");
+    }
+    const matches = currTime.textContent.match(/([A-Z][a-z]+ [0-9]{2}, [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}) PST/);
     let result = 0;
-    for (let i = 0; i < images.length; i++) {
-      // src: "https://rover.ebay.com/roversync/?site=0&stg=1&mpt=1580598619516"
-      let match = images[i].src.match(/mpt=([0-9]+)$/);
-      if (match == null)
-        continue;
-      // reduce time difference by 100ms which is the approximated ebay system processing time
-      const diffTime =  (Date.now() - 100) - Number.parseInt(match[1], 10);
-      console.debug("Biet-O-Matic: getEbayTimeDifference() networkDelay=%s, timeDiff=%s", delay, diffTime);
-      result = diffTime - delay;
-      break;
+    if (matches != null) {
+      const date = parse(matches[1] + " -0800", "MMMM dd, yyyy HH:mm:ss xx", new Date());
+      result = (receivedTime - 150) - (getUnixTime(date) * 1000);
+      console.debug("Biet-O-Matic: getEbayTimeDifference() timeDiff=%s", result);
+    } else {
+      console.warn("Biet-O-Matic: getEbayTimeDifference() Could not determine time from eBay date string: %s", currTime.textContent);
     }
     $(doc).empty();
     return result;

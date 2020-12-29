@@ -146,8 +146,8 @@
   "generic_internalError": {
     "message": "Internal Error"
   },
-  "generic_item": {
-    "message": "Item"
+  "generic_items": {
+    "message": "Items"
   },
   "generic_noGroup": {
     "message": "Other Auctions"

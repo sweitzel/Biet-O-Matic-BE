@@ -73,7 +73,7 @@ class Group {
         }
         Popup.cachedGroups[name] = result;
       } else {
-        console.log("Biet-O-Matic: Group.getStateCached(%s) NOT found in storage, returning default.", name);
+        console.log("Biet-O-Matic: Group.getState(%s) NOT found in storage, returning default.", name);
       }
     }
     return result;
@@ -1098,7 +1098,7 @@ class Article {
 
     if (shouldLogChange && result.modifiedForStorage > 0 && messages.length > 0) {
       this.addLog({
-        component: Popup.getTranslation("generic_item", ".Item"),
+        component: Popup.getTranslation("generic_items", ".Items"),
         level: Popup.getTranslation("generic_updated", ".Updated"),
         message: messages.join("; "),
       });
@@ -1725,7 +1725,7 @@ class ArticlesTable {
     if ($(selector).length === 0)
       throw new Error(`Unable to initialize articles table, selector '${selector}' not found in DOM`);
     if (Popup.disableGroups) {
-      $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation("generic_item", ".Items");
+      $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation("generic_items", ".Items");
     } else {
       $.fn.DataTable.RowGroup.defaults.emptyDataGroup = Popup.getTranslation("generic_noGroup", ".Other Items");
     }
@@ -3097,9 +3097,10 @@ class ArticlesTable {
       }
 
       let shouldOpenTab = true;
+      const autoBidState = article.getAutoBidState();
 
       // check Global autoBid state
-      if (AutoBid.getLocalState().autoBidEnabled === false) {
+      if (autoBidState.autoBidEnabled === false) {
         console.debug(
           "Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Global autoBid is disabled",
           article.articleId
@@ -3113,11 +3114,7 @@ class ArticlesTable {
       }
 
       // check Group autoBid state
-      const groupState = await Group.getState(article.articleGroup).catch((e) =>
-        console.warn("Biet-O-Matic: openArticleTabsForBidding() Failed to get Group state: " + e)
-      );
-
-      if (article.articleAutoBid === false) {
+      if (autoBidState.articleAutoBid === false) {
         console.debug(
           "Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Article autoBid is disabled",
           article.articleId
@@ -3128,7 +3125,7 @@ class ArticlesTable {
           message: Popup.getTranslation("cs_autobidInactiveForArticle", ".Auto-bid is inactive for this item"),
         });
         shouldOpenTab = false;
-      } else if (groupState.autoBid === false) {
+      } else if (autoBidState.groupAutoBid === false) {
         console.debug(
           "Biet-O-Matic: openArticleTabsForBidding() Skip article %s, Group '%s' autoBid is disabled",
           article.articleId,
@@ -3196,7 +3193,7 @@ class ArticlesTable {
         article.offerTabId = tabId;
       }
     } catch (e) {
-      console.log("regularOpenArticleForBidding() Internal Error in rows.every: " + e);
+      console.log("openArticleForBidding() Internal Error: " + e);
     } finally {
       article = null;
     }
@@ -4077,12 +4074,12 @@ class Popup {
         return;
       }
       const diff = await EbayParser.getEbayTimeDifference();
-      if (diff > 1000) {
+      if (Math.abs(diff) > 1000) {
         Popup.addUserMessage({
           message: Popup.getTranslation(
             "popup_timeDiff1",
             ".The time difference of your computer vs. the eBay time is too large: $1s",
-            [(diff / 1000).toFixed(2).toString()]
+            [(diff / 1000).toFixed(2)]
           ),
           level: "warning",
           duration: 60_000,

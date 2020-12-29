@@ -146,7 +146,7 @@
   "generic_internalError": {
     "message": "Interner Fehler"
   },
-  "generic_item": {
+  "generic_items": {
     "message": "Artikel"
   },
   "generic_noGroup": {
