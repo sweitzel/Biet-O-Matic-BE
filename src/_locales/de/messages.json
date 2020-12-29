@@ -333,7 +333,7 @@
     "message": "Es sind aktuell $2% des '$1' Speichers belegt."
   },
   "popup_timeDiff1": {
-    "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (~$1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
+    "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (ungefähr $1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
   },
   "popup_updateStorageFailed": {
     "message": "Fehler beim Speichern für Artikel $1: $2"

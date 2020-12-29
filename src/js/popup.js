@@ -4073,8 +4073,9 @@ class Popup {
         console.log("Biet-O-Matic: Regular clock check has been deactivated by user.");
         return;
       }
+      // Note: getEbayTimeDifference has a precision of 1s or more
       const diff = await EbayParser.getEbayTimeDifference();
-      if (Math.abs(diff) > 1000) {
+      if (diff < -1000 || diff > 5000) {
         Popup.addUserMessage({
           message: Popup.getTranslation(
             "popup_timeDiff1",

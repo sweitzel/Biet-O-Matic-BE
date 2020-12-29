@@ -532,30 +532,15 @@ class EbayParser {
    * - a negative value means the system time is behind ebay time
    */
   static async getEbayTimeDifference() {
+    const timeOfRequest = performance.now();
     let responseGet = await fetch('https://viv.ebay.com/ws/eBayISAPI.dll?EbayTime', {method: "GET", mode: "no-cors", cache: "no-cache"});
-    const receivedTime = Date.now();
     if (!responseGet.ok) {
       throw new Error(`Failed to fetch ebay time: HTTP ${responseGet.status} - ${responseGet.statusText}`);
     }
-    const htmlString = await responseGet.text();
-    let doc = document.implementation.createHTMLDocument("eBay Time");
-    doc.documentElement.innerHTML = htmlString;
-    // e.g. "Sunday, December 20, 2020 02:56:02 PST"
-    const currTime = doc.querySelector("p.currTime");
-    if (currTime == null) {
-      console.log("Biet-O-Matic: getEbayTimeDifference() Could not determine time from eBay (output changed?).");
-    }
-    const matches = currTime.textContent.match(/([A-Z][a-z]+ [0-9]{2}, [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}) PST/);
-    let result = 0;
-    if (matches != null) {
-      const date = parse(matches[1] + " -0800", "MMMM dd, yyyy HH:mm:ss xx", new Date());
-      result = (receivedTime - 150) - (getUnixTime(date) * 1000);
-      console.debug("Biet-O-Matic: getEbayTimeDifference() timeDiff=%s", result);
-    } else {
-      console.warn("Biet-O-Matic: getEbayTimeDifference() Could not determine time from eBay date string: %s", currTime.textContent);
-    }
-    $(doc).empty();
-    return result;
+    const requestDuration = performance.now() - timeOfRequest;
+    const headerDateString = responseGet.headers.get("Date");
+    const headerDate = new Date(headerDateString);
+    return Date.now() - (requestDuration / 2) - headerDate;
   }
 
   /*

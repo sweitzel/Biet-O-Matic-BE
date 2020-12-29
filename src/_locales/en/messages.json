@@ -333,7 +333,7 @@
     "message": "Memory consumption in $1 is $2%"
   },
   "popup_timeDiff1": {
-    "message": "The time difference of your system to the ebay time is too large (~$1s). Please ensure your clock is precise to ensure reliable automatic bidding is possible."
+    "message": "The time difference of your system to the eBay time is too large (approximately $1s). Please ensure your clock is precise to ensure reliable automatic bidding is possible."
   },
   "popup_updateStorageFailed": {
     "message": "Failed to persist update for item $1: $2"
