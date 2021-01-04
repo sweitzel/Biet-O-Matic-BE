@@ -41,7 +41,7 @@ class EbayOffer {
     info.articleEndTime = null;
     // modified bid time (bid collision prevention)
     info.modifiedEndTime = null; 
-    info.bidTime = 5;
+    info.bidTime = 10;
 
     if (info.articleId == null) {
       // check if this is a offer status page, which appears after submitting an offer
@@ -62,7 +62,7 @@ class EbayOffer {
       }).catch((e) => {
         console.warn("Biet-O-Matic: sendMessage(ebayArticleUpdated) failed: " + e);
       });
-      throw new Error("Parsing page information failed: articleId null");
+      throw new Error("Parsing page information failed: articleId is null");
     }
 
     // Request article info from popup
@@ -86,28 +86,47 @@ class EbayOffer {
     }
 
     // determine bidTime from settings
-    let options = await browser.storage.sync.get({bidTime: 0});
-    if (options.hasOwnProperty('bidTime'))
-      info.bidTime = options.bidTime;
+    try {
+      let options = await browser.storage.sync.get("bidTime");
+      if (options.hasOwnProperty("bidTime") && options.bidTime > 0) {
+        info.bidTime = options.bidTime;
+      }
+      console.debug("Biet-O-Matic: Set bidTime to %s seconds from settings.", info.bidTime);
+    } catch (e) {
+      console.info("Biet-O-Matic: init() Unable to determine bidTime from storage: " + e.message);
+      EbayOffer.sendArticleLog(info.articleId, {
+        component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+        level: "Warning",
+        message: `Unable to determine bidTime from storage - using default (${info.bidTime}s): ${e.message}`
+      });
+    }
 
     // contact popup to check if we should perform the bid earlier (multiple articles could end at the same time)
     info.modifiedEndTime = info.articleEndTime;
-    const ebayArticleGetAdjustedBidTimeResult = await browser.runtime.sendMessage({
-      action: 'ebayArticleGetAdjustedBidTime',
-      articleId: info.articleId,
-    });
-    // result format {"articleEndTime":1578180835000,"adjustmentReason":"Bietzeit um 6s angepasst, da Gefahr der Überschneidung mit Artikel 123421015319."}
-    if (ebayArticleGetAdjustedBidTimeResult == null || !ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('articleEndTime')) {
-      throw new Error("Unable to get ebayArticleGetAdjustedBidTime result - item probably unknown to popup!");
-    } else {
-      if (ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('adjustmentReason') && ebayArticleGetAdjustedBidTimeResult.adjustmentReason != null) {
-        info.modifiedEndTime = ebayArticleGetAdjustedBidTimeResult.articleEndTime;
-        EbayOffer.sendArticleLog(info.articleId, {
-          component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
-          level: "Info",
-          message: ebayArticleGetAdjustedBidTimeResult.adjustmentReason,
-        });
-      }
+    try {
+      const ebayArticleGetAdjustedBidTimeResult = await browser.runtime.sendMessage({
+        action: 'ebayArticleGetAdjustedBidTime',
+        articleId: info.articleId,
+      });
+      // result format {"articleEndTime":1578180835000,"adjustmentReason":"Bietzeit um 6s angepasst, da Gefahr der Überschneidung mit Artikel 123421015319."}
+      if (ebayArticleGetAdjustedBidTimeResult == null || !ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('articleEndTime')) {
+        throw new Error("Unable to get ebayArticleGetAdjustedBidTime result - item probably unknown to popup!");
+      } else {
+        if (ebayArticleGetAdjustedBidTimeResult.hasOwnProperty('adjustmentReason') && ebayArticleGetAdjustedBidTimeResult.adjustmentReason != null) {
+          info.modifiedEndTime = ebayArticleGetAdjustedBidTimeResult.articleEndTime;
+          EbayOffer.sendArticleLog(info.articleId, {
+            component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+            level: "Info",
+            message: ebayArticleGetAdjustedBidTimeResult.adjustmentReason,
+          });
+        }
+      }  
+    } catch (e) {
+      EbayOffer.sendArticleLog(info.articleId, {
+        component: EbayOffer.getTranslation('cs_bidding', '.Bidding'),
+        level: "Warning",
+        message: `Unable to determine modified end time: ${e.message}`
+      });
     }
 
     // assign the determined info to this Article instance
@@ -197,7 +216,7 @@ class EbayOffer {
         });
       }
     } catch (e) {
-      console.warn("Biet-O-Matic: confirmBid() internal error: " + e);
+      console.warn("Biet-O-Matic: confirmBid() internal error checking timer deviation: " + e);
     }
 
     // check window/group autoBid status
@@ -246,7 +265,7 @@ class EbayOffer {
       simulate = true;
     }
 
-    // check bid-lock. When another article auction is still running for the same group, we cannot peform bid
+    // check bid-lock. When another article auction is still running for the same group, we cannot perform bid
     let bidLockInfo = await browser.runtime.sendMessage({action: 'getBidLockState', articleId: this.articleId});
     if (bidLockInfo == null || typeof bidLockInfo === 'undefined' || !bidLockInfo.hasOwnProperty('bidIsLocked')) {
       throw {
