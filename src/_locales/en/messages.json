@@ -197,11 +197,17 @@
   "popup_activateArticleAutoBid": {
     "message": "Activates item auto-bid"
   },
-  "popup_addWatchListItemsFailed": {
-    "message": "Error while adding items from watchlist: $1"
+  "popup_addItemsSuccess": {
+    "message": "Added $1 items from the $2."
   },
-  "popup_addedWatchListItems": {
-    "message": "Added $1 items from watchlist."
+  "popup_addItemsFailed": {
+    "message": "Error while adding items from the $1: $2"
+  },
+  "popup_clipboard": {
+    "message": "Clipboard"
+  },
+  "popup_watchlist": {
+    "message": "eBay Watchlist"
   },
   "popup_adjustedBidtime": {
     "message": "Adjusted bid-time by $1 seconds due to risk of colliding with item $2"

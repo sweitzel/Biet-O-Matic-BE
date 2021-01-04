@@ -2218,29 +2218,32 @@ class ArticlesTable {
     }
   }
 
-  async addWatchListItems() {
-    // use platform based on browser language by default
+  // add items to BE from ebay watchlist or pasted from clipboard
+  async addItems(items = [], addFromWatchlist = false) {
     try {
       let articlePlatform = "ebay.com";
       if (Popup.lang === "de") articlePlatform = "ebay.de";
       // check for user defined platform
       let options = await Popup.storage.getConfig({ ebayPlatform: null });
-      if (options.hasOwnProperty("ebayPlatform") && options.ebayPlatform != null && options.ebayPlatform !== "")
+      if (options.hasOwnProperty("ebayPlatform") && options.ebayPlatform != null && options.ebayPlatform !== "") {
         articlePlatform = options.ebayPlatform;
-      let items = await EbayParser.getWatchListItems(articlePlatform);
+      }
+      if (items.length === 0 && addFromWatchlist) {
+        items = await EbayParser.getWatchListItems(articlePlatform);
+      }
       let addedCount = 0;
       for (let articleId of items) {
-        let article = new Article({ articleId: articleId });
-        // check if article is in table
-        let row = this.getRow("#" + articleId);
+        const article = new Article({ articleId: articleId });
+        // check if article is already in table
+        const row = this.getRow("#" + articleId);
         if (row != null && row.length === 1) {
           continue;
         }
-        // run this asynchronously to speed up adding articles from watchlist
-        let articleInfo = await article.getRefreshedInfo().catch((e) => {
+        // run this asynchronously to speed up adding articles
+        const articleInfo = await article.getRefreshedInfo().catch((e) => {
           console.log("Biet-O-Matic: Article %s updateInfo() failed: %s", article.articleId, e);
         });
-        if (!Popup.disableGroups) {
+        if (!Popup.disableGroups && addFromWatchlist) {
           // assign to group
           article.articleGroup = Popup.getTranslation("generic_watchListGroupName", ".Watch List");
         }
@@ -2248,25 +2251,27 @@ class ArticlesTable {
         article.updateInfo(articleInfo, false);
         this.addArticle(article);
         article.updateInfoInStorage({}, null, false).catch((e) => {
-          console.log("Biet-O-Matic: addWatchListItems() failed to store article %s: %s", article.articleId, e);
+          console.log("Biet-O-Matic: addItems() failed to store article %s: %s", article.articleId, e);
         });
         addedCount++;
       }
       Popup.addUserMessage({
-        message: Popup.getTranslation("popup_addedWatchListItems", "Added $1 items from watch list.", [
+        message: Popup.getTranslation("popup_addItemsSuccess", ".Added $1 items from the $2.", [
           addedCount.toString(10),
+          addFromWatchlist ? Popup.getTranslation("popup_watchlist") : Popup.getTranslation("popup_clipboard"),
         ]),
         level: "info",
-        duration: 30000,
+        duration: 30_000,
       });
     } catch (e) {
-      console.log("Biet-O-Matic: addWatchListItems() failed: " + e);
+      console.log("Biet-O-Matic: addItems() failed: " + e);
       Popup.addUserMessage({
-        message: Popup.getTranslation("popup_addWatchListItemsFailed", "Failed to add items from watch list: $1", [
+        message: Popup.getTranslation("popup_addItemsFailed", ".Failed to add items from the $1: $2", [
+          addFromWatchlist ? Popup.getTranslation("popup_watchlist") : Popup.getTranslation("popup_clipboard"),
           e.message,
         ]),
         level: "error",
-        duration: 60000,
+        duration: 60_000,
       });
     }
   }
@@ -3695,6 +3700,34 @@ class ArticlesTable {
     window.addEventListener("storage", (e) => {
       console.log("XXX Window Storage changed %O", e);
     });
+
+    /*
+     * Handle paste event on all elements except inputs
+     * to allow pasting eBay Item Number(s)
+     */
+    window.addEventListener("paste", (e) => {
+      if (e.target.nodeName === "INPUT") {
+        return;
+      }
+      e.stopPropagation();
+      e.preventDefault();
+      let pastedText = "";
+      if (e.clipboardData || e.originalEvent.clipboardData) {
+        pastedText = (e.originalEvent || e).clipboardData.getData('text/plain');
+      } else if (window.clipboardData) {
+        pastedText = window.clipboardData.getData('Text');
+      }
+      console.debug("Biet-O-Matic: Text pasted: '%s' (Target Element %s)", pastedText, e.target);
+      const items = EbayParser.parseItemNumberFromText(pastedText);
+      if (!Popup.checkRateLimit("addItems", "clipboard", 5000)) {
+        Popup.table
+        .addItems(items, false)
+        .catch((e) => {
+          console.log("Biet-O-Matic: Popup.table.addItems() failed: " + e);
+        });
+      }
+    });
+
   }
 
   /*
@@ -3986,8 +4019,8 @@ class Popup {
     // just store the first part (en-US -> en)
     Popup.lang = Popup.lang.slice(0, 2);
     // locale for date.fns
+    Popup.locale = enUS
     if (Popup.lang === "de") Popup.locale = de;
-    else Popup.locale = enUS;
 
     this.registerEvents();
 
@@ -4170,14 +4203,14 @@ class Popup {
     $("#inpAddWatchItems").on("click", function () {
       $(this).parent().addClass("ui-state-disabled");
       Popup.table
-        .addWatchListItems()
+        .addItems([], true)
         .then(function () {
           window.setTimeout(function () {
             $("#inpAddWatchItems").parent().removeClass("ui-state-disabled");
           }, 10_000);
         })
         .catch((e) => {
-          console.log("Biet-O-Matic: addWatchListItems() failed: " + e);
+          console.log("Biet-O-Matic: Popup.table.addItems() failed: " + e);
         });
     });
 
@@ -4419,19 +4452,6 @@ class Popup {
       Popup.rateLimit[name] = {};
     }
     Popup.rateLimit[name][key] = Date.now();
-    return false;
-  }
-
-  // can be used to ensure that a certain function is executed only once at a time
-  static checkAlreadyRunning(name, key) {
-    if (Popup.alreadyRunning.hasOwnProperty(name)) {
-      if (Popup.alreadyRunning[name].hasOwnProperty(key)) {
-        return true;
-      }
-    } else {
-      Popup.alreadyRunning[name] = {};
-    }
-    Popup.alreadyRunning[name][key] = Date.now();
     return false;
   }
 

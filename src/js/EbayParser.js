@@ -8,7 +8,6 @@
  */
 
 import browser from "webextension-polyfill";
-import { parse, getUnixTime } from "date-fns";
 import $ from "jquery";
 
 class EbayParser {
@@ -566,7 +565,25 @@ class EbayParser {
     return result;
   }
 
+  // parse input text for 1..n eBay Item Numbers
+  // - accept comma or space separated
+  // - accept one item per line
+  static parseItemNumberFromText(text) {
+    const lines = text.split(/[\s,]+/);
+    const result = [];
+    for(var i = 0; i < lines.length; i++){
+      const line = lines[i];
+      let matches;
+      if (matches = line.match(/^\s*(\d+)\s*$/)) {
+        result.push(matches[1]);
+      }
+    }
+    return result;
+  }
+
 }
+
+
 // Auction states as communicated to the overview page
 // this is used to detect auction end state - non ideal but what are the alternatives?
 EbayParser.auctionEndStates = {

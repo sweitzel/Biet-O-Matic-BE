@@ -197,11 +197,17 @@
   "popup_activateArticleAutoBid": {
     "message": "Aktiviert den Automatikmodus für diesen Artikel"
   },
-  "popup_addWatchListItemsFailed": {
-    "message": "Fehler beim hinzufügen der Artikel aus der Beobachtungsliste: $1"
+  "popup_addItemsSuccess": {
+    "message": "Es wurden $1 Artikel aus der $2 hinzugefügt."
   },
-  "popup_addedWatchListItems": {
-    "message": "Es wurden $1 Artikel aus der Beobachtungsliste hinzugefügt."
+  "popup_addItemsFailed": {
+    "message": "Fehler beim hinzufügen der Artikel aus der $1: $2"
+  },
+  "popup_clipboard": {
+    "message": "Zwischenablage"
+  },
+  "popup_watchlist": {
+    "message": "eBay Beobachtungsliste"
   },
   "popup_adjustedBidtime": {
     "message": "Bietzeitpunkt wurde um $1 Sekunden angepasst, da Gefahr der Kollision mit Artikel $2 bestand"
