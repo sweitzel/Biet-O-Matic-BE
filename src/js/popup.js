@@ -2636,7 +2636,17 @@ class ArticlesTable {
     // <div style="width:320px; height:80px; overflow:auto;">
     div.style.height = "200px";
     div.style.overflow = "auto";
-    //div.style.width = '99%';
+
+    // copy to clipboard button
+    const spanCopyToClipboard = document.createElement("span");
+    spanCopyToClipboard.id = article.articleId;
+    spanCopyToClipboard.classList.add("copy-to-clipboard", "button-zoom", "far", "fa-copy", "fa-2x");
+    spanCopyToClipboard.style.opacity = "0.6";
+    spanCopyToClipboard.style.margin = "10px";
+    spanCopyToClipboard.style.position = "absolute";
+    spanCopyToClipboard.style.right = "30px";
+    spanCopyToClipboard.title = Popup.getTranslation("popup_copyToClipboard", ".Copies the item log to the clipboard.");
+    div.appendChild(spanCopyToClipboard);
 
     const table = document.createElement("table");
     table.style.paddingLeft = "50px";
@@ -3694,14 +3704,6 @@ class ArticlesTable {
     });
 
     /*
-     * listen for changes to window storage (logs)
-     *        Note: does not fire if generated on same tab
-     */
-    window.addEventListener("storage", (e) => {
-      console.log("XXX Window Storage changed %O", e);
-    });
-
-    /*
      * Handle paste event on all elements except inputs
      * to allow pasting eBay Item Number(s)
      */
@@ -3856,6 +3858,37 @@ class ArticlesTable {
           row.data().articleDetailsShown = true;
         }
       }
+    });
+
+    // articleButtons: activate tab, remove article
+    this.DataTable.on("click", "span.copy-to-clipboard", (e) => {
+      e.preventDefault();
+      const row = Popup.table.getRow("#" + e.target.id);
+      if (row == null || row.length !== 1) {
+        return;
+      }
+      const article = row.data();
+      if (typeof article == "undefined") {
+        return;
+      }
+      const log = article.getLog();
+      const logLinesArray = [];
+      if (log == null) {
+        return;
+      }
+      // {timestamp: 1609232122278, message: "Item Maximum Bid: 1.99", component: "Items", level: "Updated"}
+      // timestamp level components message
+      log
+        .slice()
+        .forEach((e) => {
+          const timestamp = format(e.timestamp, "Ppp", { locale: Popup.locale });
+          logLinesArray.push(`${timestamp}\t${e.component}\t${e.level}\t${e.message}`);
+        });
+      navigator.clipboard.writeText(logLinesArray.join("\n")).then(() => {
+        console.log("Biet-O-Matic: successfully copied log to clipboard");
+      }, (e) => {
+        console.log("Biet-O-Matic: Failed to copy log to clipboard: " + e);
+      });
     });
 
     /*

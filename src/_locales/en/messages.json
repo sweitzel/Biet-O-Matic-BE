@@ -203,6 +203,9 @@
   "popup_addItemsFailed": {
     "message": "Error while adding items from the $1: $2"
   },
+  "popup_copyToClipboard": {
+    "message": "Copies the item specific log events to the clipboard"
+  },
   "popup_clipboard": {
     "message": "Clipboard"
   },

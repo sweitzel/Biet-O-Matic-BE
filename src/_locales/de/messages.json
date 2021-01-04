@@ -203,6 +203,9 @@
   "popup_addItemsFailed": {
     "message": "Fehler beim hinzufügen der Artikel aus der $1: $2"
   },
+  "popup_copyToClipboard": {
+    "message": "Kopiert das Artikel-Bietprotokoll in die Zwischenablage"
+  },
   "popup_clipboard": {
     "message": "Zwischenablage"
   },
