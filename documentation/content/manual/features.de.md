@@ -33,6 +33,14 @@ Falls Gruppen nicht benötigt werden, kann die Gruppen-Funktion auch über "Disa
 Artikel werden automatisch in die Übersichtstabelle hinzugefügt, sobald ein eBay Artikel in einem Browser Tab im gleichen Fenster geöffnet wurde.
 Zu diesem Zeitpunkt ist der Artikel aber noch nicht gespeichert - dies geschieht erst,
 sobald der Nutzer ein Maximal Gebot, oder auch eine Gruppenzuweisung vornimmt.
+
+Alternativ können Artikel auch über Einfügen aus der Zwischenablage (z.B. Strg + V Tastenkombination) geladen werden.
+
+Die Artikel können wie folgt formatiert sein:
+
+- Eine eBay Artikelnummer pro Zeile
+- Mehrere eBay Artikelnummern durch Komma separariert
+
 Nachdem der Artikel gespeichert wurde, kann auch der Tab geschlossen werden und der Artikel bleibt in der Tabelle.
 
 {{< image src="/features_be_artikel_maxbid.de.gif" alt="Artikel Gebot definieren" >}}
@@ -55,7 +63,7 @@ Es gibt verschiedene Möglichkeiten dieses Problem zu lösen:
   Der aktualisierte Wert wird auch dem eBay Artikel Tab mitgeteilt.
 - Bei Eingabe eines Wertes welcher niedriger als der Minimalerhöhungspreis[^1] ist, wird die Eingabe automatisch auf den
   niedrigsten möglichen Wert reduziert.
-- Bei Eingabe eines Wertes welcher höher als der Sofortkauf Preis liegt, wird die Eingabe automatisch 
+- Bei Eingabe eines Wertes welcher höher als der Sofortkauf Preis liegt, wird die Eingabe automatisch
   auf den Sofortkaufpreis, **minus 1 Cent*- reduziert.
 - Das Feld für den Artikel Automatikmodus wird erst zum anklicken freigegeben, wenn das gesetzte Maximal Gebot höher
   als der aktuelle Artikel Preis bzw. der Minimalerhöhungsschritt ist.
@@ -76,7 +84,7 @@ einen Knopf "Auf die Beobachtungsliste" über den Artikel sehr einfach für spä
 Sie können diese Artikel auch in BE einlesen. Drücken sie hierfür auf der BE Übersichtsseite den Knopf "Beobachtete Artikel hinzufügen".
 Dies fügt alle aktuell beobachteten Artikel in die Gruppe "Watchlist" hinzu.
 Bitte beachten sie, dass die Beobachtungsliste per Hand aufgeräumt werden muss.
-BE fügt alle Artikel hinzu, egal ob abgelaufene Auktionen oder Sofortkauf Artikel. 
+BE fügt alle Artikel hinzu, egal ob abgelaufene Auktionen oder Sofortkauf Artikel.
 BE löscht keine Artikel aus der Beobachtungsliste, wenn diese aus BE entfernt werden.
 Hinweis: BE verwendet ebay.de um die Beobachteten Artikel abzurufen. Dies kann in den internen Parametern umgestellt werden.
 
@@ -84,11 +92,14 @@ Hinweis: BE verwendet ebay.de um die Beobachteten Artikel abzurufen. Dies kann i
 
 BE erzeugt drei Arten von Protokollen:
 
-#### Artikel bezogenes Ereignisprotokoll
+#### Artikel-bezogenes Ereignisprotokoll
 
 {{< image src="/features_be_artikelprotokoll.de.gif" alt="Artikel Ereignisprotokoll" >}}
-Dies ist das für den Benutzer wichtigste Protokoll, das es in relativ lesbarer Form aufzeichnet, was BE bzgl. Bietvorgang
-oder Änderungen gemacht, bzw. festgestellt hat.
+Dies ist das für den Benutzer wichtigste Protokoll, das es in relativ lesbarer Form aufzeichnet,
+was BE bzgl. Bietvorgang oder Änderungen gemacht, bzw. festgestellt hat.
+
+Bitte stellen sie das Artikel Ereignisprotokoll auch bei Fehlermeldungen zur Verfügung.
+Das Protokoll kann über das 'kopieren' Symbol in die Zwischenablage kopiert werden.
 
 #### Übersichtsseite Ereignisprotokoll
 

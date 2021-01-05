@@ -12,6 +12,7 @@ Please use the navigation menu on the left to access the desired information.
 If you like, you can skip to a [Quick-Start Guide]({{< relref "/manual#quick-start" >}}) which gives important information about the basic usage of BE.
 
 ## Origin
+
 First of all: Biet-O-Matic BE and the [Original B-O-M Program](https://www.bid-o-matic.org/hp/) have little in common except for the name:
 
 - Another developer
@@ -34,14 +35,17 @@ A short research about alternatives did not lead to satisfying results:
 - Unclear situation regarding the access, storage and evaluation of transaction data (auctions)
 
 ## Bid-O-Matic Forum
+
 If you want to ask questions about the programme - be it about a problem,
 a proposal or anything else - you can do so in the [B-O-M Forum](https://www.bid-o-matic.org/forum/index.php?c=6).
 
 Please note:
+
 - For inquiries please check first if this or a similar inquiry already existed
-- Please always place new requests in separate "Topics" and in the correct category 
+- Please always place new requests in separate "Topics" and in the correct category
 
 ## Source code
+
 The source code of B-O-M BE is available at www.github.com/sweitzel/Biet-O-Matic-BE.
 It is also possible to request changes to the source code directly via "Pull Requests".
 You can report problems with BE on GitHub, which probably leads to a better order and clarity
@@ -50,6 +54,7 @@ You can report problems with BE on GitHub, which probably leads to a better orde
 The source code is under the [Apache Lizenz](https://github.com/sweitzel/Biet-O-Matic-BE/blob/master/LICENSE).
 
 ## Donations
+
 B-O-M BE was created as a spare-time project and in a relatively short time. However, in order to support the continued
 support or even the implementation of new functions in the longer term, the "donation function" is offered as a
 financing option.
@@ -57,9 +62,11 @@ financing option.
 Likewise a donation can also be considered as a small gift or a thank you, which I am of course very happy about.
 
 ### Paypal
+
 A quick and uncomplicated donation is possible via my [PayPal Profile](https://paypal.me/weitzels?locale.x=en_US).
 
 ### GitHub
+
 Sponsoring through GitHub is a relatively new way to fund open source projects through a community and generate
 predictable income. It's more complicated for the "sponsor", but it does generate more predictable cash flow,
 which is necessary to keep such a project alive. Here is the GitHub link to donate.

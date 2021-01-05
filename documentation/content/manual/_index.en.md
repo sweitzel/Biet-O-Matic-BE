@@ -24,24 +24,24 @@ Basic Usage:
 
 {{< image src="/extension_status.en.png" alt="Plug-in Icon" >}}  
 {{< image src="/overview_page.en.png" alt="Overview Page/Tab" >}}
-	
+
 - Open an eBay item in a new browser tab
   - You can press the "Auto-Bid" button to use the currently required minimum bid as your offer,
     or manually enter a maximum bid directly on the item page.
     This will also "save" the item in the overview page - and it will remain there even if the item tab is closed.
-	- NOTE that the "Place bid" display on the item page will reflect the state of the "bid active" status of that item.
+  - NOTE that the "Place bid" display on the item page will reflect the state of the "bid active" status of that item.
     This does not reflect the state of the Window Auto-Bid!
 
-{{< image src="/bid_overlay.en.png" alt="Overview Page/Tab" >}}	  
+{{< image src="/bid_overlay.en.png" alt="Overview Page/Tab" >}}  
 
-  - Or you can enter the bid for the item directly on the BE overview page:
-    - Group: By default, all items appear in the default group titled "Other Auctions".
-      Simply enter a new group name next to an item and it will move to a new group with the name you specify.
-    - Your Maximum Bid: Defines the maximum bid that BE will submit for the item just before the auction ends.
-    - Item "Active" Mode: Activates the auto-bid mode for the item.
-      If it is inactive, BE will not automatically bid on this item!
-	- NOTE that if you do not enter a maximum bid value on the BE overview page OR on the item page itself,
-	  or move an item to a custom bid group; closing the item tab will remove it from the BE overview.
+- Or you can enter the bid for the item directly on the BE overview page:
+  - Group: By default, all items appear in the default group titled "Other Auctions".
+    Simply enter a new group name next to an item and it will move to a new group with the name you specify.
+  - Your Maximum Bid: Defines the maximum bid that BE will submit for the item just before the auction ends.
+  - Item "Active" Mode: Activates the auto-bid mode for the item.
+    If it is inactive, BE will not automatically bid on this item!
+  - NOTE that if you do not enter a maximum bid value on the BE overview page OR on the item page itself,
+    or move an item to a custom bid group; closing the item tab will remove it from the BE overview.
 - For an item to be auctioned, a maximum bid must be entered and the item must be have auto-bid enabled.
 
 In addition, the group auto-bid mode and the auto-bid mode for the window have to be active:
@@ -49,6 +49,7 @@ In addition, the group auto-bid mode and the auto-bid mode for the window have t
 {{< image src="/features_be_groups.en.png" alt="Overview Page Features" >}}
 
 ### Group Auto-Bid Mode
+
 The user can define per article group whether articles from this group are to be auctioned automatically.
 The group auto-bid is *active* by default.
 
@@ -57,6 +58,7 @@ In case you do not need the Group functionality, you can deactivate it completel
 {{< /hint >}}
 
 ### Window Auto-Bid Mode
+
 The window auto-bid mode determines whether BE should bid for items automatically at all.
 This is a kind of "emergency stop" switch, by which you can make sure, that no unintentional bidding on auctions is done by BE.
 
@@ -75,13 +77,14 @@ For more information please have a look at the function documentation (see menu 
 {{< hint info >}}
 Only www.ebay.de and www.ebay.com are supported by Bid-O-Matic BE.
 If the Browser is set to German language, BE will automatically use the ebay.de platform.
-For all other languages ebay.com will be used. 
+For all other languages ebay.com will be used.
 {{< /hint >}}
 
 Even though only ebay.com and ebay.de are supported by BE, you can still use this extension.
 It is possible to perform national and international shopping via ebay.com.
 
 ### Accurate System Clock
+
 BE uses the system clock to execute tasks at certain times.
 It is especially important that the maximum bid is received on eBay before the
 auction ends - and on the other hand not too early - so that other bidders don't get into a bidding war.
@@ -92,8 +95,10 @@ However, it can happen that the preconfigured update interval is not sufficient
 for example, if the hardware timer is inaccurate) and an adjustment is necessary.
 
 By the way, BE has no technical possibility to correct the time on its own - the browser does not have the necessary permissions for this.
+However BE regularly checks the clock precision and displays a warning message if the deviation is too large.
 
 ### Deactivate Computer Standby
+
 When BE should perform automated bidding, it is important that the computer which is intended to perform the bidding keeps running.
 Some computers will automatically go to sleep when they are "inactive", so please check your computer settings.
 BE has no technical means to wakeup the computer from it.
@@ -109,10 +114,12 @@ These actions will not interfere with BE's bidding process.
 ## Extension Management
 
 ### Installation
+
 The BE is installed using the browser extension store.
 There is nothing special to note here.
 
 ### Update
+
 BE is updated automatically by the browser at regular times.
 It is not necessary to restart the browser to activate the update.
 
@@ -120,6 +127,7 @@ It is not necessary to restart the browser to activate the update.
 > BE will start again automatically after the update so that bidding can continue automatically.
 
 ### De-installation
+
 De-installing the BE is done via the browser.
 
 By default BE will store all information in the "sync" storage area provided by the browser.
@@ -128,6 +136,7 @@ This storage will not be cleaned up when the extension is uninstalled (if the ex
 In case the "local" storage area is used, it will be cleaned upon deinstallation.
 
 ## Operation
+
 See section [Features]({{< ref "/manual/features" >}})
 
 ## Stored data
@@ -153,6 +162,7 @@ All event logs are only stored locally and are not synchronized with other Compu
 {{< /hint >}}
 
 ## Data export
+
 - The stored information can be exported to a file via the provided function.
 - The information can also be imported again from the downloaded export file.
   Any preexisting data might be overwritten.
@@ -164,7 +174,7 @@ In comparison to the "sync" mode, your data is not stored in the cloud storage o
 
 ## Internal configuration parameters
 
-> Internal options should generally only be changed in case of problems. 
+> Internal options should generally only be changed in case of problems.
 
 By right clicking on the BE symbol and selecting the menu item "Options" (Chrome/IE) or "Manage Extension" (Firefox)
 you can access the internal parameters of BE.
@@ -190,8 +200,8 @@ The following parameters currently exist:
     By that BE can theoretically manage over 1000 items (this has never been tested).
     But this also means, that no information will be synchronized between your computers.
 - Override eBay Platform
-  - This is only relevant for the watch list synchronisation.
+  - This is only relevant for the watch list synchronization.
   - By default BE uses ebay.de for german browser UI language, and ebay.com for all other languages.
 - Bid time
   - Allows the adjustment of the bid time.
-    The default setting is that five (5) seconds before the auction ends, your bid will be submitted.
+    The default setting is that ten (10) seconds before the auction ends, your bid will be submitted.

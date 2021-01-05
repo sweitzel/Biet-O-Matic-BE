@@ -24,7 +24,7 @@ Erste Schritte:
 - Öffnen sie einen eBay Artikel in einem neuen Browser Tab
   - Sie können direkt auf der Artikelseite ein Maximalgebot definieren.
     Hierdurch bleibt der Artikel auch gespeichert und in der Übersichtstabelle erhalten, selbst wenn der Artikel Tab geschlossen wird.
-  - Alternativ können sie die Parameter für den Artikel auch auf der BE Übersichtsseite festegen:
+  - Alternativ können sie die Parameter für den Artikel auch auf der BE Übersichtsseite festlegen:
     - Artikel Gruppe: Verschiebt den Artikel in eine von ihnen festgelegte Gruppe.
     - Artikel Maximalgebot: Definiert das Maximalgebot, welches für den Artikel kurz vor Ende der Auktion durch BE abgegeben wird.
     - Artikel Automatikmodus: Aktiviert den Automatikmodus für den Artikel.
@@ -82,7 +82,7 @@ Seit Windows 7 ist diese Funktion übrigens eingebaut und standardmäßig aktiv.
 Allerdings kann es vorkommen, dass das voreingestellte Interval nicht ausreicht (beispielsweise bei einem ungenauen Zeitgeber der Hardware) und hier eine Anpassung nötig ist.
 
 BE hat übrigens keine technische Möglichkeit die Zeit selbständig zu korrigieren - hierzu fehlen im Browser die Berechtigungen.
-Es wird jedoch eine Warnung ausgegeben, sollte die Systemzeit mehr als eine Sekunde von der ebay-Zeit abweichen.
+Es wird jedoch eine Warnung ausgegeben, sollte die Systemzeit mehr als eine Sekunde von der eBay-Zeit abweichen.
 
 Möglichkeiten zur Zeitkorrektur:
 
@@ -166,8 +166,20 @@ Siehe Abschnitt [Funktionen]({{< ref "/manual/features" >}})
 
 ### Ereignisprotokolle
 
-- Ereignis-Protokolle werden im `window.localStorage` gesichert sobald relevante Ereignisse eintreffen.
-- Artikel Biet-Ereignisprotokolle enthalten Informationen über den Artikel und helfen dem Nutzer, aber auch dem Hersteller dabei Probleme zu prüfen.
+{{< hint info >}}
+Bitte stellen sie das Artikel Ereignisprotokoll bei Problemmeldungen zur Verfügung.
+{{< /hint >}}
+
+Artikel welche über ein Biet- bzw. Ereignisprotokoll verfügen,
+erhalten in der ersten Spalte der Artikeltabelle auf der BE Übersichtsseite ein '+' Symbol.
+Über einen Klick auf dieses Symbol, lässt sich das Protokoll anzeigen bzw. durch nochmaligen klick wieder ausblenden.
+
+Ausserdem ist es möglich, das Protokoll auch in die Zwischenablage zu kopieren.
+Dies erfolgt durch Betätigung des 'kopieren' Symbols auf der rechten Seite der Protokollansicht.
+
+- Ereignisprotokolle werden im `window.localStorage` gesichert, sobald relevante Ereignisse eintreffen.
+- Artikel Biet-Ereignisprotokolle enthalten Informationen über den Artikel und helfen dem Nutzer,
+  aber auch dem Hersteller dabei Probleme zu prüfen.
 - Artikel Informations Ereignisse werden erstellt, sobald sich Informationen bezüglich eines Artikels geändert haben.
 - Einstellungsänderungs-Ereignisse werden erstellt, falls sich eine Einstellung (z.B. Automatikmodus) geändert hat.
 
@@ -214,4 +226,4 @@ Aktuell gibt es folgende Parameter (Seite aktuell nicht übersetzt):
   - Standardmäßig verwendet BE ebay.de wenn der Browser auf deutsche Benutzersprache eingstellt ist.  
 - "Bid time"
   - Erlaubt die Anpassung der Zeit zur Gebotsabgabe.
-    In der Standardeinstellung wird BE das Gebot fünf (5) Sekunden vor Ablauf der Auktion absenden.
+    In der Standardeinstellung wird BE das Gebot zehn (10) Sekunden vor Ablauf der Auktion absenden.

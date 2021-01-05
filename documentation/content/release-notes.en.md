@@ -20,6 +20,19 @@ Other changes:
 - The support for groups can now be deactivated via a new configuration parameter.
   This should simplify the user interface for users which do not need groups.
 - The storage can now be imported to a file (backup) and also be imported from it again.
+- Fixed computer clock check.
+  However, due to reduction of the precision of that check to 1s, only a rough check is possible.
+
+### Biet-O-Matic BE Version 0.5.4
+
+{{< hint info>}}
+Released on Wednesday, 2021-01-06
+{{< /hint >}}
+
+- Fixed error handling on the bidding page, which - with a low probability - could lead to missed auctions.
+- Added function for adding items from the clipboard (Ctrl + v).
+  It is possible to add one item per line or alternatively multiple comma-separated items per line.
+- Added functionality to copy the item event log to the clipboard.
 
 ### Biet-O-Matic BE Version 0.5.3
 
@@ -179,7 +192,7 @@ Other major changes in this version:
   - Language is automatically set by the browser display language and cannot be manually defined.
 - Article group field now allows selection from existing groups.
 - Unused article groups are automatically deleted after 7 days.
-- BE overview page opens automatically after an update, but only, 
+- BE overview page opens automatically after an update, but only,
   if the auto-bid mode was active for the window before the update.
   This ensures that automatic bidding can continue in absence after a BE update has taken place.
 - Bid-Lock implemented to ensure that not multiple items from the same group are purchased,

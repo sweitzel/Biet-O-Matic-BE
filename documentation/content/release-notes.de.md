@@ -23,6 +23,19 @@ Weitere größere Änderungen:
 - Der Artikel Verkäufer wird nun gespeichert und in der Übersichtstabelle in der Beschreibung angezeigt.
   Wenn die kompakte Anzeige aktiviert ist, wird der Verkäufer nur angezeigt, wenn man mit dem Mauszeiger über der Artikelbeschreibung verweilt.
 
+### Biet-O-Matic BE Version 0.5.4
+
+{{< hint info>}}
+Veröffentlicht am Mittwoch, 06.01.2021
+{{< /hint >}}
+
+- Korrektur der Fehlerbehandlung auf der Biet-Seite, welches ggf. zu verpassten Auktionen führen konnte.
+- Funktion zum einfügen von Artikeln aus der Zwischenablage (Strg + v) hinzugefügt.
+  Es kann eine Artikelnummer pro Zeile, oder alternativ auch Komma-separiert eingelesen werden.
+- Funktion zum kopieren des Artikel-Bietprotokolls in die Zwischenablage hinzugefügt.
+- Prüfung der Uhrzeit behoben.
+  Allerdings ist die Genaugikeit jetzt nur noch 1 Sekunde, wodurch nur eine grobe Prüfung möglich ist.
+
 ### Biet-O-Matic BE Version 0.5.3
 
 {{< hint info>}}
