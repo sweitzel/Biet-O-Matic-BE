@@ -145,19 +145,21 @@ class Group {
     if (inpGroupAutoBid == null || inpGroupAutoBid.length !== 1) {
       return;
     }
-    const state = await Group.getState(name).catch((e) => {
-      console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
-    });
-    if (state.autoBid) {
-      $(inpGroupAutoBid).siblings("span").removeClass("autoBidDisabled");
-      $(inpGroupAutoBid).siblings("span").addClass("autoBidEnabled");
-      $(inpGroupAutoBid).siblings("span").attr("data-i18n-after", Popup.getTranslation("generic_active", ".active"));
-    } else {
-      $(inpGroupAutoBid).siblings("span").removeClass("autoBidEnabled");
-      $(inpGroupAutoBid).siblings("span").addClass("autoBidDisabled");
-      $(inpGroupAutoBid)
-        .siblings("span")
-        .attr("data-i18n-after", Popup.getTranslation("generic_inactive", ".inactive"));
+    try {
+      const state = await Group.getState(name);
+      if (state.autoBid) {
+        $(inpGroupAutoBid).siblings("span").removeClass("autoBidDisabled");
+        $(inpGroupAutoBid).siblings("span").addClass("autoBidEnabled");
+        $(inpGroupAutoBid).siblings("span").attr("data-i18n-after", Popup.getTranslation("generic_active", ".active"));
+      } else {
+        $(inpGroupAutoBid).siblings("span").removeClass("autoBidEnabled");
+        $(inpGroupAutoBid).siblings("span").addClass("autoBidDisabled");
+        $(inpGroupAutoBid)
+          .siblings("span")
+          .attr("data-i18n-after", Popup.getTranslation("generic_inactive", ".inactive"));
+      }
+    } catch (e) {
+      console.warn(`Biet-O-Matic: renderAutoBid() - Cannot determine autoBid state for group ${name}: ${e.message}`);
     }
   }
 
@@ -175,18 +177,20 @@ class Group {
     if (inpGroupBidAll == null || inpGroupBidAll.length !== 1) {
       return;
     }
-    const state = await Group.getState(name).catch((e) => {
-      console.warn("Biet-O-Matic: Cannot determine autoBid state for group %s: %s", name, e.message);
-    });
-    if (state.bidAll) {
-      $(inpGroupBidAll)
-        .siblings("span")
-        .text(" " + Popup.getTranslation("generic_group_bidAllEnabled", ".Bid all"));
-    } else {
-      $(inpGroupBidAll)
-        .siblings("span")
-        .text(" " + Popup.getTranslation("generic_group_bidAllDisabled", ".Bid until you win"));
-    }
+    try {
+      const state = await Group.getState(name);
+      if (state.bidAll) {
+        $(inpGroupBidAll)
+          .siblings("span")
+          .text(" " + Popup.getTranslation("generic_group_bidAllEnabled", ".Bid all"));
+      } else {
+        $(inpGroupBidAll)
+          .siblings("span")
+          .text(" " + Popup.getTranslation("generic_group_bidAllDisabled", ".Bid until you win"));
+      }  
+    } catch (e) {
+      console.warn(`Biet-O-Matic: renderBidAll() - Cannot determine bidAll state for group ${name}: ${e.message}`);
+    }  
   }
 
   // remove unused groups
@@ -272,7 +276,7 @@ class Group {
     Object.keys(changes.newValue).forEach((groupName) => {
       if (groupName !== "") {
         Group.renderAutoBid("inpGroupAutoBid", groupName).catch();
-        Group.renderBidAll("inpGroupBidAll", groupName);
+        Group.renderBidAll("inpGroupBidAll", groupName).catch();
       }
     });
   }
@@ -771,8 +775,9 @@ class OptionCompactView {
  */
 class Article {
   constructor(info, tab = null) {
-    if (info == null || !info.hasOwnProperty("articleId"))
+    if (info == null || !info.hasOwnProperty("articleId")) {
       throw new Error("Failed to initialize new Article, articleId missing in info!");
+    }
     this.articleId = info.articleId;
     this.articleGroup = null;
     this.articleMaxBid = null;
@@ -2234,12 +2239,13 @@ class ArticlesTable {
       let addedCount = 0;
       for (let articleId of items) {
         const article = new Article({ articleId: articleId });
+        article.articlePlatform = articlePlatform;
         // check if article is already in table
         const row = this.getRow("#" + articleId);
         if (row != null && row.length === 1) {
           continue;
         }
-        // run this asynchronously to speed up adding articles
+        // wait for each completion to prevent overloading cpu/network
         const articleInfo = await article.getRefreshedInfo().catch((e) => {
           console.log("Biet-O-Matic: Article %s updateInfo() failed: %s", article.articleId, e);
         });
@@ -2247,7 +2253,6 @@ class ArticlesTable {
           // assign to group
           article.articleGroup = Popup.getTranslation("generic_watchListGroupName", ".Watch List");
         }
-        article.articlePlatform = articlePlatform;
         article.updateInfo(articleInfo, false);
         this.addArticle(article);
         article.updateInfoInStorage({}, null, false).catch((e) => {
@@ -2334,26 +2339,23 @@ class ArticlesTable {
   }
 
   /*
-   * remove an closed article from the table if its uninteresting. Will be called if a tab is closed/changed
-   * An article is regarded uninteresting if no maxBid/group defined yet
+   * Remove an closed article from the table if its uninteresting.
+   * Will be called if a tab is closed/changed
+   * An article is regarded uninteresting if its not persisted to storage
    */
   removeArticleIfBoring(tabId) {
     // find articleId by tabId
     const articleId = this.getArticleIdByTabId(tabId);
     if (articleId == null) return;
-    let row = this.DataTable.row("#" + articleId);
-    let article = row.data();
+    const row = this.DataTable.row("#" + articleId);
+    const article = row.data();
     try {
       if (article == null) return;
       article.tabId = null;
       // retrieve article info from storage (maxBid)
       article.getInfoFromStorage().then((storageInfo) => {
-        if (
-          storageInfo != null &&
-          storageInfo.hasOwnProperty("articleMaxBid") &&
-          (storageInfo.articleMaxBid != null || storageInfo.articleGroup != null)
-        ) {
-          // redraw, tabid has been updated
+        if (storageInfo != null) {
+          // redraw, tabId has been updated
           console.debug("Biet-O-Matic: removeArticleIfBoring(tab=%d), keeping article %s.", tabId, articleId);
           Popup.redrawTableRow(articleId, false);
         } else {
@@ -2364,7 +2366,7 @@ class ArticlesTable {
         }
       });
     } catch (e) {
-      console.log("removeArticleIfBoring() Internal Error: " + e);
+      console.log("Biet-O-Matic: removeArticleIfBoring(), Internal Error: " + e);
     } finally {
       article = null;
       row = null;
@@ -2560,7 +2562,7 @@ class ArticlesTable {
     spanGroupAutoBid.classList.add("translate");
     spanGroupAutoBid.textContent = Popup.getTranslation("generic_group_autoBid", ".Group Auto-Bid ") + " ";
     // set cached state, to avoid flicker
-    if (Group.getStateCached(groupName).autoBid) {
+    if (Group.getStateCached(groupName).autoBid === true) {
       spanGroupAutoBid.classList.add("autoBidEnabled");
       spanGroupAutoBid.setAttribute("data-i18n-after", Popup.getTranslation("generic_active", ".active"));
     } else {
@@ -2573,6 +2575,7 @@ class ArticlesTable {
       labelGroupAutoBid.style.display = "none";
     }
     td.appendChild(labelGroupAutoBid);
+
     const labelGroupBidAll = document.createElement("label");
     labelGroupBidAll.id = "lblGroupBidAll";
     labelGroupBidAll.htmlFor = "inpGroupBidAll";
@@ -2589,7 +2592,7 @@ class ArticlesTable {
     inputGroupBidAll.style.display = "none";
     const spanGroupBidAll = document.createElement("span");
     spanGroupBidAll.id = "spanGroupBidAll";
-    if (Group.getStateCached(groupName).bidAll) {
+    if (Group.getStateCached(groupName).bidAll === true) {
       spanGroupBidAll.textContent = " " + Popup.getTranslation("generic_group_bidAllEnabled", ".Bid everything");
     } else {
       spanGroupBidAll.textContent = " " + Popup.getTranslation("generic_group_bidAllDisabled", ".Bid until you win");
@@ -2598,12 +2601,15 @@ class ArticlesTable {
     labelGroupBidAll.appendChild(spanGroupBidAll);
     td.appendChild(labelGroupBidAll);
 
-    // add group to cached groups
-    if (!Popup.cachedGroups.hasOwnProperty(groupName)) Popup.cachedGroups[groupName] = {};
-
     // renderState will asynchronously add a class toggling enabled/disabled state
-    Group.renderAutoBid("inpGroupAutoBid", groupName).catch();
-    Group.renderBidAll("inpGroupBidAll", groupName).catch();
+    Group.renderAutoBid("inpGroupAutoBid", groupName)
+      .catch(e => {
+        console.log("Biet-O-Matic: renderGroups() Group.renderAutoBid failed: " + e.message);
+      });
+    Group.renderBidAll("inpGroupBidAll", groupName)
+      .catch(e => {
+        console.log("Biet-O-Matic: renderGroups() Group.renderBidAll failed: " + e.message);
+      });
     Group.updateDatalist();
     // append data-name to tr
     return $("<tr/>").append(td).attr("data-name", groupName);
@@ -3670,7 +3676,7 @@ class ArticlesTable {
       // "oldValue":{"autoBid":{"autoBidEnabled":true,"id":"kfpgnpfmingbecjejgnjekbadpcggeae:138"}}}}
       if (changes.hasOwnProperty("SETTINGS")) {
         if (AutoBid.checkChangeIsRelevant(changes.SETTINGS)) {
-          console.debug("Biet-O-Matic: Browser Storage Settings changed, refreshing AutoBid.");
+          console.debug(`Biet-O-Matic: Browser storage.${area} settings changed, refreshing AutoBid.`);
           AutoBid.renderState();
         }
       }
@@ -3678,7 +3684,7 @@ class ArticlesTable {
       // "newValue":{"Briefmarken":{"autoBid":true},"Keine Gruppe":{"autoBid":false},"Test":{"autoBid":true},"Tischdecken":{"autoBid":true}},
       // "oldValue":{"Briefmarken":{"autoBid":false},"Keine Gruppe":{"autoBid":false},"Test":{"autoBid":true},"Tischdecken":{"autoBid":true}}}}
       if (changes.hasOwnProperty("GROUPS")) {
-        console.info("Biet-O-Matic: Browser Storage Settings changed, refreshing Groups.");
+        console.info(`Biet-O-Matic: Browser storage.${area} settings changed, refreshing Groups.`);
         Group.updateFromChanges(changes.GROUPS);
       }
       // check if a new article has been added, or has been updated by another instance of BE
@@ -3688,10 +3694,10 @@ class ArticlesTable {
         // "newValue":... (not if removed)
         if (/[0-9]+/.test(key)) {
           if (changes[key].hasOwnProperty("newValue")) {
-            console.info("Biet-O-Matic: Browser Storage Settings changed for article %s -> addOrUpdate article", key);
+            console.info(`Biet-O-Matic: Browser storage.${area} settings changed for article ${key} -> addOrUpdate article`);
             this.addOrUpdateArticle(changes[key].newValue, null, true);
           } else {
-            console.info("Biet-O-Matic: Browser Storage Settings removed for article %s. -> remove article", key);
+            console.info(`Biet-O-Matic: Browser storage.${area} settings removed for article ${key}. -> remove article`);
             this.removeArticleFromTable(key);
           }
         }
@@ -3868,7 +3874,7 @@ class ArticlesTable {
         return;
       }
       const article = row.data();
-      if (typeof article == "undefined") {
+      if (typeof article === "undefined") {
         return;
       }
       const log = article.getLog();
@@ -3877,7 +3883,6 @@ class ArticlesTable {
         return;
       }
       // {timestamp: 1609232122278, message: "Item Maximum Bid: 1.99", component: "Items", level: "Updated"}
-      // timestamp level components message
       log
         .slice()
         .forEach((e) => {
@@ -3885,7 +3890,7 @@ class ArticlesTable {
           logLinesArray.push(`${timestamp}\t${e.component}\t${e.level}\t${e.message}`);
         });
       navigator.clipboard.writeText(logLinesArray.join("\n")).then(() => {
-        console.log("Biet-O-Matic: successfully copied log to clipboard");
+        console.debug("Biet-O-Matic: successfully copied log to clipboard");
       }, (e) => {
         console.log("Biet-O-Matic: Failed to copy log to clipboard: " + e);
       });
