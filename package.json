@@ -28,7 +28,7 @@
     "build": "node utils/build.js",
     "start": "node utils/webserver.js"
   },
-  "version": "0.5.4",
+  "version": "0.5.5",
   "name": "Biet-O-Matic-BE",
   "license": "Apache-2.0",
   "description": "A browser extension for eBay"

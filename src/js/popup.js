@@ -200,17 +200,31 @@ class Group {
       let storedInfo = await Popup.storage.get(null);
       const usedGroups = {};
       Object.keys(storedInfo).forEach((articleId) => {
-        if (!/^[0-9]+$/.test(articleId)) return;
-        if (!storedInfo[articleId].hasOwnProperty("articleGroup")) return;
-        const articleGroup = storedInfo[articleId].articleGroup;
-        if (!usedGroups.hasOwnProperty(articleGroup)) usedGroups[articleGroup] = {};
+        if (/^[0-9]+$/.test(articleId) === false) {
+          return;
+        }
+        if (storedInfo[articleId].hasOwnProperty("articleGroup") === false) {
+          return;
+        }
+        let articleGroup = storedInfo[articleId].articleGroup;
+        // handle default group to ensure its not removed
+        if (articleGroup == null) {
+          if (Popup.disableGroups) {
+            articleGroup = Popup.getTranslation("generic_items", ".Items");
+          } else {
+            articleGroup = Popup.getTranslation("generic_noGroup", ".Other Items");
+          }
+        }
+        usedGroups[articleGroup] = {};
       });
 
       // iterate through all groups and remove unused
       const groups = await Group.getAll();
       Object.keys(groups).forEach((groupName) => {
         // check article is used from previous determined info
-        if (usedGroups.hasOwnProperty(groupName)) return;
+        if (usedGroups.hasOwnProperty(groupName)) {
+          return;
+        }
         // remove if group has no timestamp or timestamp is older 5 days
         if (
           !groups[groupName].hasOwnProperty("timestamp") ||
@@ -2304,8 +2318,9 @@ class ArticlesTable {
         const row = Popup.table.DataTable.row(index);
         const article = row.data();
         let articleGroup = article.articleGroup;
-        if (articleGroup == null || typeof articleGroup === "undefined")
+        if (articleGroup == null || typeof articleGroup === "undefined") {
           articleGroup = $.fn.DataTable.RowGroup.defaults.emptyDataGroup;
+        }
         // buy it now
         if (cleanBuyItNow && (!article.hasOwnProperty("articleEndTime") || article.articleEndTime == null)) {
           if (group === "" || group === articleGroup) {
