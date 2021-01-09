@@ -863,6 +863,11 @@ class Article {
       delete info.group;
       converted++;
     }
+    // convert maxBid from string to number (not sure why, but it happens).
+    if (info.hasOwnProperty("articleMaxBid") && typeof info.articleMaxBid === "string") {
+      info.articleMaxBid = Number.parseInt(info.articleMaxBid, 10);
+      converted++;
+    }
     return converted;
   }
 
