@@ -23,6 +23,15 @@ Other changes:
 - Fixed computer clock check.
   However, due to reduction of the precision of that check to 1s, only a rough check is possible.
 
+### Biet-O-Matic BE Version 0.5.5
+
+{{< hint info>}}
+Released on Saturday, 2021-01-09
+{{< /hint >}}
+
+- Fixed an issue leading to removal of the default group settings (e.g. resetting its bid all option).
+- Fixed an error during initialisation in case data was stored in an old incompatible format.
+
 ### Biet-O-Matic BE Version 0.5.4
 
 {{< hint info>}}
