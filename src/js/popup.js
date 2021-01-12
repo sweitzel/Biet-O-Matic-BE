@@ -2387,9 +2387,6 @@ class ArticlesTable {
       });
     } catch (e) {
       console.log("Biet-O-Matic: removeArticleIfBoring(), Internal Error: " + e);
-    } finally {
-      article = null;
-      row = null;
     }
   }
 
@@ -2489,7 +2486,7 @@ class ArticlesTable {
     inpMaxBid.type = "number";
     inpMaxBid.min = "0";
     inpMaxBid.step = "0.50";
-    inpMaxBid.defaultValue = Number.isNaN(maxBid) ? "" : Number.parseInt(maxBid, 10).toFixed(2);
+    inpMaxBid.defaultValue = Number.isNaN(maxBid) ? "" : Number.parseFloat(maxBid).toFixed(2);
     inpMaxBid.style.width = "60px";
     const labelAutoBid = document.createElement("label");
     const chkAutoBid = document.createElement("input");
