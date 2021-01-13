@@ -3268,7 +3268,13 @@ class ArticlesTable {
       let article = row.data();
       try {
         // skip articles with open tab
-        if (article.hasOwnProperty("tabId") && article.tabId != null) return;
+        if (article.hasOwnProperty("tabId") && article.tabId != null) {
+          return;
+        }
+        // skip articles older 1 month
+        if ((Date.now() - article.articleEndTime) > 2_629_800*1000 ) {
+          return;
+        } 
         // Note: the refresh function can use a rate limit which depends on the article end time
         await ArticlesTable.refreshArticle(article.articleId, article.articleEndTime, useRateLimit);
       } catch (e) {
@@ -3851,7 +3857,6 @@ class ArticlesTable {
       let tr = $(e.target).closest("tr");
       if (e.target.id === "tabStatus") {
         this.toggleArticleTab(tr);
-        //this.refreshArticle(tr);
       } else if (e.target.id === "articleRemove") {
         this.removeArticle(tr);
       }
