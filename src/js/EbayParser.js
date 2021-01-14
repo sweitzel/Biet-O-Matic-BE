@@ -143,12 +143,12 @@ class EbayParser {
    * - uses priceCurrency for currency
    * returns {currency: "EUR", price: 0.01}
    */
-  static parsePriceString(domEntry, currencySelector) {
+  static parsePriceString(domEntry, currencySelector = null) {
     const result = {
       price: null,
       currency: null
     };
-    if (typeof currencySelector !== 'undefined' && currencySelector.length >= 1) {
+    if (currencySelector != null && typeof currencySelector !== 'undefined' && currencySelector.length >= 1) {
       result.currency = currencySelector[0].getAttribute("content");
     }
     let price;
@@ -173,7 +173,9 @@ class EbayParser {
       result.price = Number.parseFloat(`${p1}.${p2}`);
     } else {
       // fallback get price from
-      result.price = Number.parseFloat(domEntry.getAttribute("content"));
+      if (typeof domEntry === "object") {
+        result.price = Number.parseFloat(domEntry.getAttribute("content"));
+      }
     }
     return result;
   }

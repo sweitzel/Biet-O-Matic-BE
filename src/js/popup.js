@@ -1444,8 +1444,11 @@ class Article {
       currency = "EUR?";
     }
     let price;
-    if (this.hasOwnProperty("articleBidPrice")) price = this.articleBidPrice;
-    else if (this.hasOwnProperty("articleBuyPrice")) price = this.articleBuyPrice;
+    if (this.hasOwnProperty("articleBidPrice")) {
+      price = this.articleBidPrice;
+    } else if (this.hasOwnProperty("articleBuyPrice")) {
+      price = this.articleBuyPrice;
+    }
     try {
       return new Intl.NumberFormat(Popup.lang, { style: "currency", currency: currency }).format(price);
     } catch (e) {
@@ -1839,15 +1842,7 @@ class ArticlesTable {
           searchable: false,
           orderable: false,
           defaultContent: "nicht angegeben",
-          render: function (data, type, row) {
-            if (type !== "display" && type !== "filter") return data;
-            let span = document.createElement("span");
-            span.textContent = data;
-            if (!row.hasOwnProperty("articleShippingCost") && row.hasOwnProperty("articleShippingMethods"))
-              span.textContent = row.articleShippingMethods;
-            if (row.hasOwnProperty("articleShippingMethods")) span.title = row.articleShippingMethods;
-            return span.outerHTML;
-          },
+          render: ArticlesTable.renderArticleShippingCost,
         },
         {
           name: "articleAuctionState",
@@ -2723,8 +2718,34 @@ class ArticlesTable {
     if (type !== "display" && type !== "filter") return data;
     const span = document.createElement("span");
     span.textContent = row.getPrettyBidPrice();
-    if (row.hasOwnProperty("articleBidCount")) span.textContent += "  (" + row.articleBidCount + ")";
-    if (row.hasOwnProperty("articlePaymentMethods")) span.title = row.articlePaymentMethods;
+    if (row.hasOwnProperty("articleBidCount")) {
+      span.textContent += "  (" + row.articleBidCount + ")";
+    }
+    if (row.hasOwnProperty("articlePaymentMethods")) {
+      span.title = row.articlePaymentMethods;
+    }
+    return span.outerHTML;
+  }
+
+  static renderArticleShippingCost(data, type, row) {
+    if (type !== "display" && type !== "filter") return data;
+    const span = document.createElement("span");
+    let priceInfo = EbayParser.parsePriceString(data);
+    if (priceInfo.price !== null && row.hasOwnProperty("articleCurrency")) {
+      try {
+        span.textContent = Intl.NumberFormat(Popup.lang, { style: "currency", currency: row.articleCurrency }).format(priceInfo.price);
+      } catch (e) {
+        span.textContent = data;
+      }
+    } else {
+      span.textContent = data;
+    }
+    if (!row.hasOwnProperty("articleShippingCost") && row.hasOwnProperty("articleShippingMethods")) {
+      span.textContent = row.articleShippingMethods;
+    }
+    if (row.hasOwnProperty("articleShippingMethods")) {
+      span.title = row.articleShippingMethods;
+    }
     return span.outerHTML;
   }
 
