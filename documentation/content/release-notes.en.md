@@ -23,6 +23,16 @@ Other changes:
 - Fixed computer clock check.
   However, due to reduction of the precision of that check to 1s, only a rough check is possible.
 
+### Biet-O-Matic BE Version 0.5.6
+
+{{< hint info>}}
+Released on Saturday, 2021-01-16
+{{< /hint >}}
+
+- Fixed an issue displaying the cent values of the maximum bid on the overview page.
+- Improved display of currency for shipping cost on the overrview page.
+- Items whose auctions ended longer than one month ago are no longer regularly updated.
+
 ### Biet-O-Matic BE Version 0.5.5
 
 {{< hint info>}}

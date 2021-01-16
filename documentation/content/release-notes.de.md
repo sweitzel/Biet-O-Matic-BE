@@ -23,6 +23,16 @@ Weitere größere Änderungen:
 - Der Artikel Verkäufer wird nun gespeichert und in der Übersichtstabelle in der Beschreibung angezeigt.
   Wenn die kompakte Anzeige aktiviert ist, wird der Verkäufer nur angezeigt, wenn man mit dem Mauszeiger über der Artikelbeschreibung verweilt.
 
+### Biet-O-Matic BE Version 0.5.6
+
+{{< hint info>}}
+Veröffentlicht am Samstag, 16.01.2021
+{{< /hint >}}
+
+- Korrektur eines Fehlers bei der Darstellung des Maximalgebotes bzgl. Nachkommastellen auf der Übersichtsseite.
+- Vereinheitlichung der Währungsanzeige der Versandkosten auf der Übersichtsseite.
+- Artikel, deren Auktionen vor mehr als einem Monat endeten, werden nun nicht mehr aktualisiert.
+
 ### Biet-O-Matic BE Version 0.5.5
 
 {{< hint info>}}
