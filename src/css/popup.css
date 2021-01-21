@@ -333,6 +333,11 @@ div.settings label:after {
   background-color: black;
 }
 
+/* override transparency for toastr */
+body #toast-container > div {
+  opacity: 0.95;
+}
+
 /* raleway-regular - latin_latin-ext */
 /*
 @font-face {

@@ -146,6 +146,9 @@
   "generic_internalError": {
     "message": "Interner Fehler"
   },
+  "generic_item": {
+    "message": "Artikel"
+  },
   "generic_items": {
     "message": "Artikel"
   },
@@ -345,6 +348,6 @@
     "message": "Der Unterschied ihrer Systemzeit zur eBay Zeit ist zu groß (ungefähr $1s). Bitte stellen sie sicher, dass die Systemzeit synchron ist, damit die Gebote zuverlässig abgegeben werden können."
   },
   "popup_updateStorageFailed": {
-    "message": "Fehler beim Speichern für Artikel $1: $2"
+    "message": "Fehler beim Speichern: $1"
   }
 }

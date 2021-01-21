@@ -36,6 +36,11 @@ import "@fortawesome/fontawesome-free/css/all.css";
 //import '@fortawesome/fontawesome-free/js/fontawesome';
 //import '@fortawesome/fontawesome-free/js/regular';
 
+// Notifications
+//import { toastr } from "toastr";
+import * as toastr from "toastr";
+import "toastr/build/toastr.css";
+
 import EbayParser from "./EbayParser.js";
 import BomStorage from "./BomStorage.js";
 import "../css/popup.css";
@@ -2121,10 +2126,8 @@ class ArticlesTable {
           .catch((e) => {
             console.log("Biet-O-Matic: updateArticle(%s) Failed to update storage: %s", article.articleId, e.message);
             Popup.addUserMessage({
-              message: Popup.getTranslation("popup_updateStorageFailed", ".Failed to update storage for item $1: $2", [
-                article.articleId,
-                e.message,
-              ]),
+              message: Popup.getTranslation("popup_updateStorageFailed", ".Failed to update storage: $1", [e.message]),
+              title: Popup.getTranslation("generic_item", ".Item") + " " + article.articleId,
               level: "error",
               duration: 60000,
             });
@@ -2279,7 +2282,7 @@ class ArticlesTable {
           addedCount.toString(10),
           addFromWatchlist ? Popup.getTranslation("popup_watchlist") : Popup.getTranslation("popup_clipboard"),
         ]),
-        level: "info",
+        level: "success",
         duration: 30_000,
       });
     } catch (e) {
@@ -2391,71 +2394,93 @@ class ArticlesTable {
    * - include article image if present
    */
   static renderArticleId(data, type, row) {
-    if (type !== "display") return data;
-    let div = document.createElement("div");
-    div.id = data;
-
-    let a = document.createElement("a");
-    a.href = row.getUrl();
-    a.id = row.getArticleLinkId();
-    a.text = data;
-    a.target = "_blank";
-
-    if (OptionCompactView.compactViewEnabled) {
-      div.appendChild(a);
-    } else {
-      div.classList.add("polaroid");
-      div.style.width = "90px";
-      div.style.minHeight = "25px";
-      div.style.maxHeight = "90px";
-
-      if (row.hasOwnProperty("articleImage")) {
-        let img = document.createElement("img");
-        img.src = row.articleImage;
-        img.alt = row.articleId;
-        img.style.width = "100%";
-        img.style.userSelect = "none";
-        div.appendChild(img);
-      }
-
-      let divContainer = document.createElement("div");
-      divContainer.classList.add("container");
-      divContainer.appendChild(a);
-      div.appendChild(divContainer);
+    if (type !== "display") {
+      return data;
     }
+    try {
+      const div = document.createElement("div");
+      div.id = data;
 
-    return div.outerHTML;
+      const a = document.createElement("a");
+      a.href = row.getUrl();
+      a.id = row.getArticleLinkId();
+      a.text = data;
+      a.target = "_blank";
+
+      if (OptionCompactView.compactViewEnabled) {
+        div.appendChild(a);
+      } else {
+        div.classList.add("polaroid");
+        div.style.width = "90px";
+        div.style.minHeight = "25px";
+        div.style.maxHeight = "90px";
+
+        if (row.hasOwnProperty("articleImage")) {
+          let img = document.createElement("img");
+          img.src = row.articleImage;
+          img.alt = row.articleId;
+          img.style.width = "100%";
+          img.style.userSelect = "none";
+          div.appendChild(img);
+        }
+
+        let divContainer = document.createElement("div");
+        divContainer.classList.add("container");
+        divContainer.appendChild(a);
+        div.appendChild(divContainer);
+      }
+      return div.outerHTML;
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleId(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
+      });
+      return data;
+    }
   }
 
   // render article description including seller if available
   // Note: articleSeller was added with 0.5.0 version
   static renderArticleDescription(data, type, row) {
-    if (type !== "display") return data;
-    let div = document.createElement("div");
-
-    let divDescr = document.createElement("div");
-    divDescr.textContent = data;
-    div.appendChild(divDescr);
-    if (row.hasOwnProperty("articleSeller"))
-      div.title = Popup.getTranslation("generic_seller", ".Seller") + ": " + row.articleSeller;
-
-    if (OptionCompactView.compactViewEnabled === false) {
-      if (row.hasOwnProperty("articleSeller")) {
-        // link to author
-        let a = document.createElement("a");
-        a.href = row.getProfileUrl(row.articleSeller);
-        a.text = row.articleSeller;
-        a.target = "_blank";
-
-        let span2 = document.createElement("span");
-        span2.textContent = Popup.getTranslation("generic_seller", ".Seller") + ": ";
-
-        div.appendChild(span2);
-        div.appendChild(a);
-      }
+    if (type !== "display") {
+      return data;
     }
+    try {
+      const div = document.createElement("div");
+      const divDescr = document.createElement("div");
+      divDescr.textContent = data;
+      div.appendChild(divDescr);
+      if (row.hasOwnProperty("articleSeller")) {
+        div.title = Popup.getTranslation("generic_seller", ".Seller") + ": " + row.articleSeller;
+      }
 
-    return div.outerHTML;
+      if (OptionCompactView.compactViewEnabled === false) {
+        if (row.hasOwnProperty("articleSeller")) {
+          // link to author
+          let a = document.createElement("a");
+          a.href = row.getProfileUrl(row.articleSeller);
+          a.text = row.articleSeller;
+          a.target = "_blank";
+  
+          let span2 = document.createElement("span");
+          span2.textContent = Popup.getTranslation("generic_seller", ".Seller") + ": ";
+  
+          div.appendChild(span2);
+          div.appendChild(a);
+        }
+      }
+      return div.outerHTML;  
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleDescription(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
+      });
+      return data;
+    }
   }
 
   /*
@@ -2465,166 +2490,195 @@ class ArticlesTable {
    * - input:checkbox for autoBid
    */
   static renderArticleMaxBid(data, type, row) {
-    if (type !== "display" && type !== "filter") return data;
+    if (type !== "display" && type !== "filter") {
+      return data;
+    }
     //console.log("renderArticleMaxBid(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
-    if (!row.hasOwnProperty("articleBidPrice") && data == null)
-      return Popup.getTranslation("generic_buyNow", ".Buy It Now");
-    let autoBid = false;
-    if (row.hasOwnProperty("articleAutoBid")) {
-      autoBid = row.articleAutoBid;
-    }
-    let maxBid = 0;
-    if (data != null) maxBid = data;
-    const divArticleMaxBid = document.createElement("div");
-    const inpMaxBid = document.createElement("input");
-    inpMaxBid.id = "inpMaxBid_" + row.articleId;
-    inpMaxBid.type = "number";
-    inpMaxBid.min = "0";
-    inpMaxBid.step = "0.50";
-    inpMaxBid.defaultValue = Number.isNaN(maxBid) ? "" : Number.parseFloat(maxBid).toFixed(2);
-    inpMaxBid.style.width = "60px";
-    const labelAutoBid = document.createElement("label");
-    const chkAutoBid = document.createElement("input");
-    chkAutoBid.id = "chkAutoBid_" + row.articleId;
-    chkAutoBid.classList.add("ui-button");
-    chkAutoBid.type = "checkbox";
-    chkAutoBid.defaultChecked = autoBid;
-    chkAutoBid.style.width = "15px";
-    chkAutoBid.style.height = "15px";
-    chkAutoBid.style.verticalAlign = "middle";
-    labelAutoBid.appendChild(chkAutoBid);
-    const spanAutoBid = document.createElement("span");
-    if (autoBid) {
-      spanAutoBid.textContent = Popup.getTranslation("generic_active");
-      chkAutoBid.title = Popup.getTranslation("popup_deactivateArticleAutoBid", ".Deactivates Article Auto-Bid");
-    } else {
-      spanAutoBid.textContent = Popup.getTranslation("generic_inactive");
-      chkAutoBid.title = Popup.getTranslation("popup_activateArticleAutoBid", ".Activates Article Auto-Bid");
-    }
-    labelAutoBid.appendChild(spanAutoBid);
+    try {
+      if (!row.hasOwnProperty("articleBidPrice") && data == null) {
+        return Popup.getTranslation("generic_buyNow", ".Buy It Now");
+      }
+      let autoBid = false;
+      if (row.hasOwnProperty("articleAutoBid")) {
+        autoBid = row.articleAutoBid;
+      }
+      let maxBid = 0;
+      if (data != null) {
+        maxBid = data;
+      }
+      const divArticleMaxBid = document.createElement("div");
+      const inpMaxBid = document.createElement("input");
+      inpMaxBid.id = "inpMaxBid_" + row.articleId;
+      inpMaxBid.type = "number";
+      inpMaxBid.min = "0";
+      inpMaxBid.step = "0.50";
+      inpMaxBid.defaultValue = Number.isNaN(maxBid) ? "" : Number.parseFloat(maxBid).toFixed(2);
+      inpMaxBid.style.width = "60px";
+      const labelAutoBid = document.createElement("label");
+      const chkAutoBid = document.createElement("input");
+      chkAutoBid.id = "chkAutoBid_" + row.articleId;
+      chkAutoBid.classList.add("ui-button");
+      chkAutoBid.type = "checkbox";
+      chkAutoBid.defaultChecked = autoBid;
+      chkAutoBid.style.width = "15px";
+      chkAutoBid.style.height = "15px";
+      chkAutoBid.style.verticalAlign = "middle";
+      labelAutoBid.appendChild(chkAutoBid);
+      const spanAutoBid = document.createElement("span");
+      if (autoBid) {
+        spanAutoBid.textContent = Popup.getTranslation("generic_active");
+        chkAutoBid.title = Popup.getTranslation("popup_deactivateArticleAutoBid", ".Deactivates Article Auto-Bid");
+      } else {
+        spanAutoBid.textContent = Popup.getTranslation("generic_inactive");
+        chkAutoBid.title = Popup.getTranslation("popup_activateArticleAutoBid", ".Activates Article Auto-Bid");
+      }
+      labelAutoBid.appendChild(spanAutoBid);
 
-    // maxBid was entered, check if the autoBid field can be enabled
-    if (row.canActivateAutoBid()) {
-      chkAutoBid.disabled = false;
-    } else {
-      labelAutoBid.classList.add("ui-state-disabled");
-      chkAutoBid.disabled = true;
-    }
-    // set tooltip for button to minBidValue
-    // if the maxBid is < minimum bidding price or current Price, add highlight color
-    if (row.articleEndTime - Date.now() > 0 && chkAutoBid.disabled) {
-      inpMaxBid.classList.add("bomHighlightBorder");
-      inpMaxBid.title = Popup.getTranslation("popup_enterMinAmount", ".Enter at least $1", [
-        row.articleMinimumBid.toString(),
-      ]);
-    } else {
-      inpMaxBid.classList.remove("bomHighlightBorder");
-      inpMaxBid.title = Popup.getTranslation("popup_minIncreaseReached", ".Required increase reached");
+      // maxBid was entered, check if the autoBid field can be enabled
+      if (row.canActivateAutoBid()) {
+        chkAutoBid.disabled = false;
+      } else {
+        labelAutoBid.classList.add("ui-state-disabled");
+        chkAutoBid.disabled = true;
+      }
+
+      // set tooltip for button to minBidValue
+      // if the maxBid is < minimum bidding price or current Price, add highlight color
+      if (row.articleEndTime - Date.now() > 0 && chkAutoBid.disabled) {
+        inpMaxBid.classList.add("bomHighlightBorder");
+        inpMaxBid.title = Popup.getTranslation("popup_enterMinAmount", ".Enter at least $1", [
+          row.articleMinimumBid.toString(),
+        ]);
+      } else {
+        inpMaxBid.classList.remove("bomHighlightBorder");
+        inpMaxBid.title = Popup.getTranslation("popup_minIncreaseReached", ".Required increase reached");
+      }
+
+      // disable maxBid/autoBid if article ended
+      if (row.articleEndTime - Date.now() <= 0) {
+        //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
+        labelAutoBid.classList.add("ui-state-disabled");
+        inpMaxBid.disabled = true;
+        chkAutoBid.disabled = true;
+      }
+
+      divArticleMaxBid.appendChild(inpMaxBid);
+      divArticleMaxBid.appendChild(labelAutoBid);
+
+      return divArticleMaxBid.outerHTML;
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleMaxBid(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
+      });
+      return data;
     }
 
-    // disable maxBid/autoBid if article ended
-    if (row.articleEndTime - Date.now() <= 0) {
-      //console.debug("Biet-O-Matic: Article %s already ended, disabling inputs", row.articleId);
-      labelAutoBid.classList.add("ui-state-disabled");
-      inpMaxBid.disabled = true;
-      chkAutoBid.disabled = true;
-    }
-
-    divArticleMaxBid.appendChild(inpMaxBid);
-    divArticleMaxBid.appendChild(labelAutoBid);
-    return divArticleMaxBid.outerHTML;
   }
 
   /*
    * Render row groups
    */
   static renderGroups(rows, groupName) {
-    const td = document.createElement("td");
-    td.colSpan = rows.columns()[0].length;
-
-    // left side: icon + group name (number of articles)
-    const i = document.createElement("i");
-    i.classList.add("fas", "fa-shopping-cart", "fa-fw");
-    i.style.fontSize = "1.2em";
-    i.style.paddingTop = "0.5em";
-    const span = document.createElement("span");
-    span.textContent = `${groupName} (${rows.count()})`;
-    span.style.fontSize = "1.2em";
-    span.style.fontWeight = "normal";
-    td.appendChild(i);
-    td.appendChild(span);
-
-    // right side: input groupBidAll, input groupAutoBid
-    const labelGroupAutoBid = document.createElement("label");
-    labelGroupAutoBid.id = "lblGroupAutoBid";
-    labelGroupAutoBid.htmlFor = "inpGroupAutoBid";
-    labelGroupAutoBid.classList.add("ui-button");
-    labelGroupAutoBid.title = Popup.getTranslation(
-      "generic_group_autoBidHint",
-      ".Configures the Auto-Bid mode for the group"
-    );
-    labelGroupAutoBid.style.float = "right";
-    const inputGroupAutoBid = document.createElement("input");
-    inputGroupAutoBid.id = "inpGroupAutoBid";
-    inputGroupAutoBid.setAttribute("name", groupName);
-    inputGroupAutoBid.type = "checkbox";
-    inputGroupAutoBid.style.display = "none";
-    const spanGroupAutoBid = document.createElement("span");
-    spanGroupAutoBid.id = "spanGroupAutoBid";
-    spanGroupAutoBid.classList.add("translate");
-    spanGroupAutoBid.textContent = Popup.getTranslation("generic_group_autoBid", ".Group Auto-Bid ") + " ";
-    // set cached state, to avoid flicker
-    if (Group.getStateCached(groupName).autoBid === true) {
-      spanGroupAutoBid.classList.add("autoBidEnabled");
-      spanGroupAutoBid.setAttribute("data-i18n-after", Popup.getTranslation("generic_active", ".active"));
-    } else {
-      spanGroupAutoBid.classList.add("autoBidDisabled");
-      spanGroupAutoBid.setAttribute("data-i18n-after", Popup.getTranslation("generic_inactive", ".inactive"));
-    }
-    labelGroupAutoBid.appendChild(inputGroupAutoBid);
-    labelGroupAutoBid.appendChild(spanGroupAutoBid);
-    if (Popup.disableGroups) {
-      labelGroupAutoBid.style.display = "none";
-    }
-    td.appendChild(labelGroupAutoBid);
-
-    const labelGroupBidAll = document.createElement("label");
-    labelGroupBidAll.id = "lblGroupBidAll";
-    labelGroupBidAll.htmlFor = "inpGroupBidAll";
-    labelGroupBidAll.classList.add("ui-button");
-    labelGroupBidAll.title = Popup.getTranslation(
-      "generic_group_bidAllHint",
-      ".Toggles betwen Bid all and Bid one for this group"
-    );
-    labelGroupBidAll.style.float = "right";
-    const inputGroupBidAll = document.createElement("input");
-    inputGroupBidAll.id = "inpGroupBidAll";
-    inputGroupBidAll.setAttribute("name", groupName);
-    inputGroupBidAll.type = "checkbox";
-    inputGroupBidAll.style.display = "none";
-    const spanGroupBidAll = document.createElement("span");
-    spanGroupBidAll.id = "spanGroupBidAll";
-    if (Group.getStateCached(groupName).bidAll === true) {
-      spanGroupBidAll.textContent = " " + Popup.getTranslation("generic_group_bidAllEnabled", ".Bid everything");
-    } else {
-      spanGroupBidAll.textContent = " " + Popup.getTranslation("generic_group_bidAllDisabled", ".Bid until you win");
-    }
-    labelGroupBidAll.appendChild(inputGroupBidAll);
-    labelGroupBidAll.appendChild(spanGroupBidAll);
-    td.appendChild(labelGroupBidAll);
-
-    // renderState will asynchronously add a class toggling enabled/disabled state
-    Group.renderAutoBid("inpGroupAutoBid", groupName)
-      .catch(e => {
-        console.log("Biet-O-Matic: renderGroups() Group.renderAutoBid failed: " + e.message);
+    try {
+      const td = document.createElement("td");
+      td.colSpan = rows.columns()[0].length;
+  
+      // left side: icon + group name (number of articles)
+      const i = document.createElement("i");
+      i.classList.add("fas", "fa-shopping-cart", "fa-fw");
+      i.style.fontSize = "1.2em";
+      i.style.paddingTop = "0.5em";
+      const span = document.createElement("span");
+      span.textContent = `${groupName} (${rows.count()})`;
+      span.style.fontSize = "1.2em";
+      span.style.fontWeight = "normal";
+      td.appendChild(i);
+      td.appendChild(span);
+  
+      // right side: input groupBidAll, input groupAutoBid
+      const labelGroupAutoBid = document.createElement("label");
+      labelGroupAutoBid.id = "lblGroupAutoBid";
+      labelGroupAutoBid.htmlFor = "inpGroupAutoBid";
+      labelGroupAutoBid.classList.add("ui-button");
+      labelGroupAutoBid.title = Popup.getTranslation(
+        "generic_group_autoBidHint",
+        ".Configures the Auto-Bid mode for the group"
+      );
+      labelGroupAutoBid.style.float = "right";
+      const inputGroupAutoBid = document.createElement("input");
+      inputGroupAutoBid.id = "inpGroupAutoBid";
+      inputGroupAutoBid.setAttribute("name", groupName);
+      inputGroupAutoBid.type = "checkbox";
+      inputGroupAutoBid.style.display = "none";
+      const spanGroupAutoBid = document.createElement("span");
+      spanGroupAutoBid.id = "spanGroupAutoBid";
+      spanGroupAutoBid.classList.add("translate");
+      spanGroupAutoBid.textContent = Popup.getTranslation("generic_group_autoBid", ".Group Auto-Bid ") + " ";
+      // set cached state, to avoid flicker
+      if (Group.getStateCached(groupName).autoBid === true) {
+        spanGroupAutoBid.classList.add("autoBidEnabled");
+        spanGroupAutoBid.setAttribute("data-i18n-after", Popup.getTranslation("generic_active", ".active"));
+      } else {
+        spanGroupAutoBid.classList.add("autoBidDisabled");
+        spanGroupAutoBid.setAttribute("data-i18n-after", Popup.getTranslation("generic_inactive", ".inactive"));
+      }
+      labelGroupAutoBid.appendChild(inputGroupAutoBid);
+      labelGroupAutoBid.appendChild(spanGroupAutoBid);
+      if (Popup.disableGroups) {
+        labelGroupAutoBid.style.display = "none";
+      }
+      td.appendChild(labelGroupAutoBid);
+  
+      const labelGroupBidAll = document.createElement("label");
+      labelGroupBidAll.id = "lblGroupBidAll";
+      labelGroupBidAll.htmlFor = "inpGroupBidAll";
+      labelGroupBidAll.classList.add("ui-button");
+      labelGroupBidAll.title = Popup.getTranslation(
+        "generic_group_bidAllHint",
+        ".Toggles betwen Bid all and Bid one for this group"
+      );
+      labelGroupBidAll.style.float = "right";
+      const inputGroupBidAll = document.createElement("input");
+      inputGroupBidAll.id = "inpGroupBidAll";
+      inputGroupBidAll.setAttribute("name", groupName);
+      inputGroupBidAll.type = "checkbox";
+      inputGroupBidAll.style.display = "none";
+      const spanGroupBidAll = document.createElement("span");
+      spanGroupBidAll.id = "spanGroupBidAll";
+      if (Group.getStateCached(groupName).bidAll === true) {
+        spanGroupBidAll.textContent = " " + Popup.getTranslation("generic_group_bidAllEnabled", ".Bid everything");
+      } else {
+        spanGroupBidAll.textContent = " " + Popup.getTranslation("generic_group_bidAllDisabled", ".Bid until you win");
+      }
+      labelGroupBidAll.appendChild(inputGroupBidAll);
+      labelGroupBidAll.appendChild(spanGroupBidAll);
+      td.appendChild(labelGroupBidAll);
+  
+      // renderState will asynchronously add a class toggling enabled/disabled state
+      Group.renderAutoBid("inpGroupAutoBid", groupName)
+        .catch(e => {
+          console.log("Biet-O-Matic: renderGroups() Group.renderAutoBid failed: " + e.message);
+        });
+      Group.renderBidAll("inpGroupBidAll", groupName)
+        .catch(e => {
+          console.log("Biet-O-Matic: renderGroups() Group.renderBidAll failed: " + e.message);
+        });
+      Group.updateDatalist();
+      // append data-name to tr
+      return $("<tr/>").append(td).attr("data-name", groupName);
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: `Internal Error occured: renderGroups() ${e.message}`,
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderGroups(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
       });
-    Group.renderBidAll("inpGroupBidAll", groupName)
-      .catch(e => {
-        console.log("Biet-O-Matic: renderGroups() Group.renderBidAll failed: " + e.message);
-      });
-    Group.updateDatalist();
-    // append data-name to tr
-    return $("<tr/>").append(td).attr("data-name", groupName);
+      return "";
+    }
   }
 
   static renderArticleGroup(data, type, row) {
@@ -2632,81 +2686,103 @@ class ArticlesTable {
       return data;
     }
     //console.debug("Biet-O-Matic: renderArticleGroup(%s) data=%s, type=%O, row=%O", row.articleId, data, type, row);
-    let div = document.createElement("div");
-
-    const inpGroup = document.createElement("input");
-    inpGroup.id = "inpGroup_" + row.articleId;
-    inpGroup.type = "text";
-    inpGroup.setAttribute("list", "groups");
-    inpGroup.setAttribute("maxlength", "32");
-    inpGroup.multiple = false;
-    inpGroup.style.width = "94%";
-    inpGroup.placeholder = Popup.getTranslation("generic_group", ".Group");
-    if (data != null && typeof data !== "undefined") inpGroup.defaultValue = data;
-
-    div.appendChild(inpGroup);
-    return div.outerHTML;
+    try {
+      const div = document.createElement("div");
+      const inpGroup = document.createElement("input");
+      inpGroup.id = "inpGroup_" + row.articleId;
+      inpGroup.type = "text";
+      inpGroup.setAttribute("list", "groups");
+      inpGroup.setAttribute("maxlength", "32");
+      inpGroup.multiple = false;
+      inpGroup.style.width = "94%";
+      inpGroup.placeholder = Popup.getTranslation("generic_group", ".Group");
+      if (data != null && typeof data !== "undefined") {
+        inpGroup.defaultValue = data; 
+      }
+      div.appendChild(inpGroup);
+      return div.outerHTML;
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleGroup(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
+      });
+      return data;
+    }
   }
 
   static renderArticleLog(article) {
-    if (article == null || !article.hasOwnProperty("articleId")) return "";
-    let div = document.createElement("div");
-    // <div style="width:320px; height:80px; overflow:auto;">
-    div.style.height = "200px";
-    div.style.overflow = "auto";
-
-    // copy to clipboard button
-    const spanCopyToClipboard = document.createElement("span");
-    spanCopyToClipboard.id = article.articleId;
-    spanCopyToClipboard.classList.add("copy-to-clipboard", "button-zoom", "far", "fa-copy", "fa-2x");
-    spanCopyToClipboard.style.opacity = "0.6";
-    spanCopyToClipboard.style.margin = "10px";
-    spanCopyToClipboard.style.position = "absolute";
-    spanCopyToClipboard.style.right = "30px";
-    spanCopyToClipboard.title = Popup.getTranslation("popup_copyToClipboard", ".Copies the item log to the clipboard.");
-    div.appendChild(spanCopyToClipboard);
-
-    const table = document.createElement("table");
-    table.style.paddingLeft = "50px";
-    table.style.width = "80%";
-    // get log entries
-    let log = article.getLog();
-    if (log == null) return "";
-    if (log.length < 5) div.style.height = null;
-    // iterate log array in reverse order (newest first)
-    log
-      .slice()
-      .reverse()
-      .forEach((e) => {
-        const tr = document.createElement("tr");
-        tr.style.width = "100%";
-        const tdDate = document.createElement("td");
-        tdDate.style.width = "150px";
-        // first column: date
-        if (e.hasOwnProperty("timestamp")) tdDate.textContent = format(e.timestamp, "PPpp", { locale: Popup.locale });
-        else tdDate.textContent = "?";
-        tr.append(tdDate);
-        // second column: component
-        const tdComp = document.createElement("td");
-        tdComp.style.width = "100px";
-        if (e.hasOwnProperty("component")) tdComp.textContent = e.component;
-        else tdComp.textContent = "?";
-        tr.append(tdComp);
-        // third column: level
-        let tdLevel = document.createElement("td");
-        tdLevel.style.width = "100px";
-        if (e.hasOwnProperty("level")) tdLevel.textContent = e.level;
-        else tdLevel.textContent = "?";
-        tr.append(tdLevel);
-        // fourth column: message
-        const tdMsg = document.createElement("td");
-        if (e.hasOwnProperty("message")) tdMsg.textContent = e.message;
-        else tdMsg.textContent = "n/a";
-        tr.append(tdMsg);
-        table.appendChild(tr);
+    if (article == null || !article.hasOwnProperty("articleId")) {
+      return "";
+    }
+    try {
+      const div = document.createElement("div");
+      // <div style="width:320px; height:80px; overflow:auto;">
+      div.style.height = "200px";
+      div.style.overflow = "auto";
+  
+      // copy to clipboard button
+      const spanCopyToClipboard = document.createElement("span");
+      spanCopyToClipboard.id = article.articleId;
+      spanCopyToClipboard.classList.add("copy-to-clipboard", "button-zoom", "far", "fa-copy", "fa-2x");
+      spanCopyToClipboard.style.opacity = "0.6";
+      spanCopyToClipboard.style.margin = "10px";
+      spanCopyToClipboard.style.position = "absolute";
+      spanCopyToClipboard.style.right = "30px";
+      spanCopyToClipboard.title = Popup.getTranslation("popup_copyToClipboard", ".Copies the item log to the clipboard.");
+      div.appendChild(spanCopyToClipboard);
+  
+      const table = document.createElement("table");
+      table.style.paddingLeft = "50px";
+      table.style.width = "80%";
+      // get log entries
+      let log = article.getLog();
+      if (log == null) return "";
+      if (log.length < 5) div.style.height = null;
+      // iterate log array in reverse order (newest first)
+      log
+        .slice()
+        .reverse()
+        .forEach((e) => {
+          const tr = document.createElement("tr");
+          tr.style.width = "100%";
+          const tdDate = document.createElement("td");
+          tdDate.style.width = "150px";
+          // first column: date
+          if (e.hasOwnProperty("timestamp")) tdDate.textContent = format(e.timestamp, "PPpp", { locale: Popup.locale });
+          else tdDate.textContent = "?";
+          tr.append(tdDate);
+          // second column: component
+          const tdComp = document.createElement("td");
+          tdComp.style.width = "100px";
+          if (e.hasOwnProperty("component")) tdComp.textContent = e.component;
+          else tdComp.textContent = "?";
+          tr.append(tdComp);
+          // third column: level
+          let tdLevel = document.createElement("td");
+          tdLevel.style.width = "100px";
+          if (e.hasOwnProperty("level")) tdLevel.textContent = e.level;
+          else tdLevel.textContent = "?";
+          tr.append(tdLevel);
+          // fourth column: message
+          const tdMsg = document.createElement("td");
+          if (e.hasOwnProperty("message")) tdMsg.textContent = e.message;
+          else tdMsg.textContent = "n/a";
+          tr.append(tdMsg);
+          table.appendChild(tr);
+        });
+      div.appendChild(table);
+      return div.outerHTML;
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleLog(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
       });
-    div.appendChild(table);
-    return div.outerHTML;
+      return "";
+    }
   }
 
   /*
@@ -2715,38 +2791,62 @@ class ArticlesTable {
    * - include number of bids
    */
   static renderArticleBidPrice(data, type, row) {
-    if (type !== "display" && type !== "filter") return data;
-    const span = document.createElement("span");
-    span.textContent = row.getPrettyBidPrice();
-    if (row.hasOwnProperty("articleBidCount")) {
-      span.textContent += "  (" + row.articleBidCount + ")";
+    if (type !== "display" && type !== "filter") {
+      return data;
     }
-    if (row.hasOwnProperty("articlePaymentMethods")) {
-      span.title = row.articlePaymentMethods;
+    try {
+      const span = document.createElement("span");
+      span.textContent = row.getPrettyBidPrice();
+      if (row.hasOwnProperty("articleBidCount")) {
+        span.textContent += "  (" + row.articleBidCount + ")";
+      }
+      if (row.hasOwnProperty("articlePaymentMethods")) {
+        span.title = row.articlePaymentMethods;
+      }
+      return span.outerHTML;  
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleBidPrice(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
+      });
+      return data;
     }
-    return span.outerHTML;
   }
 
   static renderArticleShippingCost(data, type, row) {
-    if (type !== "display" && type !== "filter") return data;
-    const span = document.createElement("span");
-    let priceInfo = EbayParser.parsePriceString(data);
-    if (priceInfo.price !== null && row.hasOwnProperty("articleCurrency")) {
-      try {
-        span.textContent = Intl.NumberFormat(Popup.lang, { style: "currency", currency: row.articleCurrency }).format(priceInfo.price);
-      } catch (e) {
+    if (typeof data === 'undefined' || type !== "display" && type !== "filter") {
+      return data;
+    }
+    try {
+      const span = document.createElement("span");
+      let priceInfo = EbayParser.parsePriceString(data);
+      if (priceInfo.price !== null && row.hasOwnProperty("articleCurrency")) {
+        try {
+          span.textContent = Intl.NumberFormat(Popup.lang, { style: "currency", currency: row.articleCurrency }).format(priceInfo.price);
+        } catch (e) {
+          span.textContent = data;
+        }
+      } else {
         span.textContent = data;
       }
-    } else {
-      span.textContent = data;
+      if (!row.hasOwnProperty("articleShippingCost") && row.hasOwnProperty("articleShippingMethods")) {
+        span.textContent = row.articleShippingMethods;
+      }
+      if (row.hasOwnProperty("articleShippingMethods")) {
+        span.title = row.articleShippingMethods;
+      }
+      return span.outerHTML;
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleShippingCost(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
+      });
+      return data;
     }
-    if (!row.hasOwnProperty("articleShippingCost") && row.hasOwnProperty("articleShippingMethods")) {
-      span.textContent = row.articleShippingMethods;
-    }
-    if (row.hasOwnProperty("articleShippingMethods")) {
-      span.title = row.articleShippingMethods;
-    }
-    return span.outerHTML;
   }
 
   /*
@@ -2755,43 +2855,54 @@ class ArticlesTable {
    * delete: remove the article info from storage
    */
   static renderArticleButtons(data, type, row) {
-    if (type !== "display" && type !== "filter") return data;
+    if (type !== "display" && type !== "filter") {
+      return data;
+    }
     //console.log("renderArticleButtons(%s) data=%O, type=%O, row=%O", row.articleId, data, type, row);
-
-    const div = document.createElement("div");
-    div.id = "articleButtons";
-
-    // tab status
-    const spanTabStatus = document.createElement("span");
-    spanTabStatus.id = "tabStatus";
-    spanTabStatus.classList.add("button-zoom", "far", "fa-lg");
-    spanTabStatus.style.opacity = "0.6";
-    if (row.tabId == null) {
-      spanTabStatus.classList.add("fa-folder");
-      spanTabStatus.title = Popup.getTranslation("popup_openArticleInTab", ".Opens this article in a new tab");
-    } else {
-      spanTabStatus.classList.add("fa-folder-open");
-      spanTabStatus.title = Popup.getTranslation("popup_closeArticleTab", ".Closes this articles tab");
+    try {
+      const div = document.createElement("div");
+      div.id = "articleButtons";
+  
+      // tab status
+      const spanTabStatus = document.createElement("span");
+      spanTabStatus.id = "tabStatus";
+      spanTabStatus.classList.add("button-zoom", "far", "fa-lg");
+      spanTabStatus.style.opacity = "0.6";
+      if (row.tabId == null) {
+        spanTabStatus.classList.add("fa-folder");
+        spanTabStatus.title = Popup.getTranslation("popup_openArticleInTab", ".Opens this article in a new tab");
+      } else {
+        spanTabStatus.classList.add("fa-folder-open");
+        spanTabStatus.title = Popup.getTranslation("popup_closeArticleTab", ".Closes this articles tab");
+      }
+  
+      // article remove
+      const spanArticleRemove = document.createElement("span");
+      spanArticleRemove.id = "articleRemove";
+      spanArticleRemove.title = Popup.getTranslation(
+        "popup_articleRemove",
+        ".Removes all Article events and configuration"
+      );
+      spanArticleRemove.classList.add("button-zoom", "warning-hover", "far", "fa-trash-alt", "fa-lg");
+      spanArticleRemove.style.marginLeft = "20px";
+      spanArticleRemove.style.opacity = "0.6";
+      // if there is currently no data to remove, then disable the button
+      if (row.getLog() == null && row.articleMaxBid == null && row.articleGroup == null) {
+        spanArticleRemove.classList.remove("button-zoom", "warning-hover");
+        spanArticleRemove.style.opacity = "0.05";
+      }
+      div.appendChild(spanTabStatus);
+      div.appendChild(spanArticleRemove);
+      return div.outerHTML;
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleButtons(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
+      });
+      return data;
     }
-
-    // article remove
-    const spanArticleRemove = document.createElement("span");
-    spanArticleRemove.id = "articleRemove";
-    spanArticleRemove.title = Popup.getTranslation(
-      "popup_articleRemove",
-      ".Removes all Article events and configuration"
-    );
-    spanArticleRemove.classList.add("button-zoom", "warning-hover", "far", "fa-trash-alt", "fa-lg");
-    spanArticleRemove.style.marginLeft = "20px";
-    spanArticleRemove.style.opacity = "0.6";
-    // if there is currently no data to remove, then disable the button
-    if (row.getLog() == null && row.articleMaxBid == null && row.articleGroup == null) {
-      spanArticleRemove.classList.remove("button-zoom", "warning-hover");
-      spanArticleRemove.style.opacity = "0.05";
-    }
-    div.appendChild(spanTabStatus);
-    div.appendChild(spanArticleRemove);
-    return div.outerHTML;
   }
 
   /*
@@ -2801,32 +2912,43 @@ class ArticlesTable {
    * empty if no logs are present
    */
   static renderArticleDetailsControl(data, type, row) {
-    if (type !== "display" && type !== "filter") return "";
-    // check if there are logs, then show plus if the log view is closed, else minus
-    if (row.getLog() != null) {
-      const div = document.createElement("div");
-      div.style.textAlign = "center";
-      const span = document.createElement("span");
-      span.setAttribute("aria-hidden", "true");
-      span.style.opacity = "0.6";
-      span.classList.add("button-zoom", "fas");
-      if (row.articleDetailsShown) {
-        span.classList.add("fa-minus");
-        span.title = Popup.getTranslation("popup_hide_articleEvents", ".Hide article events");
+    if (type !== "display" && type !== "filter") {
+      return "";
+    }
+    try {
+      // check if there are logs, then show plus if the log view is closed, else minus
+      if (row.getLog() != null) {
+        const div = document.createElement("div");
+        div.style.textAlign = "center";
+        const span = document.createElement("span");
+        span.setAttribute("aria-hidden", "true");
+        span.style.opacity = "0.6";
+        span.classList.add("button-zoom", "fas");
+        if (row.articleDetailsShown) {
+          span.classList.add("fa-minus");
+          span.title = Popup.getTranslation("popup_hide_articleEvents", ".Hide article events");
+        } else {
+          span.classList.add("fa-plus");
+          span.title = Popup.getTranslation("popup_show_articleEvents", ".Show article events");
+        }
+        div.appendChild(span);
+        return div.outerHTML;
       } else {
-        span.classList.add("fa-plus");
-        span.title = Popup.getTranslation("popup_show_articleEvents", ".Show article events");
-      }
-      div.appendChild(span);
-      return div.outerHTML;
-    } else {
+        return "";
+     }
+    } catch (e) {
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleDetailsControl(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
+      });
       return "";
     }
   }
 
   static renderArticleEndTime(data, type, row) {
     if (type !== "display") {
-      //console.log("renderArticleEndTime returning data=%s (type=%s)", data, type);
       return data;
     }
     try {
@@ -2855,7 +2977,12 @@ class ArticlesTable {
       }
       return span.outerHTML;
     } catch (e) {
-      console.log("Biet-O-Matic: renderArticleEndTime(%s) failed: %s", data, e);
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in renderArticleEndTime(): ${e.message}`,
+        title: row.hasOwnProperty("articleId") ? Popup.getTranslation("generic_item", ".Item") + " " + row.articleId : undefined,
+        duration: 60_000,
+      });
       return data;
     }
   }
@@ -4105,6 +4232,30 @@ class Popup {
 
     this.registerEvents();
 
+    // initialize notification library early
+    try {
+      toastr.options = {
+        "preventDuplicates": true,
+        "closeButton": true,
+        "extendedTimeOut": "2000",
+        "timeOut": "60000",
+        "showMethod": "slideDown",
+        "progressBar": "true",
+        "positionClass": "toast-top-right",
+        "typeBasedOverrides": {
+          "info": {
+            "timeout": "30000"
+          },
+          "error": {
+            "timeout": "120000"
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`Bid-O-Matic: Popup.init() failed to init notification support: ${e.message}`);
+    }
+
+
     await Group.removeAllUnused().catch((e) => {
       console.log("Biet-O-Matic: Group.removeAllUnused() failed: %s", e.message);
     });
@@ -4211,33 +4362,26 @@ class Popup {
   }
 
   /*
-   * adds a message to be displayed to the user
+   * Adds a message to be displayed to the user
    * info.message = i18n translated message
-   * info.level = info|warn
-   * info.duration = optional display duration (default unlimited)
+   * info.level = success|info|warn|error (default: info)
+   * info.duration = optional display duration (default: unlimited)
    * info.cleanAll = optionally clean all old messages
    */
   static addUserMessage(info) {
-    let messages = document.querySelector("#messages");
-    if (messages != null && typeof messages !== "undefined") {
-      if (info.cleanAll) $(messages).empty();
-      let span = document.createElement("span");
-      if (info.hasOwnProperty("level") && info.level === "warning") span.classList.add("ui-state-highlight");
-      else if (info.level === "error") span.classList.add("ui-state-error");
-      else span.classList.add("ui-state-default");
-      span.innerText = info.message;
-      if (info.hasOwnProperty("duration")) {
-        $(span)
-          .hide()
-          .appendTo("#messages")
-          .show("slow")
-          .delay(info.duration)
-          .hide("slow")
-          .queue(function () {
-            $(this).remove();
-          });
-      } else {
-        messages.appendChild(span);
+    if (info.cleanAll) {
+      toastr.clear();
+    }
+    if (info.hasOwnProperty("message")) {
+      const title = info.hasOwnProperty("title") && info.title !== "undefined" ? info.title : null;
+      if (info.hasOwnProperty("level") && info.level === "success") {
+        toastr.success(info.message, title);
+      } else if (info.hasOwnProperty("level") && info.level === "warning") {
+        toastr.warning(info.message, title);
+      } else if (info.hasOwnProperty("level") && info.level === "error") {
+        toastr.error(info.message, title);
+      }  else {
+        toastr.info(info.message, title);
       }
     }
   }
@@ -4371,7 +4515,7 @@ class Popup {
         message: Popup.getTranslation("popup_importDone", ".Import of $1 items has been completed.", [
           Object.keys(data).length,
         ]),
-        level: "info",
+        level: "success",
         duration: 30000,
       });
     } catch (e) {
@@ -4645,9 +4789,9 @@ document.addEventListener("DOMContentLoaded", function () {
         Popup.currentWindowId,
         Popup.lang
       );
+      toastr.success('Bid-O-Matic successfully initialized.');
     })
     .catch((e) => {
       console.warn("Biet-O-Matic: Popup initialization failed: " + e);
     });
-
 });

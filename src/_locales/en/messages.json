@@ -146,6 +146,9 @@
   "generic_internalError": {
     "message": "Internal Error"
   },
+  "generic_item": {
+    "message": "Item"
+  },
   "generic_items": {
     "message": "Items"
   },
@@ -345,6 +348,6 @@
     "message": "The time difference of your system to the eBay time is too large (approximately $1s). Please ensure your clock is precise to ensure reliable automatic bidding is possible."
   },
   "popup_updateStorageFailed": {
-    "message": "Failed to persist update for item $1: $2"
+    "message": "Failed to persist update: $1"
   }
 }
