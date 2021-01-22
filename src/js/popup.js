@@ -1773,9 +1773,17 @@ class ArticlesTable {
     this.registerTableEvents();
     this.regularOpenArticlesForBidding().catch((e) => {
       console.error("Biet-O-Matic: openArticleTabsForBidding() internal error: " + e);
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in regularOpenArticlesForBidding(): ${e.message}`
+      });
     });
     ArticlesTable.regularRefreshArticleInfo().catch((e) => {
       console.error("Biet-O-Matic: regularRefreshArticleInfo() internal error: " + e);
+      Popup.addUserMessage({
+        level: "error",
+        message: Popup.getTranslation("generic_internalError", ".Internal Error") + ` in regularRefreshArticleInfo(): ${e.message}`
+      });
     });
   }
 
@@ -3379,7 +3387,19 @@ class ArticlesTable {
         article.offerTabId = tabId;
       }
     } catch (e) {
-      console.log("openArticleForBidding() Internal Error: " + e);
+      console.warn("openArticleForBidding() Internal Error: " + e);
+      if (article != null && typeof article !== "undefined") {
+        Popup.addUserMessage({
+          level: "error",
+          message: Popup.getTranslation("popup_failedToOpenArticleForBidding", ".Failed to open bidding tab: $1", [e.message]),
+          title: Popup.getTranslation("generic_item", ".Item") + " " + article.articleId
+        }); 
+        article.addLog({
+          component: Popup.getTranslation("cs_bidding", ".Bidding"),
+          level: "Error",
+          message: `Internal Error opening offer tab: ${e.message}`
+        });  
+      }
     } finally {
       article = null;
     }
@@ -4255,7 +4275,6 @@ class Popup {
       console.error(`Bid-O-Matic: Popup.init() failed to init notification support: ${e.message}`);
     }
 
-
     await Group.removeAllUnused().catch((e) => {
       console.log("Biet-O-Matic: Group.removeAllUnused() failed: %s", e.message);
     });
@@ -4789,7 +4808,7 @@ document.addEventListener("DOMContentLoaded", function () {
         Popup.currentWindowId,
         Popup.lang
       );
-      toastr.success('Bid-O-Matic successfully initialized.');
+      //toastr.success('Bid-O-Matic successfully initialized.');
     })
     .catch((e) => {
       console.warn("Biet-O-Matic: Popup initialization failed: " + e);
