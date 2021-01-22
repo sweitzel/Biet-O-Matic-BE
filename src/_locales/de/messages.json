@@ -349,5 +349,8 @@
   },
   "popup_updateStorageFailed": {
     "message": "Fehler beim Speichern: $1"
+  },
+  "popup_failedToOpenArticleForBidding": {
+    "message": "Biet-Tab konnte nicht geöffnet werden: $1"
   }
 }

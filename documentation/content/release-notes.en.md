@@ -23,7 +23,16 @@ Other changes:
 - Fixed computer clock check.
   However, due to reduction of the precision of that check to 1s, only a rough check is possible.
 
-### Biet-O-Matic BE Version 0.5.6
+### Bid-O-Matic BE Version 0.5.7
+
+{{< hint info>}}
+Released on Saturday, 2021-01-23
+{{< /hint >}}
+
+- Fixed an issue displaying an item, which does not define shipping costs.
+- Improved user notifications.
+
+### Bid-O-Matic BE Version 0.5.6
 
 {{< hint info>}}
 Released on Saturday, 2021-01-16
@@ -33,7 +42,7 @@ Released on Saturday, 2021-01-16
 - Improved display of currency for shipping cost on the overrview page.
 - Items whose auctions ended longer than one month ago are no longer regularly updated.
 
-### Biet-O-Matic BE Version 0.5.5
+### Bid-O-Matic BE Version 0.5.5
 
 {{< hint info>}}
 Released on Saturday, 2021-01-09
@@ -42,7 +51,7 @@ Released on Saturday, 2021-01-09
 - Fixed an issue leading to removal of the default group settings (e.g. resetting its bid all option).
 - Fixed an error during initialisation in case data was stored in an old incompatible format.
 
-### Biet-O-Matic BE Version 0.5.4
+### Bid-O-Matic BE Version 0.5.4
 
 {{< hint info>}}
 Released on Wednesday, 2021-01-06
@@ -53,7 +62,7 @@ Released on Wednesday, 2021-01-06
   It is possible to add one item per line or alternatively multiple comma-separated items per line.
 - Added functionality to copy the item event log to the clipboard.
 
-### Biet-O-Matic BE Version 0.5.3
+### Bid-O-Matic BE Version 0.5.3
 
 {{< hint info>}}
 Released on Saturday, 2020-12-19

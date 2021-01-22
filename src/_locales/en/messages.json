@@ -349,5 +349,8 @@
   },
   "popup_updateStorageFailed": {
     "message": "Failed to persist update: $1"
+  },
+  "popup_failedToOpenArticleForBidding": {
+    "message": "Failed to open offer tab: $1"
   }
 }
