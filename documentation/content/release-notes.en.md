@@ -29,7 +29,7 @@ Other changes:
 Released on Saturday, 2021-01-23
 {{< /hint >}}
 
-- Fixed an issue displaying an item, which does not define shipping costs.
+- Fixed an issue displaying items, which do not define shipping cost.
 - Improved user notifications.
 
 ### Bid-O-Matic BE Version 0.5.6
